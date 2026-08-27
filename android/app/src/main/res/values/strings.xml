@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Rapport de stage</string>
+    <string name="title_activity_main">Rapport de stage</string>
+    <string name="package_name">io.github.dane.rapportstage</string>
+    <string name="custom_url_scheme">io.github.dane.rapportstage</string>
+</resources>

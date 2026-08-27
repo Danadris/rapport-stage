@@ -1,0 +1,164 @@
+@import "tailwindcss";
+@import "@fontsource/geist-sans/400.css";
+@import "@fontsource/geist-sans/500.css";
+@import "@fontsource/geist-sans/600.css";
+@import "@fontsource/geist-mono/400.css";
+@import "@fontsource/geist-mono/500.css";
+
+@theme {
+  --font-sans: "Geist Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-serif: Georgia, "Times New Roman", serif;
+
+  --color-cream: oklch(0.977 0.004 85);
+  --color-paper: oklch(0.995 0.002 85);
+  --color-line: oklch(0.906 0.008 80);
+  --color-line-strong: oklch(0.83 0.012 80);
+  --color-ink: oklch(0.35 0.02 70);
+  --color-muted: oklch(0.52 0.018 70);
+  --color-faint: oklch(0.66 0.014 75);
+  --color-gold: oklch(0.8 0.06 85);
+  --color-gold-deep: oklch(0.48 0.07 78);
+  --color-gold-soft: oklch(0.945 0.022 88);
+  --color-danger: oklch(0.55 0.19 27);
+
+  --radius-field: 0.5rem;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-cream);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  ::selection {
+    background-color: var(--color-gold-soft);
+    color: var(--color-gold-deep);
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not(.light) {
+    --color-cream: oklch(0.18 0.006 85);
+    --color-paper: oklch(0.22 0.004 85);
+    --color-line: oklch(0.30 0.008 80);
+    --color-line-strong: oklch(0.38 0.012 80);
+    --color-ink: oklch(0.88 0.015 70);
+    --color-muted: oklch(0.70 0.015 70);
+    --color-faint: oklch(0.55 0.012 75);
+    --color-gold: oklch(0.75 0.06 85);
+    --color-gold-deep: oklch(0.85 0.06 78);
+    --color-gold-soft: oklch(0.25 0.02 88);
+    --color-danger: oklch(0.60 0.19 27);
+    color-scheme: dark;
+  }
+}
+
+html.dark {
+  --color-cream: oklch(0.18 0.006 85);
+  --color-paper: oklch(0.22 0.004 85);
+  --color-line: oklch(0.30 0.008 80);
+  --color-line-strong: oklch(0.38 0.012 80);
+  --color-ink: oklch(0.88 0.015 70);
+  --color-muted: oklch(0.70 0.015 70);
+  --color-faint: oklch(0.55 0.012 75);
+  --color-gold: oklch(0.75 0.06 85);
+  --color-gold-deep: oklch(0.85 0.06 78);
+  --color-gold-soft: oklch(0.25 0.02 88);
+  --color-danger: oklch(0.60 0.19 27);
+  color-scheme: dark;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  html,
+  body {
+    background: white;
+    margin: 0;
+    padding: 0;
+  }
+
+  header, aside, nav,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    background: transparent !important;
+    margin: 0 !important;
+  }
+
+  main > div {
+    max-width: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+    margin: 0 !important;
+  }
+
+  .a4-page {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .a4-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .a4-page h1,
+  .a4-page h2,
+  .a4-page h3,
+  .a4-page figure {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .a4-page h1,
+  .a4-page h2,
+  .a4-page h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .a4-page p {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .a4-page [contenteditable="true"] {
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: 0 !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
