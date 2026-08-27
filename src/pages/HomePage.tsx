@@ -93,24 +93,23 @@ export function HomePage() {
   return (
     <div className="mx-auto max-w-3xl px-5 pb-20">
       <section className="pt-14 pb-12">
-        <Eyebrow>Institut de formation aux métiers de la boulangerie et de la pâtisserie · Casablanca</Eyebrow>
+        <Eyebrow>IFMBP Casablanca</Eyebrow>
         <h1 className="mt-4 font-serif text-[30px] leading-tight text-ink">
-          Votre rapport de stage,
+          Rapport de stage,
           <br />
           sans page blanche.
         </h1>
         <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted">
-          Répondez aux questions, laissez l'application rechercher les informations de votre entreprise
-          d'accueil, puis exportez un document conforme au canevas officiel de l'institut.
+          Complétez les étapes, vérifiez l'aperçu A4, exportez en PDF.
         </p>
         <div className="mt-6 flex items-center gap-3">
           <Button variant="primary" onClick={handleNew}>
             <Plus size={15} />
-            Nouveau rapport
+            Nouveau
           </Button>
           {drafts.length > 0 && (
             <Button variant="ghost" onClick={() => navigate(`/rapport/${drafts[0].id}`)}>
-              Reprendre le dernier
+              Reprendre
               <ArrowRight size={15} />
             </Button>
           )}
@@ -119,8 +118,8 @@ export function HomePage() {
 
       <section>
         <div className="mb-2 flex items-baseline justify-between px-2">
-          <h2 className="text-[13px] font-medium tracking-wide text-ink uppercase">Mes brouillons</h2>
-          <span className="font-mono text-[11px] text-faint">{drafts.length} enregistré(s) sur cet appareil</span>
+          <h2 className="text-[13px] font-medium tracking-wide text-ink uppercase">Brouillons</h2>
+          <span className="font-mono text-[11px] text-faint">{drafts.length} local</span>
         </div>
         {loading ? (
           <div className="rounded-xl border border-line bg-paper/60 p-4">
@@ -135,14 +134,13 @@ export function HomePage() {
         ) : drafts.length === 0 ? (
           <div className="rounded-xl border border-dashed border-line-strong px-6 py-12 text-center">
             <FileText size={22} className="mx-auto text-faint" />
-            <p className="mt-3 text-sm font-medium text-ink">Aucun brouillon pour l'instant</p>
+            <p className="mt-3 text-sm font-medium text-ink">Aucun brouillon</p>
             <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-muted">
-              Créez votre premier rapport : le questionnaire vous guide section par section, dans l'ordre du
-              canevas officiel.
+              Le questionnaire suit le canevas officiel.
             </p>
             <Button variant="primary" size="sm" className="mt-5" onClick={handleNew}>
               <Plus size={14} />
-              Créer mon rapport
+              Créer
             </Button>
           </div>
         ) : (

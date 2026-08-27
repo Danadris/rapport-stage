@@ -2,7 +2,7 @@ import { ChevronDown, Lightbulb, Sparkles, AlertCircle } from 'lucide-react'
 import { useState } from 'react'
 import type { NoteField } from '../../data/sections'
 import type { SectionImage } from '../../types'
-import { ConsigneBox, Field, Textarea, Button } from '../ui'
+import { Field, Textarea, Button } from '../ui'
 import { ImageManager } from '../ImageManager'
 import { genererParagraphe } from '../../lib/ai'
 
@@ -47,7 +47,6 @@ function Examples({ examples, onPick }: { examples: string[]; onPick: (text: str
               </button>
             </li>
           ))}
-          <li className="pt-0.5 text-[11px] text-faint">Cliquez sur un exemple pour l'insérer dans le champ.</li>
         </ul>
       )}
     </div>
@@ -102,7 +101,7 @@ function FieldBox({ f, stepTitle, current, generated, onChange, onGenerate }: Fi
 
       <div className="rounded-lg border border-line bg-cream p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold text-ink">Texte rédigé final (Aperçu A4)</span>
+          <span className="text-xs font-semibold text-ink">Texte final A4</span>
           <Button 
             size="sm" 
             variant="secondary" 
@@ -110,7 +109,7 @@ function FieldBox({ f, stepTitle, current, generated, onChange, onGenerate }: Fi
             disabled={loading || !current.trim()}
           >
             <Sparkles size={14} className={loading ? "animate-pulse" : "text-gold-deep"} />
-            {loading ? 'Génération…' : 'Générer la rédaction'}
+            {loading ? 'Rédaction...' : 'Rédiger'}
           </Button>
         </div>
         
@@ -124,12 +123,9 @@ function FieldBox({ f, stepTitle, current, generated, onChange, onGenerate }: Fi
           rows={generated ? 4 : 2}
           value={generated}
           onChange={(e) => onGenerate(f.id, e.target.value)}
-          placeholder="Le texte professionnel sera généré ici..."
+          placeholder="Texte final..."
           className="bg-paper"
         />
-        <p className="mt-1.5 text-[11px] text-muted">
-          Vous pouvez modifier le texte généré manuellement s'il ne vous convient pas totalement.
-        </p>
       </div>
     </div>
   )
@@ -152,9 +148,6 @@ export function NotesStep({ stepTitle, fields, values, generatedValues, onChange
       <div className="pt-4 border-t border-line">
         <ImageManager images={images} onChange={onImagesChange} />
       </div>
-      <ConsigneBox>
-        Vos notes courtes sont transformées en paragraphes professionnels grâce au bouton de génération. Relisez toujours le résultat !
-      </ConsigneBox>
     </div>
   )
 }

@@ -10,10 +10,7 @@ export function AppShell() {
           <NavLink to="/" className="flex items-center gap-2.5">
             <img src={logo} alt="IFMBP" className="h-7 w-auto" />
             <span className="hidden text-sm font-semibold tracking-tight text-ink sm:inline">
-              Rapport de stage
-            </span>
-            <span className="rounded border border-line bg-paper px-1.5 py-0.5 font-mono text-[10px] tracking-wider text-muted uppercase">
-              IFMBP
+              Rapport stage
             </span>
           </NavLink>
           <nav className="flex items-center gap-1">

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { createBackup, importBackup, loadSettings, saveSettings } from '../lib/storage'
 import { applyTheme, loadTheme, saveTheme, THEME_PRESETS } from '../lib/themes'
 import { loadDarkPref, saveDarkPref, type DarkPref } from '../lib/darkMode'
-import { Badge, Button, ConsigneBox, Eyebrow, Field, Input } from '../components/ui'
+import { Badge, Button, Eyebrow, Field, Input } from '../components/ui'
 import type { Settings } from '../types'
 
 export function ParametresPage() {
@@ -113,7 +113,7 @@ export function ParametresPage() {
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <KeyRound size={16} className="text-gold-deep" />
-              <h2 className="text-sm font-semibold text-ink">Clé API Google Gemini</h2>
+              <h2 className="text-sm font-semibold text-ink">Clé Gemini</h2>
             </div>
             {settings.geminiKey ? <Badge>Configurée</Badge> : <Badge tone="neutral">Non configurée</Badge>}
           </div>
@@ -136,8 +136,7 @@ export function ParametresPage() {
             />
           </Field>
           <p className="mt-2 text-xs leading-relaxed text-muted">
-            La clé sert à la recherche automatique des entreprises et à l'amélioration des paragraphes. Sans
-            clé, tout le reste de l'application fonctionne normalement.
+            Optionnelle. Sans clé, l'app utilise le mode local.
           </p>
           <div className="mt-4 flex items-center gap-3">
             <Button variant="primary" size="sm" onClick={enregistrer} loading={settingsSaving} disabled={settingsLoading}>
@@ -172,12 +171,6 @@ export function ParametresPage() {
           </div>
         </div>
 
-        <ConsigneBox>
-          Cette application fonctionne sans compte : vos rapports sont enregistrés dans le stockage local du
-          navigateur, sur cet appareil uniquement. Pensez à exporter votre document avant de changer
-          d'ordinateur.
-        </ConsigneBox>
-
         <div className="rounded-xl border border-line bg-paper p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
@@ -187,8 +180,7 @@ export function ParametresPage() {
             <Badge tone="neutral">JSON</Badge>
           </div>
           <p className="mb-4 text-xs leading-relaxed text-muted">
-            Exportez vos rapports pour les garder hors de l'application ou les importer sur un autre appareil.
-            La clé API n'est pas incluse dans la sauvegarde.
+            Rapports stockés sur cet appareil. Exportez avant de changer d'appareil.
           </p>
           <input
             ref={backupInputRef}
@@ -222,11 +214,8 @@ export function ParametresPage() {
         <div className="rounded-xl border border-line bg-paper p-5">
           <div className="mb-4 flex items-center gap-2.5">
             <Palette size={16} className="text-gold-deep" />
-            <h2 className="text-sm font-semibold text-ink">Thème de couleur</h2>
+            <h2 className="text-sm font-semibold text-ink">Couleur</h2>
           </div>
-          <p className="mb-4 text-xs leading-relaxed text-muted">
-            Choisissez l'accent de couleur de l'interface. Cela change les badges, sélections et accents dans toute l'application.
-          </p>
           <div className="flex flex-wrap gap-3">
             {THEME_PRESETS.map((preset) => (
               <button
@@ -257,11 +246,8 @@ export function ParametresPage() {
         <div className="rounded-xl border border-line bg-paper p-5">
           <div className="mb-4 flex items-center gap-2.5">
             <Palette size={16} className="text-gold-deep" />
-            <h2 className="text-sm font-semibold text-ink">Mode d'affichage</h2>
+            <h2 className="text-sm font-semibold text-ink">Apparence</h2>
           </div>
-          <p className="mb-4 text-xs leading-relaxed text-muted">
-            Choisissez l'apparence de l'interface.
-          </p>
           <div className="flex flex-wrap gap-3">
             {[
               { id: 'light', label: 'Clair', Icon: Sun },

@@ -140,12 +140,3 @@ export function Badge({ children, tone = 'gold' }: { children: ReactNode; tone?:
 export function SkeletonRow() {
   return <div className="h-4 w-full animate-pulse rounded bg-line" />
 }
-
-export function ConsigneBox({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-lg border border-line bg-paper p-4">
-      <Eyebrow>Consigne</Eyebrow>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted">{children}</p>
-    </div>
-  )
-}
