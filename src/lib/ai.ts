@@ -116,7 +116,7 @@ Si l'entreprise n'est pas très connue, génère des informations vraisemblables
 Réponds uniquement en JSON.`
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.5-flash-lite',
     contents: prompt,
     config: {
       responseMimeType: 'application/json',
@@ -146,7 +146,7 @@ Notes de l'apprenti :
 "${notes}"`
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.5-flash-lite',
     contents: prompt,
   })
 
