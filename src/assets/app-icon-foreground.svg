@@ -1,6 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Rapport de stage">
-  <rect width="1024" height="1024" rx="220" fill="#f7efe2"/>
-  <rect x="86" y="86" width="852" height="852" rx="176" fill="none" stroke="#d2a24c" stroke-width="34"/>
   <path d="M277 170h360l130 130v526c0 42-34 76-76 76H277c-42 0-76-34-76-76V246c0-42 34-76 76-76Z" fill="#fffaf3" stroke="#30251b" stroke-width="32" stroke-linejoin="round"/>
   <path d="M637 170v126c0 20 16 36 36 36h94Z" fill="#ead7b5" stroke="#30251b" stroke-width="32" stroke-linejoin="round"/>
   <rect x="320" y="430" width="376" height="32" rx="16" fill="#2f605b"/>
