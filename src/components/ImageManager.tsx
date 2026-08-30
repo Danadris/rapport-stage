@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import type { SectionImage } from '../types'
 import { cx } from '../lib/cx'
 import { Input } from './ui'
-import { removeBg } from '../lib/bgRemoval'
+import { useBackgroundRemoval } from '../hooks/useBackgroundRemoval'
 
 interface ImageManagerProps {
   images: SectionImage[]
@@ -15,18 +15,10 @@ export function ImageManager({ images, onChange, max = 6 }: ImageManagerProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [overIdx, setOverIdx] = useState<number | null>(null)
-  const [removingId, setRemovingId] = useState<string | null>(null)
+  const { activeId: removingId, error: bgError, removeBackground } = useBackgroundRemoval()
 
-  const handleRemoveBg = async (id: string, dataUrl: string) => {
-    try {
-      setRemovingId(id)
-      const noBg = await removeBg(dataUrl)
-      update(id, { dataUrl: noBg })
-    } catch (e) {
-      console.error('Failed to remove bg', e)
-    } finally {
-      setRemovingId(null)
-    }
+  const handleRemoveBg = (id: string, dataUrl: string) => {
+    void removeBackground(id, dataUrl, (noBg) => update(id, { dataUrl: noBg }))
   }
 
   const addFile = (file: File | undefined) => {
@@ -75,6 +67,11 @@ export function ImageManager({ images, onChange, max = 6 }: ImageManagerProps) {
         Images de la section{' '}
         <span className="text-[11px] font-normal text-faint">Optionnel · glisser pour réordonner</span>
       </span>
+      {bgError && (
+        <p className="mt-2 text-[12px] text-danger" role="alert">
+          {bgError}
+        </p>
+      )}
       <input
         ref={inputRef}
         type="file"
@@ -153,7 +150,7 @@ export function ImageManager({ images, onChange, max = 6 }: ImageManagerProps) {
                     type="button"
                     title="Détourer l'image (Enlever le fond)"
                     onClick={() => handleRemoveBg(img.id, img.dataUrl)}
-                    disabled={removingId === img.id}
+                    disabled={removingId !== null}
                     className="flex h-7 w-7 items-center justify-center rounded-md text-faint transition-colors duration-150 hover:bg-gold-soft hover:text-gold-deep disabled:opacity-50"
                   >
                     {removingId === img.id ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}

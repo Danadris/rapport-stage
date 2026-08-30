@@ -1,5 +1,5 @@
 import type { Rapport } from '../types'
-import { emptyCouverture } from '../types'
+import { emptyCouverture, emptyEntreprise } from '../types'
 import demoPain from '../assets/demo/pain-levain.jpg'
 import demoEntremets from '../assets/demo/entremets.jpg'
 
@@ -10,18 +10,7 @@ export function createRapport(partial?: Partial<Rapport>): Rapport {
     createdAt: now,
     updatedAt: now,
     couverture: emptyCouverture(),
-    entreprise: {
-      nom: '',
-      ville: '',
-      sourceRecherche: null,
-      organismeAccueil: '',
-      historique: '',
-      secteurActivite: '',
-      missionsValeurs: '',
-      activitesPrincipales: '',
-      equipements: '',
-      technologies: '',
-    },
+    entreprise: emptyEntreprise(),
     sections: {},
     images: {},
     ...partial,

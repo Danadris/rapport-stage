@@ -20,6 +20,9 @@ dump.js
 fix.cjs
 sim.js
 
+# Self-hosted background-removal assets (fetched via scripts/fetch-bg-assets.sh)
+public/bg-removal-data
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

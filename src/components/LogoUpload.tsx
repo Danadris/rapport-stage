@@ -1,7 +1,7 @@
 import { ImagePlus, Trash2, Wand2, Loader2 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { cx } from '../lib/cx'
-import { removeBg } from '../lib/bgRemoval'
+import { useBackgroundRemoval } from '../hooks/useBackgroundRemoval'
 
 interface LogoUploadProps {
   value?: string
@@ -12,10 +12,12 @@ interface LogoUploadProps {
 
 export function LogoUpload({ value, onChange, label, aspect = 'wide' }: LogoUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const [isRemovingBg, setIsRemovingBg] = useState(false)
+  const { activeId, error: bgError, clearError, removeBackground } = useBackgroundRemoval()
+  const isRemovingBg = activeId === 'logo'
 
   const handleFile = (file: File | undefined) => {
     if (!file) return
+    clearError()
     const reader = new FileReader()
     reader.onload = () => {
       if (typeof reader.result === 'string') onChange(reader.result)
@@ -25,15 +27,7 @@ export function LogoUpload({ value, onChange, label, aspect = 'wide' }: LogoUplo
 
   const handleRemoveBg = async () => {
     if (!value) return
-    try {
-      setIsRemovingBg(true)
-      const noBg = await removeBg(value)
-      onChange(noBg)
-    } catch (e) {
-      console.error('Failed to remove bg', e)
-    } finally {
-      setIsRemovingBg(false)
-    }
+    await removeBackground('logo', value, onChange)
   }
 
   return (
@@ -41,6 +35,11 @@ export function LogoUpload({ value, onChange, label, aspect = 'wide' }: LogoUplo
       <span className="text-[13px] font-medium text-ink">
         {label} <span className="text-[11px] font-normal text-faint">Optionnel</span>
       </span>
+      {bgError && (
+        <p className="text-[12px] text-danger" role="alert">
+          {bgError}
+        </p>
+      )}
       <input
         ref={inputRef}
         type="file"
@@ -80,7 +79,10 @@ export function LogoUpload({ value, onChange, label, aspect = 'wide' }: LogoUplo
             <button
               type="button"
               aria-label="Retirer l'image"
-              onClick={() => onChange(undefined)}
+              onClick={() => {
+                clearError()
+                onChange(undefined)
+              }}
               className="rounded-md bg-paper/90 p-1.5 text-muted hover:text-danger"
             >
               <Trash2 size={14} />
