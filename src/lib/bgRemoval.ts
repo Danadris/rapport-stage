@@ -1,5 +1,13 @@
+import { Capacitor } from '@capacitor/core'
+
 let worker: Worker | null = null
 let nextRequestId = 1
+
+type WorkerRequest = {
+  id: number
+  dataUrl: string
+  publicPath?: string
+}
 
 type WorkerResponse = {
   id: number
@@ -57,6 +65,11 @@ function getWorker(): Worker {
   return worker
 }
 
+function getBgRemovalPublicPath(): string | undefined {
+  if (Capacitor.getPlatform() !== 'android') return undefined
+  return new URL('/bg-removal-data/dist/', window.location.origin).toString()
+}
+
 export function removeBg(dataUrl: string): Promise<string> {
   if (!isBgRemovalSupported()) {
     return Promise.reject(new Error(BG_REMOVAL_UNSUPPORTED_MESSAGE))
@@ -67,7 +80,11 @@ export function removeBg(dataUrl: string): Promise<string> {
     pending.set(id, { resolve, reject })
 
     try {
-      getWorker().postMessage({ id, dataUrl })
+      getWorker().postMessage({
+        id,
+        dataUrl,
+        publicPath: getBgRemovalPublicPath(),
+      } satisfies WorkerRequest)
     } catch (error) {
       pending.delete(id)
       reject(error instanceof Error ? error : new Error(String(error)))
