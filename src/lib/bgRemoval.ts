@@ -5,7 +5,7 @@ let nextRequestId = 1
 
 type WorkerRequest = {
   id: number
-  dataUrl: string
+  source: string
   publicPath?: string
 }
 
@@ -82,7 +82,7 @@ export function removeBg(dataUrl: string): Promise<string> {
     try {
       getWorker().postMessage({
         id,
-        dataUrl,
+        source: dataUrl,
         publicPath: getBgRemovalPublicPath(),
       } satisfies WorkerRequest)
     } catch (error) {

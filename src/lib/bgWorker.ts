@@ -4,7 +4,7 @@ const ctx = self as any
 
 type WorkerRequest = {
   id: number
-  dataUrl: string
+  source: string
   publicPath?: string
 }
 
@@ -26,12 +26,24 @@ async function assertSelfHostedAssets(publicPath: string) {
   }
 }
 
+async function loadImageSource(source: string): Promise<Blob> {
+  const response = await fetch(source)
+  const contentType = response.headers.get('content-type') ?? ''
+
+  if (!response.ok || contentType.includes('text/html')) {
+    throw new Error("L'image à détourer est introuvable ou n'est pas servie comme image.")
+  }
+
+  return response.blob()
+}
+
 ctx.onmessage = async (e: MessageEvent<WorkerRequest>) => {
-  const { id, dataUrl, publicPath } = e.data
+  const { id, source, publicPath } = e.data
 
   try {
     if (publicPath) await assertSelfHostedAssets(publicPath)
-    const blob = await removeBackground(dataUrl, {
+    const image = await loadImageSource(source)
+    const blob = await removeBackground(image, {
       ...(publicPath ? { publicPath } : {}),
       model: 'isnet_quint8',
       device: 'cpu',
