@@ -2,18 +2,18 @@ import { ArrowRight, FileText, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { progressOf } from '../data/sections'
 import { createRapport } from '../lib/demo'
-import { loadRapports, persistRapport, removeRapport } from '../lib/storage'
-import type { Rapport, WizardStep } from '../types'
+import { persistRapport, removeRapport, loadRapports } from '../lib/storage'
+import { loadAllMeta, deleteMeta, deleteReportData, deleteImagesByReportId, persistReport as persistReportV3 } from '../lib/storageV3'
+import type { ReportMeta, WizardStep } from '../types'
 import { useEffect, useState } from 'react'
 import { Badge, Button, Eyebrow, SkeletonRow } from '../components/ui'
 import { PlanPickerModal } from '../components/PlanPickerModal'
 
-function DraftRow({ rapport, onOpen, onDelete }: { rapport: Rapport; onOpen: () => void; onDelete: () => void }) {
+function DraftRow({ meta, onOpen, onDelete }: { meta: ReportMeta; onOpen: () => void; onDelete: () => void }) {
   const [confirming, setConfirming] = useState(false)
-  const { ratio } = progressOf(rapport)
-  const pct = Math.round(ratio * 100)
-  const titre = rapport.entreprise.nom || 'Rapport sans titre'
-  const date = new Date(rapport.updatedAt).toLocaleDateString('fr-FR', {
+  const pct = meta.progressTotal > 0 ? Math.round((meta.progressDone / meta.progressTotal) * 100) : 0
+  const titre = meta.companyName || 'Rapport sans titre'
+  const date = new Date(meta.updatedAt).toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'short',
     hour: '2-digit',
@@ -29,10 +29,10 @@ function DraftRow({ rapport, onOpen, onDelete }: { rapport: Rapport; onOpen: () 
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
             <span className="truncate text-sm font-medium text-ink">{titre}</span>
-            {rapport.entreprise.sourceRecherche === 'ia' && <Badge>Recherché</Badge>}
+            {meta.sourceRecherche === 'ia' && <Badge>Recherché</Badge>}
           </span>
           <span className="mt-0.5 block truncate text-xs text-faint">
-            {[rapport.couverture.nomStagiaire || 'Stagiaire', `Période ${rapport.couverture.periodeNumero || '?'}`, date].join(' · ')}
+            {[meta.studentName || 'Stagiaire', `Période ${meta.periodeNumero || '?'}`, date].join(' · ')}
           </span>
         </span>
         <span className="hidden items-center gap-2 sm:flex">
@@ -66,19 +66,45 @@ function DraftRow({ rapport, onOpen, onDelete }: { rapport: Rapport; onOpen: () 
 
 export function HomePage() {
   const navigate = useNavigate()
-  const [rapports, setRapports] = useState<Rapport[] | null>(null)
+  const [metas, setMetas] = useState<ReportMeta[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [showPlanPicker, setShowPlanPicker] = useState(false)
 
+  const fetchMetas = async (): Promise<ReportMeta[]> => {
+    // Try V3 first. If empty, fall back to V1 and build meta on the fly.
+    let list = await loadAllMeta()
+    if (list.length === 0) {
+      // V3 not populated yet (migration may still be running).
+      // Fall back to V1 so the user always sees their data.
+      const v1 = await loadRapports()
+      list = v1.map((r): ReportMeta => ({
+        id: r.id,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+        studentName: r.couverture.nomStagiaire || '',
+        companyName: r.entreprise.nom || '',
+        periodeNumero: r.couverture.periodeNumero || '',
+        sourceRecherche: r.entreprise.sourceRecherche ?? null,
+        progressDone: progressOf(r, r.customSteps).done,
+        progressTotal: progressOf(r, r.customSteps).total,
+      }))
+    }
+    return list
+  }
+
+  const refresh = async () => {
+    const list = await fetchMetas()
+    setMetas(list)
+  }
+
   useEffect(() => {
     let alive = true
-    loadRapports()
-      .then((list) => {
-        if (alive) setRapports(list)
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
+    void fetchMetas().then((list) => {
+      if (alive) {
+        setMetas(list)
+        setLoading(false)
+      }
+    })
     return () => {
       alive = false
     }
@@ -87,11 +113,56 @@ export function HomePage() {
   const handleNew = async (customSteps?: WizardStep[]) => {
     setShowPlanPicker(false)
     const rapport = createRapport({ customSteps })
+    // V1 save (primary)
     await persistRapport(rapport)
+    // V3 dual-write
+    try {
+      const progress = progressOf(rapport, rapport.customSteps)
+      await persistReportV3(
+        {
+          id: rapport.id,
+          couverture: rapport.couverture,
+          entreprise: rapport.entreprise,
+          sections: rapport.sections,
+          sectionsGenerated: rapport.sectionsGenerated,
+          style: rapport.style,
+          pageBreaks: rapport.pageBreaks,
+          customSteps: rapport.customSteps,
+          images: {},
+        },
+        {
+          id: rapport.id,
+          createdAt: rapport.createdAt,
+          updatedAt: rapport.updatedAt,
+          studentName: rapport.couverture.nomStagiaire || '',
+          companyName: rapport.entreprise.nom || '',
+          periodeNumero: rapport.couverture.periodeNumero || '',
+          sourceRecherche: rapport.entreprise.sourceRecherche ?? null,
+          progressDone: progress.done,
+          progressTotal: progress.total,
+        },
+      )
+    } catch {
+      // V3 failure is non-critical during dual-write phase
+    }
     navigate(`/rapport/${rapport.id}`)
   }
 
-  const drafts = rapports ?? []
+  const handleDelete = async (id: string) => {
+    // Delete from V1
+    await removeRapport(id)
+    // Delete from V3 (if migrated)
+    try {
+      await deleteImagesByReportId(id)
+      await deleteReportData(id)
+      await deleteMeta(id)
+    } catch {
+      // V3 may not have this report yet, that's fine
+    }
+    await refresh()
+  }
+
+  const drafts = metas ?? []
 
   return (
     <div className="mx-auto max-w-3xl px-5 pb-20">
@@ -155,15 +226,12 @@ export function HomePage() {
           </div>
         ) : (
           <div className="rounded-xl border border-line bg-paper/60">
-            {drafts.map((r) => (
+            {drafts.map((m) => (
               <DraftRow
-                key={r.id}
-                rapport={r}
-                onOpen={() => navigate(`/rapport/${r.id}`)}
-                onDelete={async () => {
-                  await removeRapport(r.id)
-                  setRapports(await loadRapports())
-                }}
+                key={m.id}
+                meta={m}
+                onOpen={() => navigate(`/rapport/${m.id}`)}
+                onDelete={() => handleDelete(m.id)}
               />
             ))}
           </div>

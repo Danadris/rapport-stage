@@ -98,6 +98,8 @@ export interface ReportMeta {
   updatedAt: number
   studentName: string
   companyName: string
+  periodeNumero: string
+  sourceRecherche: 'ia' | 'manuel' | null
   progressDone: number
   progressTotal: number
 }

@@ -439,6 +439,8 @@ async function migrateOneReport(rapport: Rapport): Promise<void> {
     updatedAt: rapport.updatedAt,
     studentName: rapport.couverture.nomStagiaire || '',
     companyName: rapport.entreprise.nom || '',
+    periodeNumero: rapport.couverture.periodeNumero || '',
+    sourceRecherche: rapport.entreprise.sourceRecherche ?? null,
     progressDone: progress.done,
     progressTotal: progress.total,
   }

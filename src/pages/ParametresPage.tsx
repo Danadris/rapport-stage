@@ -1,6 +1,7 @@
 import { AlertCircle, CheckCircle2, Download, KeyRound, Monitor, Moon, Palette, Sun, Upload } from 'lucide-react'
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { createBackup, importBackup, loadSettings, saveSettings } from '../lib/storage'
+import { createBackupV3, importBackupV3 } from '../lib/backupV3'
 import { applyTheme, loadTheme, saveTheme, THEME_PRESETS } from '../lib/themes'
 import { loadDarkPref, saveDarkPref, type DarkPref } from '../lib/darkMode'
 import { Badge, Button, Eyebrow, Field, Input } from '../components/ui'
@@ -60,8 +61,13 @@ export function ParametresPage() {
     setExportingBackup(true)
     setBackupStatus(null)
     try {
-      const backup = await createBackup()
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+      let backupPayload: any = await createBackupV3()
+      // If V3 has no reports yet, fall back to V1
+      if (backupPayload.reports.length === 0) {
+        backupPayload = await createBackup()
+      }
+
+      const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
@@ -70,7 +76,9 @@ export function ParametresPage() {
       link.click()
       link.remove()
       URL.revokeObjectURL(url)
-      setBackupStatus({ tone: 'success', text: `${backup.rapports.length} rapport(s) exporté(s).` })
+
+      const reportCount = backupPayload.reports?.length ?? backupPayload.rapports?.length ?? 0
+      setBackupStatus({ tone: 'success', text: `${reportCount} rapport(s) exporté(s) avec succès.` })
     } catch {
       setBackupStatus({ tone: 'error', text: "L'export de la sauvegarde a échoué." })
     } finally {
@@ -86,7 +94,15 @@ export function ParametresPage() {
     setImportingBackup(true)
     setBackupStatus(null)
     try {
-      const result = await importBackup(await file.text())
+      const text = await file.text()
+      let result: { imported: number; total: number }
+      try {
+        result = await importBackupV3(text)
+      } catch {
+        // Fallback to legacy V1 import
+        result = await importBackup(text)
+      }
+
       setBackupStatus({
         tone: 'success',
         text: `${result.imported} rapport(s) importé(s). Total local : ${result.total}.`,

@@ -9,7 +9,9 @@ import { NotesStep } from '../components/steps/NotesStep'
 import { PreviewA4 } from '../components/PreviewA4'
 import { progressOf, stepById, WIZARD_STEPS } from '../data/sections'
 import { getRapport, persistRapport } from '../lib/storage'
-import type { Couverture, Entreprise, Rapport, SectionImage, RapportStyle } from '../types'
+import { persistReport as persistReportV3 } from '../lib/storageV3'
+import { revokeReportUrls } from '../lib/imageRuntime'
+import type { Couverture, Entreprise, Rapport, SectionImage, RapportStyle, ReportData, ReportMeta } from '../types'
 import { Button, Eyebrow, SkeletonRow } from '../components/ui'
 import { cx } from '../lib/cx'
 import { exportToPdf } from '../lib/exportPdf'
@@ -44,16 +46,60 @@ export function WorkspacePage() {
 
   const historyRef = useRef<Rapport[]>([])
   const futureRef = useRef<Rapport[]>([])
+  const imageLiveUrls = useRef(new Map<string, string>())
+  const lastEditTime = useRef(0)
   const loadingRapport = Boolean(id && loadedRapportId !== id)
 
-  const setRapportWithHistory = (updater: Rapport | ((prev: Rapport | null) => Rapport | null)) => {
+  // Strips large Base64 binary strings from history snapshots to prevent RAM leaks
+  const stripBinaryForHistory = (r: Rapport): Rapport => {
+    if (!r.images) return r
+    const lightImages: Record<string, SectionImage[]> = {}
+    for (const [sectionId, imgs] of Object.entries(r.images)) {
+      lightImages[sectionId] = imgs.map((img) => {
+        // Cache the live URL so it can be restored on undo/redo
+        if (img.dataUrl) imageLiveUrls.current.set(img.id, img.dataUrl)
+        return {
+          ...img,
+          dataUrl: img.dataUrl.startsWith('data:') ? '' : img.dataUrl,
+        }
+      })
+    }
+    return { ...r, images: lightImages }
+  }
+
+  // Restores live image URLs into a snapshot retrieved from undo/redo
+  const restoreLiveImages = (r: Rapport): Rapport => {
+    if (!r.images) return r
+    const restoredImages: Record<string, SectionImage[]> = {}
+    for (const [sectionId, imgs] of Object.entries(r.images)) {
+      restoredImages[sectionId] = imgs.map((img) => {
+        if (!img.dataUrl && imageLiveUrls.current.has(img.id)) {
+          return { ...img, dataUrl: imageLiveUrls.current.get(img.id)! }
+        }
+        return img
+      })
+    }
+    return { ...r, images: restoredImages }
+  }
+
+  const setRapportWithHistory = (
+    updater: Rapport | ((prev: Rapport | null) => Rapport | null),
+    options?: { isTextKeystroke?: boolean }
+  ) => {
     setRapport((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater
       if (prev && next && prev !== next) {
-        historyRef.current = [...historyRef.current.slice(-29), prev]
-        futureRef.current = []
-        setCanUndo(true)
-        setCanRedo(false)
+        const now = Date.now()
+        const isCoalescing = options?.isTextKeystroke && now - lastEditTime.current < 600
+
+        if (!isCoalescing) {
+          // Never duplicate large binary data in history
+          historyRef.current = [...historyRef.current.slice(-49), stripBinaryForHistory(prev)]
+          futureRef.current = []
+          setCanUndo(true)
+          setCanRedo(false)
+        }
+        lastEditTime.current = now
         setSaveStatus('saving')
       }
       return next
@@ -85,32 +131,34 @@ export function WorkspacePage() {
 
     return () => {
       cancelled = true
+      // Revoke active Object URLs when leaving workspace to prevent memory leaks
+      revokeReportUrls(id)
     }
   }, [id])
 
   const undo = () => {
     if (historyRef.current.length === 0) return
     setRapport((prev) => {
-      const previous = historyRef.current[historyRef.current.length - 1]
+      const previousRaw = historyRef.current[historyRef.current.length - 1]
       historyRef.current = historyRef.current.slice(0, -1)
-      if (prev) futureRef.current = [prev, ...futureRef.current]
+      if (prev) futureRef.current = [stripBinaryForHistory(prev), ...futureRef.current]
       setCanUndo(historyRef.current.length > 0)
       setCanRedo(true)
       setSaveStatus('saving')
-      return previous
+      return restoreLiveImages(previousRaw)
     })
   }
 
   const redo = () => {
     if (futureRef.current.length === 0) return
     setRapport((prev) => {
-      const next = futureRef.current[0]
+      const nextRaw = futureRef.current[0]
       futureRef.current = futureRef.current.slice(1)
-      if (prev) historyRef.current = [...historyRef.current, prev]
+      if (prev) historyRef.current = [...historyRef.current, stripBinaryForHistory(prev)]
       setCanUndo(true)
       setCanRedo(futureRef.current.length > 0)
       setSaveStatus('saving')
-      return next
+      return restoreLiveImages(nextRaw)
     })
   }
 
@@ -128,6 +176,7 @@ export function WorkspacePage() {
     window.clearTimeout(saveTimer.current)
     const seq = ++saveSeq.current
     saveTimer.current = window.setTimeout(() => {
+      // V1 save (primary — workspace still loads from V1)
       void persistRapport(rapport)
         .then(() => {
           if (saveSeq.current === seq) setSaveStatus('saved')
@@ -135,6 +184,40 @@ export function WorkspacePage() {
         .catch(() => {
           if (saveSeq.current === seq) setSaveStatus('error')
         })
+
+      // V3 dual-write (fire-and-forget, keeps V3 stores in sync)
+      try {
+        const steps = rapport.customSteps ?? WIZARD_STEPS
+        const progress = progressOf(rapport, steps)
+        const meta: ReportMeta = {
+          id: rapport.id,
+          createdAt: rapport.createdAt,
+          updatedAt: rapport.updatedAt,
+          studentName: rapport.couverture.nomStagiaire || '',
+          companyName: rapport.entreprise.nom || '',
+          periodeNumero: rapport.couverture.periodeNumero || '',
+          sourceRecherche: rapport.entreprise.sourceRecherche ?? null,
+          progressDone: progress.done,
+          progressTotal: progress.total,
+        }
+        const data: ReportData = {
+          id: rapport.id,
+          couverture: rapport.couverture,
+          entreprise: rapport.entreprise,
+          sections: rapport.sections,
+          sectionsGenerated: rapport.sectionsGenerated,
+          style: rapport.style,
+          pageBreaks: rapport.pageBreaks,
+          customSteps: rapport.customSteps,
+          // Note: images stay as-is (still Base64 refs) until Phase 3 migration
+          images: rapport.images as any,
+        }
+        void persistReportV3(data, meta).catch(() => {
+          // V3 write failure is non-critical during dual-write phase
+        })
+      } catch {
+        // Never let V3 errors affect the V1 save path
+      }
     }, 400)
     return () => window.clearTimeout(saveTimer.current)
   }, [rapport, loadingRapport, saveStatus])
@@ -161,10 +244,16 @@ export function WorkspacePage() {
   const { ratio } = progressOf(rapport, activeSteps)
 
   const patchCouverture = (patch: Partial<Couverture>) =>
-    setRapportWithHistory((r) => (r ? { ...r, couverture: { ...r.couverture, ...patch }, updatedAt: Date.now() } : r))
+    setRapportWithHistory(
+      (r) => (r ? { ...r, couverture: { ...r.couverture, ...patch }, updatedAt: Date.now() } : r),
+      { isTextKeystroke: true },
+    )
 
   const patchEntreprise = (patch: Partial<Entreprise>) =>
-    setRapportWithHistory((r) => (r ? { ...r, entreprise: { ...r.entreprise, ...patch }, updatedAt: Date.now() } : r))
+    setRapportWithHistory(
+      (r) => (r ? { ...r, entreprise: { ...r.entreprise, ...patch }, updatedAt: Date.now() } : r),
+      { isTextKeystroke: true },
+    )
 
   const patchStyle = (patch: Partial<RapportStyle>) =>
     setRapportWithHistory((r) =>
@@ -185,17 +274,19 @@ export function WorkspacePage() {
     )
 
   const setNote = (fieldId: string, value: string) =>
-    setRapportWithHistory((r) =>
-      r
-        ? {
-            ...r,
-            sections: {
-              ...r.sections,
-              [step.id]: { ...(r.sections[step.id] ?? {}), [fieldId]: value },
-            },
-            updatedAt: Date.now(),
-          }
-        : r,
+    setRapportWithHistory(
+      (r) =>
+        r
+          ? {
+              ...r,
+              sections: {
+                ...r.sections,
+                [step.id]: { ...(r.sections[step.id] ?? {}), [fieldId]: value },
+              },
+              updatedAt: Date.now(),
+            }
+          : r,
+      { isTextKeystroke: true },
     )
 
   const setGeneratedNote = (fieldId: string, value: string) =>
