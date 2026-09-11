@@ -257,6 +257,67 @@ export function WorkspacePage() {
     })
   }
 
+  const handleRenameStep = (stepId: string, newTitle: string) => {
+    if (!newTitle.trim()) return
+    setRapportWithHistory(r => {
+      if (!r || !r.customSteps) return r
+      const updated = r.customSteps.map(s => s.id === stepId ? { 
+        ...s, 
+        titre: newTitle,
+      } : s)
+      return { ...r, customSteps: updated, updatedAt: Date.now() }
+    })
+  }
+
+  const handleAddSubSection = (stepId: string) => {
+    setRapportWithHistory(r => {
+      if (!r || !r.customSteps) return r
+      const updated = r.customSteps.map(s => {
+        if (s.id !== stepId) return s
+        const newFieldId = crypto.randomUUID()
+        return {
+          ...s,
+          fields: [
+            ...s.fields,
+            {
+              id: newFieldId,
+              label: 'Nouveau sous-titre',
+              placeholder: 'Vos notes pour cette section…',
+              examples: [],
+            }
+          ]
+        }
+      })
+      return { ...r, customSteps: updated, updatedAt: Date.now() }
+    })
+  }
+
+  const handleDeleteSubSection = (stepId: string, fieldId: string) => {
+    setRapportWithHistory(r => {
+      if (!r || !r.customSteps) return r
+      const updated = r.customSteps.map(s => {
+        if (s.id !== stepId) return s
+        return { ...s, fields: s.fields.filter(f => f.id !== fieldId) }
+      })
+      return { ...r, customSteps: updated, updatedAt: Date.now() }
+    })
+  }
+
+  const handleRenameSubSection = (stepId: string, fieldId: string, newLabel: string) => {
+    if (!newLabel.trim()) return
+    setRapportWithHistory(r => {
+      if (!r || !r.customSteps) return r
+      const updated = r.customSteps.map(s => {
+        if (s.id !== stepId) return s
+        return {
+          ...s,
+          fields: s.fields.map(f => f.id === fieldId ? { ...f, label: newLabel } : f)
+        }
+      })
+      return { ...r, customSteps: updated, updatedAt: Date.now() }
+    })
+  }
+
   const setImages = (sectionId: string, imgs: SectionImage[]) =>
     setRapportWithHistory((r) =>
       r ? { ...r, images: { ...(r.images ?? {}), [sectionId]: imgs }, updatedAt: Date.now() } : r,
@@ -394,7 +455,16 @@ export function WorkspacePage() {
               <div className="min-w-0 flex items-center gap-2">
                 <div>
                   <span className="block font-mono text-[10px] tracking-widest text-faint">{step.numero} / {activeSteps.length}</span>
-                  <h1 className="truncate text-[14px] sm:text-[15px] font-semibold text-ink">{step.titre}</h1>
+                  {step.id.startsWith('custom-') ? (
+                    <input
+                      type="text"
+                      value={step.titre}
+                      onChange={(e) => handleRenameStep(step.id, e.target.value)}
+                      className="truncate text-[14px] sm:text-[15px] font-semibold text-ink bg-transparent focus:outline-none focus:border-b focus:border-gold border-b border-transparent p-0 w-full"
+                    />
+                  ) : (
+                    <h1 className="truncate text-[14px] sm:text-[15px] font-semibold text-ink">{step.titre}</h1>
+                  )}
                 </div>
                 <span className={cx('mt-3 hidden text-[10px] sm:inline', saveStatus === 'error' ? 'text-danger' : 'text-faint')}>
                   {saveStatus === 'saving' ? 'Enregistrement...' : saveStatus === 'error' ? "Erreur d'enregistrement" : 'Enregistré'}
@@ -565,6 +635,10 @@ export function WorkspacePage() {
                   onGenerate={setGeneratedNote}
                   images={rapport.images?.[step.id] ?? []}
                   onImagesChange={(imgs) => setImages(step.id, imgs)}
+                  isCustom={!!rapport.customSteps && step.id.startsWith('custom-')}
+                  onAddSubSection={() => handleAddSubSection(step.id)}
+                  onDeleteSubSection={(fieldId) => handleDeleteSubSection(step.id, fieldId)}
+                  onRenameSubSection={(fieldId, newTitle) => handleRenameSubSection(step.id, fieldId, newTitle)}
                 />
               )}
               {step.kind !== 'couverture' && step.id !== 'remerciements' && step.id !== 'sommaire' && (

@@ -42,6 +42,34 @@ function note(rapport: Rapport, stepId: string, fieldId: string): string {
 export function buildReportParts(rapport: Rapport): ReportPart[] {
   const e = rapport.entreprise
 
+  if (rapport.customSteps) {
+    const parts: ReportPart[] = []
+    let currentPartNumber = 1
+
+    for (const step of rapport.customSteps) {
+      if (step.kind === 'couverture' || step.kind === 'entreprise') continue
+
+      if (step.kind === 'notes') {
+        const sousSections = step.fields.map(f => ({
+          titre: f.label,
+          texte: note(rapport, step.id, f.id),
+          editPath: { source: 'section' as const, field: `${step.id}:${f.id}` }
+        }))
+
+        // If there is only one field and its label is empty or matches the step title, 
+        // we could just render it as paragraphs. But for simplicity and consistency with subtitles,
+        // we'll always use sousSections.
+        parts.push({
+          key: step.id,
+          numero: currentPartNumber++,
+          titre: step.titre,
+          sousSections,
+        })
+      }
+    }
+    return parts
+  }
+
   const remerciements = [note(rapport, 'remerciements', 'personnes'), note(rapport, 'remerciements', 'raisons')]
     .filter(Boolean)
     .join(' ')
@@ -147,14 +175,9 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
 }
 
 export function buildSommaireEntries(parts: ReportPart[], numbers: Record<string, number>): SommaireEntry[] {
-  const [remerciements, ...mainParts] = parts
   const entries: SommaireEntry[] = []
 
-  if (remerciements) {
-    entries.push({ label: 'Remerciements', page: numbers[remerciements.key] || undefined })
-  }
-
-  for (const part of mainParts) {
+  for (const part of parts) {
     entries.push({
       label: part.numero !== null ? `${part.numero}. ${part.titre}` : part.titre,
       page: numbers[part.key] || undefined,

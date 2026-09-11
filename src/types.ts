@@ -90,6 +90,53 @@ export interface Rapport {
   customSteps?: WizardStep[]
 }
 
+// --- V3.1 Architecture Types ---
+
+export interface ReportMeta {
+  id: string
+  createdAt: number
+  updatedAt: number
+  studentName: string
+  companyName: string
+  progressDone: number
+  progressTotal: number
+}
+
+export interface ImageReference {
+  id: string
+  imageId: string // References StoredImage.id
+  side: 'left' | 'right' | 'center'
+  size: 'S' | 'M' | 'L'
+  caption?: string
+  positioning?: 'flow' | 'free'
+  x?: number
+  y?: number
+  blockIndex?: number
+}
+
+export interface ReportData {
+  id: string
+  couverture: Couverture
+  entreprise: Entreprise
+  sections: Sections
+  sectionsGenerated?: Sections
+  style?: RapportStyle
+  pageBreaks?: Record<string, boolean>
+  customSteps?: WizardStep[]
+  images?: Record<string, ImageReference[]> // No Base64 data here!
+}
+
+export interface StoredImage {
+  id: string          // Primary Key
+  reportId: string    // Indexed for cascade deletes
+  blob: Blob          // Raw binary data
+  mimeType: string
+  width: number
+  height: number
+  size: number
+  createdAt: number
+}
+
 export interface Settings {
   geminiKey: string
   geminiModel?: string

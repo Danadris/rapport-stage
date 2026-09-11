@@ -16,6 +16,10 @@ interface Props {
   onGenerate: (fieldId: string, value: string) => void
   images: SectionImage[]
   onImagesChange: (images: SectionImage[]) => void
+  isCustom?: boolean
+  onAddSubSection?: () => void
+  onDeleteSubSection?: (fieldId: string) => void
+  onRenameSubSection?: (fieldId: string, newLabel: string) => void
 }
 
 function Examples({ examples, onPick }: { examples: string[]; onPick: (text: string) => void }) {
@@ -60,9 +64,12 @@ interface FieldBoxProps {
   generated: string
   onChange: (fieldId: string, value: string) => void
   onGenerate: (fieldId: string, value: string) => void
+  isCustom?: boolean
+  onRename?: (newLabel: string) => void
+  onDelete?: () => void
 }
 
-function FieldBox({ f, stepTitle, current, generated, onChange, onGenerate }: FieldBoxProps) {
+function FieldBox({ f, stepTitle, current, generated, onChange, onGenerate, isCustom, onRename, onDelete }: FieldBoxProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
@@ -81,22 +88,55 @@ function FieldBox({ f, stepTitle, current, generated, onChange, onGenerate }: Fi
   }
 
   return (
-    <div key={f.id} className="space-y-3">
+    <div key={f.id} className="space-y-3 relative group/field">
       <div>
-        <Field label={f.label} hint={f.hint} optional={f.hint === 'Optionnel'} htmlFor={`f-${f.id}`}>
-          <Textarea
-            id={`f-${f.id}`}
-            rows={3}
-            counter
-            value={current}
-            onChange={(e) => onChange(f.id, e.target.value)}
-            placeholder={f.placeholder}
+        {isCustom ? (
+          <>
+            <div className="flex items-center gap-2 mb-1.5">
+              <input
+                type="text"
+                value={f.label}
+                onChange={(e) => onRename?.(e.target.value)}
+                className="flex-1 bg-transparent text-[13px] font-medium text-ink focus:outline-none focus:border-b focus:border-gold border-b border-transparent p-0"
+              />
+              {onDelete && (
+                <button
+                  onClick={onDelete}
+                  title="Supprimer ce sous-titre"
+                  className="opacity-0 group-hover/field:opacity-100 p-1 text-faint hover:text-danger hover:bg-danger/10 rounded transition-all"
+                >
+                  <AlertCircle size={14} className="hidden" />
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                </button>
+              )}
+            </div>
+            <Textarea
+              id={`f-${f.id}`}
+              rows={3}
+              counter
+              value={current}
+              onChange={(e) => onChange(f.id, e.target.value)}
+              placeholder={f.placeholder}
+            />
+          </>
+        ) : (
+          <Field label={f.label} hint={f.hint} optional={f.hint === 'Optionnel'} htmlFor={`f-${f.id}`}>
+            <Textarea
+              id={`f-${f.id}`}
+              rows={3}
+              counter
+              value={current}
+              onChange={(e) => onChange(f.id, e.target.value)}
+              placeholder={f.placeholder}
+            />
+          </Field>
+        )}
+        {(!isCustom || f.examples?.length > 0) && (
+          <Examples
+            examples={f.examples || []}
+            onPick={(ex) => onChange(f.id, current.trim() === '' ? ex : `${current.trimEnd()} ${ex}`)}
           />
-        </Field>
-        <Examples
-          examples={f.examples}
-          onPick={(ex) => onChange(f.id, current.trim() === '' ? ex : `${current.trimEnd()} ${ex}`)}
-        />
+        )}
       </div>
 
       <div className="rounded-lg border border-line bg-cream p-4">
@@ -131,7 +171,20 @@ function FieldBox({ f, stepTitle, current, generated, onChange, onGenerate }: Fi
   )
 }
 
-export function NotesStep({ stepTitle, fields, values, generatedValues, onChange, onGenerate, images, onImagesChange }: Props) {
+export function NotesStep({ 
+  stepTitle, 
+  fields, 
+  values, 
+  generatedValues, 
+  onChange, 
+  onGenerate, 
+  images, 
+  onImagesChange,
+  isCustom,
+  onAddSubSection,
+  onDeleteSubSection,
+  onRenameSubSection
+}: Props) {
   return (
     <div className="space-y-10">
       {fields.map((f) => (
@@ -143,8 +196,21 @@ export function NotesStep({ stepTitle, fields, values, generatedValues, onChange
           generated={generatedValues[f.id] ?? ''}
           onChange={onChange}
           onGenerate={onGenerate}
+          isCustom={isCustom}
+          onRename={isCustom && onRenameSubSection ? (val) => onRenameSubSection(f.id, val) : undefined}
+          onDelete={isCustom && onDeleteSubSection && fields.length > 1 ? () => onDeleteSubSection(f.id) : undefined}
         />
       ))}
+
+      {isCustom && onAddSubSection && (
+        <div className="flex justify-center pt-2">
+          <Button variant="secondary" size="sm" onClick={onAddSubSection}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Ajouter un sous-titre
+          </Button>
+        </div>
+      )}
+
       <div className="pt-4 border-t border-line">
         <ImageManager images={images} onChange={onImagesChange} />
       </div>
