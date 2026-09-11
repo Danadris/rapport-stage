@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { progressOf } from '../data/sections'
 import { createRapport } from '../lib/demo'
 import { loadRapports, persistRapport, removeRapport } from '../lib/storage'
-import type { Rapport } from '../types'
+import type { Rapport, WizardStep } from '../types'
 import { useEffect, useState } from 'react'
 import { Badge, Button, Eyebrow, SkeletonRow } from '../components/ui'
+import { PlanPickerModal } from '../components/PlanPickerModal'
 
 function DraftRow({ rapport, onOpen, onDelete }: { rapport: Rapport; onOpen: () => void; onDelete: () => void }) {
   const [confirming, setConfirming] = useState(false)
@@ -67,6 +68,7 @@ export function HomePage() {
   const navigate = useNavigate()
   const [rapports, setRapports] = useState<Rapport[] | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showPlanPicker, setShowPlanPicker] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -82,8 +84,9 @@ export function HomePage() {
     }
   }, [])
 
-  const handleNew = async () => {
-    const rapport = createRapport()
+  const handleNew = async (customSteps?: WizardStep[]) => {
+    setShowPlanPicker(false)
+    const rapport = createRapport({ customSteps })
     await persistRapport(rapport)
     navigate(`/rapport/${rapport.id}`)
   }
@@ -92,6 +95,13 @@ export function HomePage() {
 
   return (
     <div className="mx-auto max-w-3xl px-5 pb-20">
+      {showPlanPicker && (
+        <PlanPickerModal
+          onConfirm={handleNew}
+          onClose={() => setShowPlanPicker(false)}
+        />
+      )}
+
       <section className="pt-14 pb-12">
         <Eyebrow>IFMBP Casablanca</Eyebrow>
         <h1 className="mt-4 font-serif text-[30px] leading-tight text-ink">
@@ -103,7 +113,7 @@ export function HomePage() {
           Complétez les étapes, vérifiez l'aperçu A4, exportez en PDF.
         </p>
         <div className="mt-6 flex items-center gap-3">
-          <Button variant="primary" onClick={handleNew}>
+          <Button variant="primary" onClick={() => setShowPlanPicker(true)}>
             <Plus size={15} />
             Nouveau
           </Button>
@@ -138,7 +148,7 @@ export function HomePage() {
             <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-muted">
               Le questionnaire suit le canevas officiel.
             </p>
-            <Button variant="primary" size="sm" className="mt-5" onClick={handleNew}>
+            <Button variant="primary" size="sm" className="mt-5" onClick={() => setShowPlanPicker(true)}>
               <Plus size={14} />
               Créer
             </Button>

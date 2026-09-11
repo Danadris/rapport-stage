@@ -1,17 +1,15 @@
 import { Check } from 'lucide-react'
-import { WIZARD_STEPS } from '../data/sections'
-import type { Rapport } from '../types'
+import type { Rapport, WizardStep } from '../types'
 import { cx } from '../lib/cx'
 
 interface StepperProps {
   rapport: Rapport
+  steps: WizardStep[]
   currentId: string
   onSelect: (id: string) => void
 }
 
-function stepComplete(rapport: Rapport, stepId: string): boolean {
-  const step = WIZARD_STEPS.find((s) => s.id === stepId)
-  if (!step) return false
+function stepComplete(rapport: Rapport, step: WizardStep): boolean {
   if (step.kind === 'couverture') {
     const c = rapport.couverture
     return [c.nomStagiaire, c.periodeNumero, c.periodeDebut, c.periodeFin, c.objectifStage].every(
@@ -25,17 +23,15 @@ function stepComplete(rapport: Rapport, stepId: string): boolean {
       ? e.historique.trim() !== '' && e.secteurActivite.trim() !== ''
       : e.activitesPrincipales.trim() !== ''
   }
-  const notes = rapport.sections[stepId]
+  const notes = rapport.sections[step.id]
   if (!notes) return false
   return step.fields
     .filter((f) => f.hint !== 'Optionnel')
     .every((f) => (notes[f.id] ?? '').trim() !== '')
 }
 
-function stepProgress(rapport: Rapport, stepId: string): number {
-  const step = WIZARD_STEPS.find((s) => s.id === stepId)
-  if (!step) return 0
-  if (stepComplete(rapport, stepId)) return 100
+function stepProgress(rapport: Rapport, step: WizardStep): number {
+  if (stepComplete(rapport, step)) return 100
   if (step.kind === 'couverture') {
     const c = rapport.couverture
     const filled = [c.nomStagiaire, c.periodeNumero, c.periodeDebut, c.periodeFin, c.objectifStage].filter(v => v.trim() !== '').length
@@ -52,7 +48,7 @@ function stepProgress(rapport: Rapport, stepId: string): number {
     const filled = [e.activitesPrincipales, e.equipements, e.technologies].filter(v => v.trim() !== '').length
     return Math.round((filled / 3) * 100)
   }
-  const notes = rapport.sections[stepId]
+  const notes = rapport.sections[step.id]
   if (!notes) return 0
   const required = step.fields.filter(f => f.hint !== 'Optionnel')
   if (required.length === 0) return 0
@@ -60,15 +56,15 @@ function stepProgress(rapport: Rapport, stepId: string): number {
   return Math.round((filled / required.length) * 100)
 }
 
-export function Stepper({ rapport, currentId, onSelect }: StepperProps) {
-  const currentIndex = WIZARD_STEPS.findIndex((s) => s.id === currentId)
+export function Stepper({ rapport, steps, currentId, onSelect }: StepperProps) {
+  const currentIndex = steps.findIndex((s) => s.id === currentId)
   return (
     <nav aria-label="Sections du rapport" className="py-4">
       <ol className="space-y-0.5">
-        {WIZARD_STEPS.map((step, i) => {
-          const done = stepComplete(rapport, step.id)
+        {steps.map((step, i) => {
+          const done = stepComplete(rapport, step)
           const current = step.id === currentId
-          const reachable = i <= currentIndex || stepComplete(rapport, WIZARD_STEPS[i - 1]?.id ?? '')
+          const reachable = i <= currentIndex || stepComplete(rapport, steps[i - 1] ?? step)
           return (
             <li key={step.id}>
               <button
@@ -102,7 +98,7 @@ export function Stepper({ rapport, currentId, onSelect }: StepperProps) {
                   </span>
                   <span className="block truncate text-[11px] text-faint">{step.sousTitre}</span>
                   {(() => {
-                    const pct = stepProgress(rapport, step.id)
+                    const pct = stepProgress(rapport, step)
                     return pct > 0 && pct < 100 ? (
                       <span className="mt-1 block h-0.5 w-full overflow-hidden rounded-full bg-line">
                         <span className="block h-full rounded-full bg-gold transition-all" style={{ width: `${pct}%` }} />

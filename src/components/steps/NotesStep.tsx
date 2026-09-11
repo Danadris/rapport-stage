@@ -1,6 +1,6 @@
 import { ChevronDown, Lightbulb, Sparkles, AlertCircle } from 'lucide-react'
 import { useState } from 'react'
-import type { NoteField } from '../../data/sections'
+import type { NoteField } from '../../types'
 import type { SectionImage } from '../../types'
 import { Field, Textarea, Button } from '../ui'
 import { ImageManager } from '../ImageManager'

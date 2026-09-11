@@ -43,6 +43,26 @@ export interface SectionImage {
 export type SectionNotes = Record<string, string>
 export type Sections = Record<string, SectionNotes>
 
+export interface NoteField {
+  id: string
+  label: string
+  hint?: string
+  placeholder: string
+  examples: string[]
+}
+
+export type StepKind = 'couverture' | 'entreprise' | 'presentation' | 'activites' | 'notes'
+
+export interface WizardStep {
+  id: string
+  numero: string
+  titre: string
+  sousTitre: string
+  consigne: string
+  kind: StepKind
+  fields: NoteField[]
+}
+
 export interface RapportStyle {
   primaryColor: string
   titleFont: string
@@ -66,6 +86,8 @@ export interface Rapport {
   images?: Record<string, SectionImage[]>
   style?: RapportStyle
   pageBreaks?: Record<string, boolean>
+  /** Custom plan defined by the user. undefined = use official WIZARD_STEPS */
+  customSteps?: WizardStep[]
 }
 
 export interface Settings {

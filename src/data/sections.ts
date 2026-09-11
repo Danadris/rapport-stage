@@ -1,24 +1,4 @@
-import type { Rapport } from '../types'
-
-export type StepKind = 'couverture' | 'entreprise' | 'presentation' | 'activites' | 'notes'
-
-export interface NoteField {
-  id: string
-  label: string
-  hint?: string
-  placeholder: string
-  examples: string[]
-}
-
-export interface WizardStep {
-  id: string
-  numero: string
-  titre: string
-  sousTitre: string
-  consigne: string
-  kind: StepKind
-  fields: NoteField[]
-}
+import type { NoteField, Rapport, WizardStep } from '../types'
 
 const F = (
   id: string,
@@ -304,10 +284,13 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
 ]
 
-export const stepById = (id: string): WizardStep | undefined =>
-  WIZARD_STEPS.find((s) => s.id === id)
+export const stepById = (id: string, steps = WIZARD_STEPS): WizardStep | undefined =>
+  steps.find((s) => s.id === id)
 
-export function progressOf(rapport: Rapport): { done: number; total: number; ratio: number } {
+export function progressOf(
+  rapport: Rapport,
+  steps = WIZARD_STEPS,
+): { done: number; total: number; ratio: number } {
   let total = 0
   let done = 0
   const c = rapport.couverture
@@ -320,7 +303,7 @@ export function progressOf(rapport: Rapport): { done: number; total: number; rat
   const entFields = [e.nom, e.historique, e.secteurActivite]
   total += entFields.length
   done += entFields.filter((v) => v && v.trim() !== '').length
-  for (const step of WIZARD_STEPS) {
+  for (const step of steps) {
     if (step.kind === 'notes') {
       for (const field of step.fields) {
         if (field.hint === 'Optionnel') continue

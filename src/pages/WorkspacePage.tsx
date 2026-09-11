@@ -153,11 +153,12 @@ export function WorkspacePage() {
   }
   if (!rapport) return <Navigate to="/" replace />
 
-  const step = stepById(stepId) ?? WIZARD_STEPS[0]
-  const stepIndex = WIZARD_STEPS.findIndex((s) => s.id === step.id)
-  const prev = WIZARD_STEPS[stepIndex - 1]
-  const next = WIZARD_STEPS[stepIndex + 1]
-  const { ratio } = progressOf(rapport)
+  const activeSteps = rapport.customSteps ?? WIZARD_STEPS
+  const step = stepById(stepId, activeSteps) ?? activeSteps[0]
+  const stepIndex = activeSteps.findIndex((s) => s.id === step.id)
+  const prev = activeSteps[stepIndex - 1]
+  const next = activeSteps[stepIndex + 1]
+  const { ratio } = progressOf(rapport, activeSteps)
 
   const patchCouverture = (patch: Partial<Couverture>) =>
     setRapportWithHistory((r) => (r ? { ...r, couverture: { ...r.couverture, ...patch }, updatedAt: Date.now() } : r))
@@ -325,7 +326,7 @@ export function WorkspacePage() {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto">
-          <Stepper rapport={rapport} currentId={step.id} onSelect={handleSelectStep} />
+          <Stepper rapport={rapport} steps={activeSteps} currentId={step.id} onSelect={handleSelectStep} />
         </div>
       </aside>
 
@@ -340,7 +341,7 @@ export function WorkspacePage() {
               </button>
               <div className="min-w-0 flex items-center gap-2">
                 <div>
-                  <span className="block font-mono text-[10px] tracking-widest text-faint">{step.numero} / {WIZARD_STEPS.length}</span>
+                  <span className="block font-mono text-[10px] tracking-widest text-faint">{step.numero} / {activeSteps.length}</span>
                   <h1 className="truncate text-[14px] sm:text-[15px] font-semibold text-ink">{step.titre}</h1>
                 </div>
                 <span className={cx('mt-3 hidden text-[10px] sm:inline', saveStatus === 'error' ? 'text-danger' : 'text-faint')}>
