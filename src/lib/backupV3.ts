@@ -1,5 +1,6 @@
 import { loadAllMeta, loadReportData, loadImagesByReportId, saveMeta, saveReportData, saveImage } from './storageV3'
-import type { ReportMeta, ReportData, StoredImage } from '../types'
+import { persistRapport } from './storage'
+import type { ReportMeta, ReportData, StoredImage, Rapport } from '../types'
 
 export interface BackupPayloadV3 {
   app: 'rapport-stage'
@@ -118,6 +119,23 @@ export async function importBackupV3(raw: string): Promise<{ imported: number; t
       if (item.meta && item.data) {
         await saveReportData(item.data)
         await saveMeta({ ...item.meta, updatedAt: Date.now() })
+
+        // Also write to V1 (localStorage) so WorkspacePage can load it immediately
+        const v1Rapport: Rapport = {
+          id: item.data.id,
+          createdAt: item.meta.createdAt,
+          updatedAt: Date.now(),
+          couverture: item.data.couverture,
+          entreprise: item.data.entreprise,
+          sections: item.data.sections,
+          sectionsGenerated: item.data.sectionsGenerated,
+          images: item.data.images as Record<string, any[]> | undefined,
+          style: item.data.style,
+          pageBreaks: item.data.pageBreaks,
+          customSteps: item.data.customSteps,
+        }
+        await persistRapport(v1Rapport)
+
         count++
       }
     }
