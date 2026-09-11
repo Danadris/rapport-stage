@@ -1,9 +1,16 @@
 import { ArrowRight, FileText, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { progressOf } from '../data/sections'
 import { createRapport } from '../lib/demo'
 import { persistRapport, removeRapport, loadRapports } from '../lib/storage'
-import { loadAllMeta, deleteMeta, deleteReportData, deleteImagesByReportId, persistReport as persistReportV3 } from '../lib/storageV3'
+import {
+  loadAllMeta,
+  deleteMeta,
+  deleteReportData,
+  deleteImagesByReportId,
+  persistReport as persistReportV3,
+  buildReportMeta,
+  buildReportData,
+} from '../lib/storageV3'
 import type { ReportMeta, WizardStep } from '../types'
 import { useEffect, useState } from 'react'
 import { Badge, Button, Eyebrow, SkeletonRow } from '../components/ui'
@@ -77,17 +84,7 @@ export function HomePage() {
       // V3 not populated yet (migration may still be running).
       // Fall back to V1 so the user always sees their data.
       const v1 = await loadRapports()
-      list = v1.map((r): ReportMeta => ({
-        id: r.id,
-        createdAt: r.createdAt,
-        updatedAt: r.updatedAt,
-        studentName: r.couverture.nomStagiaire || '',
-        companyName: r.entreprise.nom || '',
-        periodeNumero: r.couverture.periodeNumero || '',
-        sourceRecherche: r.entreprise.sourceRecherche ?? null,
-        progressDone: progressOf(r, r.customSteps).done,
-        progressTotal: progressOf(r, r.customSteps).total,
-      }))
+      list = v1.map(buildReportMeta)
     }
     return list
   }
@@ -117,31 +114,7 @@ export function HomePage() {
     await persistRapport(rapport)
     // V3 dual-write
     try {
-      const progress = progressOf(rapport, rapport.customSteps)
-      await persistReportV3(
-        {
-          id: rapport.id,
-          couverture: rapport.couverture,
-          entreprise: rapport.entreprise,
-          sections: rapport.sections,
-          sectionsGenerated: rapport.sectionsGenerated,
-          style: rapport.style,
-          pageBreaks: rapport.pageBreaks,
-          customSteps: rapport.customSteps,
-          images: {},
-        },
-        {
-          id: rapport.id,
-          createdAt: rapport.createdAt,
-          updatedAt: rapport.updatedAt,
-          studentName: rapport.couverture.nomStagiaire || '',
-          companyName: rapport.entreprise.nom || '',
-          periodeNumero: rapport.couverture.periodeNumero || '',
-          sourceRecherche: rapport.entreprise.sourceRecherche ?? null,
-          progressDone: progress.done,
-          progressTotal: progress.total,
-        },
-      )
+      await persistReportV3(buildReportData(rapport), buildReportMeta(rapport))
     } catch {
       // V3 failure is non-critical during dual-write phase
     }

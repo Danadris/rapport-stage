@@ -9,9 +9,10 @@ import { NotesStep } from '../components/steps/NotesStep'
 import { PreviewA4 } from '../components/PreviewA4'
 import { progressOf, stepById, WIZARD_STEPS } from '../data/sections'
 import { getRapport, persistRapport } from '../lib/storage'
-import { persistReport as persistReportV3 } from '../lib/storageV3'
+import { persistReport as persistReportV3, buildReportMeta, buildReportData } from '../lib/storageV3'
 import { revokeReportUrls } from '../lib/imageRuntime'
-import type { Couverture, Entreprise, Rapport, SectionImage, RapportStyle, ReportData, ReportMeta } from '../types'
+import type { Couverture, Entreprise, Rapport, SectionImage, RapportStyle } from '../types'
+import { emptyCouverture } from '../types'
 import { Button, Eyebrow, SkeletonRow } from '../components/ui'
 import { cx } from '../lib/cx'
 import { exportToPdf } from '../lib/exportPdf'
@@ -37,10 +38,17 @@ export function WorkspacePage() {
   const [stepId, setStepId] = useState('couverture')
   const [mode, setMode] = useState<'edition' | 'apercu'>('edition')
   const [zoom, setZoom] = useState(100)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
   const saveTimer = useRef<number | undefined>(undefined)
   const saveSeq = useRef(0)
 
@@ -187,31 +195,8 @@ export function WorkspacePage() {
 
       // V3 dual-write (fire-and-forget, keeps V3 stores in sync)
       try {
-        const steps = rapport.customSteps ?? WIZARD_STEPS
-        const progress = progressOf(rapport, steps)
-        const meta: ReportMeta = {
-          id: rapport.id,
-          createdAt: rapport.createdAt,
-          updatedAt: rapport.updatedAt,
-          studentName: rapport.couverture.nomStagiaire || '',
-          companyName: rapport.entreprise.nom || '',
-          periodeNumero: rapport.couverture.periodeNumero || '',
-          sourceRecherche: rapport.entreprise.sourceRecherche ?? null,
-          progressDone: progress.done,
-          progressTotal: progress.total,
-        }
-        const data: ReportData = {
-          id: rapport.id,
-          couverture: rapport.couverture,
-          entreprise: rapport.entreprise,
-          sections: rapport.sections,
-          sectionsGenerated: rapport.sectionsGenerated,
-          style: rapport.style,
-          pageBreaks: rapport.pageBreaks,
-          customSteps: rapport.customSteps,
-          // Note: images stay as-is (still Base64 refs) until Phase 3 migration
-          images: rapport.images as any,
-        }
+        const meta = buildReportMeta(rapport)
+        const data = buildReportData(rapport, (rapport.images as any) ?? {})
         void persistReportV3(data, meta).catch(() => {
           // V3 write failure is non-critical during dual-write phase
         })
@@ -444,14 +429,46 @@ export function WorkspacePage() {
         const newSectionsGenerated = { ...r.sectionsGenerated }
         if (newSectionsGenerated) delete newSectionsGenerated[step.id]
         const newImages = { ...r.images }
-        if (newImages) delete newImages[step.id]
+        delete newImages[step.id]
+
+        let newCouverture = r.couverture
+        let newEntreprise = r.entreprise
+
+        if (step.kind === 'couverture') {
+          newCouverture = emptyCouverture()
+        } else if (step.kind === 'entreprise') {
+          newEntreprise = {
+            ...newEntreprise,
+            nom: '',
+            ville: '',
+            sourceRecherche: null,
+            logoDataUrl: undefined,
+          }
+        } else if (step.kind === 'presentation') {
+          newEntreprise = {
+            ...newEntreprise,
+            organismeAccueil: '',
+            historique: '',
+            secteurActivite: '',
+            missionsValeurs: '',
+          }
+        } else if (step.kind === 'activites') {
+          newEntreprise = {
+            ...newEntreprise,
+            activitesPrincipales: '',
+            equipements: '',
+            technologies: '',
+          }
+        }
 
         return {
           ...r,
+          couverture: newCouverture,
+          entreprise: newEntreprise,
           sections: newSections,
           sectionsGenerated: newSectionsGenerated,
           images: newImages,
-          updatedAt: Date.now()
+          updatedAt: Date.now(),
         }
       })
     }
@@ -462,14 +479,19 @@ export function WorkspacePage() {
     setIsMobileMenuOpen(false)
     if (mode === 'apercu') {
       setTimeout(() => {
-        const targetId = id === 'entreprise' ? 'presentation' : id
-        const el = document.querySelector(`[data-part="${targetId}"]`)
-        if (el) {
-          // Adjust for the sticky toolbar (top-[6.5rem] is roughly 104px, let's offset by a bit more)
-          const y = el.getBoundingClientRect().top + window.scrollY - 120
-          window.scrollTo({ top: y, behavior: 'smooth' })
+        let targetId = id === 'entreprise' ? 'presentation' : id
+        let candidates = Array.from(document.querySelectorAll<HTMLElement>(`[data-part="${targetId}"]`))
+        if (candidates.length === 0 && id === 'entreprise') {
+          targetId = id
+          candidates = Array.from(document.querySelectorAll<HTMLElement>(`[data-part="${targetId}"]`))
         }
-      }, 10)
+        const el = candidates.find((node) => node.offsetParent !== null) ?? candidates[0]
+        if (el) {
+          // Adjust for the sticky toolbar (top-14 is roughly 56px, plus header is 56px => 112px, offset 120px)
+          const y = el.getBoundingClientRect().top + window.scrollY - 120
+          window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' })
+        }
+      }, 50)
     }
   }
 
@@ -773,17 +795,13 @@ export function WorkspacePage() {
 
             {/* ── Preview ─────────────────────────────────────────── */}
             <div className="px-2 py-6 md:px-4 md:py-10 print:p-0">
-              {/* Mobile: CSS zoom scales the whole content including layout */}
               <div
-                className="md:hidden print:hidden"
-                style={{ zoom: Math.min(1, (window.innerWidth - 16) / 794) }}
-              >
-                <PreviewA4 rapport={rapport} onEdit={handlePreviewEdit} onImagesChange={setImages} />
-              </div>
-              {/* Desktop / Print: transform scale with zoom slider */}
-              <div
-                className="hidden md:block print:!block print:!transform-none"
-                style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
+                className="print:!block print:!transform-none"
+                style={
+                  isMobile
+                    ? { zoom: Math.min(1, (window.innerWidth - 16) / 794) }
+                    : { transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }
+                }
               >
                 <PreviewA4 rapport={rapport} onEdit={handlePreviewEdit} onImagesChange={setImages} />
               </div>

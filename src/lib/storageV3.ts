@@ -419,21 +419,26 @@ async function migrateOneReport(rapport: Rapport): Promise<void> {
   }
 
   // 2. Create ReportData (no binary data)
-  const reportData: ReportData = {
-    id: rapport.id,
-    couverture: rapport.couverture,
-    entreprise: rapport.entreprise,
-    sections: rapport.sections,
-    sectionsGenerated: rapport.sectionsGenerated,
-    style: rapport.style,
-    pageBreaks: rapport.pageBreaks,
-    customSteps: rapport.customSteps,
-    images: newImages,
-  }
+  const reportData = buildReportData(rapport, newImages)
 
   // 3. Create ReportMeta
+  const reportMeta = buildReportMeta(rapport)
+
+  // 4. Save both transactionally
+  const tx = db.transaction(['reportData', 'reportMeta'], 'readwrite')
+  tx.objectStore('reportData').put(reportData)
+  tx.objectStore('reportMeta').put(reportMeta)
+  await tx.done
+
+  console.log(`[Migration] ✓ Report ${rapport.id} migrated successfully`)
+}
+
+/**
+ * Helper to build ReportMeta from a Rapport
+ */
+export function buildReportMeta(rapport: Rapport): ReportMeta {
   const progress = progressOf(rapport, rapport.customSteps)
-  const reportMeta: ReportMeta = {
+  return {
     id: rapport.id,
     createdAt: rapport.createdAt,
     updatedAt: rapport.updatedAt,
@@ -444,12 +449,24 @@ async function migrateOneReport(rapport: Rapport): Promise<void> {
     progressDone: progress.done,
     progressTotal: progress.total,
   }
+}
 
-  // 4. Save both transactionally
-  const tx = db.transaction(['reportData', 'reportMeta'], 'readwrite')
-  tx.objectStore('reportData').put(reportData)
-  tx.objectStore('reportMeta').put(reportMeta)
-  await tx.done
-
-  console.log(`[Migration] ✓ Report ${rapport.id} migrated successfully`)
+/**
+ * Helper to build ReportData from a Rapport
+ */
+export function buildReportData(
+  rapport: Rapport,
+  images: Record<string, any> = {},
+): ReportData {
+  return {
+    id: rapport.id,
+    couverture: rapport.couverture,
+    entreprise: rapport.entreprise,
+    sections: rapport.sections,
+    sectionsGenerated: rapport.sectionsGenerated,
+    style: rapport.style,
+    pageBreaks: rapport.pageBreaks,
+    customSteps: rapport.customSteps,
+    images,
+  }
 }
