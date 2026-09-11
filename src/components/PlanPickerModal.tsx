@@ -84,7 +84,7 @@ export function PlanPickerModal({ onConfirm, onClose }: PlanPickerModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-canvas shadow-xl">
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-cream shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-line px-6 py-4">
           <h2 className="font-serif text-[18px] text-ink">Choisir un plan</h2>
@@ -98,7 +98,7 @@ export function PlanPickerModal({ onConfirm, onClose }: PlanPickerModalProps) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-line px-6 pt-3">
+        <div className="flex gap-1 border-b border-line bg-paper/60 px-6 pt-3">
           <button
             onClick={() => setTab('officiel')}
             className={`flex items-center gap-2 border-b-2 px-3 pb-2.5 text-[13px] font-medium transition-colors ${
@@ -129,11 +129,12 @@ export function PlanPickerModal({ onConfirm, onClose }: PlanPickerModalProps) {
             <p className="mb-3 text-[13px] text-muted">
               Le canevas officiel IFMBP — 12 sections dans l'ordre réglementaire.
             </p>
-            <ol className="space-y-1">
+            <ol className="max-h-64 overflow-y-auto rounded-xl border border-line bg-paper/80 divide-y divide-line overflow-hidden">
               {WIZARD_STEPS.map((step) => (
-                <li key={step.id} className="flex items-center gap-2.5 py-1">
-                  <span className="font-mono text-[11px] text-faint w-6 shrink-0">{step.numero}</span>
-                  <span className="text-[13px] text-ink">{step.titre}</span>
+                <li key={step.id} className="flex items-center gap-3 px-3 py-2">
+                  <span className="font-mono text-[10px] text-faint w-6 shrink-0 text-center">{step.numero}</span>
+                  <span className="text-[13px] text-ink font-medium">{step.titre}</span>
+                  <span className="ml-auto text-[11px] text-faint truncate max-w-[120px]">{step.sousTitre}</span>
                 </li>
               ))}
             </ol>

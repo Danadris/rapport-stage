@@ -1,12 +1,20 @@
-import { Check } from 'lucide-react'
+import { Check, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 import type { Rapport, WizardStep } from '../types'
 import { cx } from '../lib/cx'
+
+/** Steps that are always fixed and cannot be deleted */
+const FIXED_STEP_KINDS = new Set(['couverture', 'entreprise'])
 
 interface StepperProps {
   rapport: Rapport
   steps: WizardStep[]
   currentId: string
   onSelect: (id: string) => void
+  /** If provided, shows a delete button on each deletable custom step */
+  onDeleteStep?: (stepId: string) => void
+  /** If provided, shows an "Add section" button at the bottom */
+  onAddStep?: () => void
 }
 
 function stepComplete(rapport: Rapport, step: WizardStep): boolean {
@@ -56,8 +64,10 @@ function stepProgress(rapport: Rapport, step: WizardStep): number {
   return Math.round((filled / required.length) * 100)
 }
 
-export function Stepper({ rapport, steps, currentId, onSelect }: StepperProps) {
+export function Stepper({ rapport, steps, currentId, onSelect, onDeleteStep, onAddStep }: StepperProps) {
   const currentIndex = steps.findIndex((s) => s.id === currentId)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+
   return (
     <nav aria-label="Sections du rapport" className="py-4">
       <ol className="space-y-0.5">
@@ -65,14 +75,18 @@ export function Stepper({ rapport, steps, currentId, onSelect }: StepperProps) {
           const done = stepComplete(rapport, step)
           const current = step.id === currentId
           const reachable = i <= currentIndex || stepComplete(rapport, steps[i - 1] ?? step)
+          const canDelete = onDeleteStep && !FIXED_STEP_KINDS.has(step.kind)
+          const confirming = confirmingId === step.id
+
           return (
-            <li key={step.id}>
+            <li key={step.id} className="group relative">
               <button
-                onClick={() => onSelect(step.id)}
+                onClick={() => { setConfirmingId(null); onSelect(step.id) }}
                 disabled={!reachable}
                 className={cx(
                   'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors duration-150',
                   current ? 'bg-gold-soft' : reachable ? 'hover:bg-paper' : 'cursor-not-allowed opacity-40',
+                  canDelete ? 'pr-8' : '',
                 )}
               >
                 <span
@@ -87,7 +101,7 @@ export function Stepper({ rapport, steps, currentId, onSelect }: StepperProps) {
                 >
                   {done ? <Check size={11} strokeWidth={3} /> : step.numero}
                 </span>
-                <span className="min-w-0">
+                <span className="min-w-0 flex-1">
                   <span
                     className={cx(
                       'block truncate text-[13px]',
@@ -107,10 +121,53 @@ export function Stepper({ rapport, steps, currentId, onSelect }: StepperProps) {
                   })()}
                 </span>
               </button>
+
+              {/* Delete control — only for deletable custom steps */}
+              {canDelete && (
+                <div className="absolute right-1 top-1/2 -translate-y-1/2">
+                  {confirming ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDeleteStep(step.id); setConfirmingId(null) }}
+                        className="rounded px-1.5 py-0.5 text-[11px] font-medium text-danger hover:bg-danger/10 transition-colors"
+                      >
+                        Oui
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setConfirmingId(null) }}
+                        className="rounded px-1.5 py-0.5 text-[11px] text-faint hover:text-ink transition-colors"
+                      >
+                        Non
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setConfirmingId(step.id) }}
+                      aria-label={`Supprimer ${step.titre}`}
+                      className="rounded p-1 text-faint opacity-0 group-hover:opacity-100 hover:bg-danger/10 hover:text-danger transition-all duration-150"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
+              )}
             </li>
           )
         })}
       </ol>
+
+      {/* Add section button — only for custom plans */}
+      {onAddStep && (
+        <div className="mt-2 px-2">
+          <button
+            onClick={onAddStep}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[12px] text-faint transition-colors hover:bg-paper hover:text-ink"
+          >
+            <Plus size={13} />
+            Ajouter une section
+          </button>
+        </div>
+      )}
     </nav>
   )
 }

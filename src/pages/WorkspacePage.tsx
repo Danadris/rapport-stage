@@ -212,6 +212,51 @@ export function WorkspacePage() {
         : r,
     )
 
+  const handleAddStep = () => {
+    if (!rapport.customSteps) return
+    const id = crypto.randomUUID()
+    const newStep = {
+      id: `custom-${id}`,
+      numero: String(rapport.customSteps.length + 1).padStart(2, '0'),
+      titre: `Nouvelle section`,
+      sousTitre: 'Section personnalisée',
+      consigne: 'Décrivez librement le contenu de cette section.',
+      kind: 'notes' as const,
+      fields: [
+        {
+          id: 'contenu',
+          label: 'Nouvelle section',
+          placeholder: 'Vos notes pour cette section…',
+          examples: [],
+        },
+      ],
+    }
+    setRapportWithHistory((r) => r ? { ...r, customSteps: [...r.customSteps!, newStep], updatedAt: Date.now() } : r)
+    setStepId(newStep.id)
+  }
+
+  const handleDeleteStep = (stepIdToDelete: string) => {
+    if (!rapport.customSteps) return
+    const stepIdx = rapport.customSteps.findIndex(s => s.id === stepIdToDelete)
+    if (stepIdx === -1) return
+    
+    // Redirect if we are deleting the current step
+    if (stepIdToDelete === step.id) {
+       const prevStep = rapport.customSteps[stepIdx - 1]
+       if (prevStep) setStepId(prevStep.id)
+    }
+
+    setRapportWithHistory((r) => {
+      if (!r || !r.customSteps) return r
+      const updatedSteps = r.customSteps.filter(s => s.id !== stepIdToDelete)
+      // Renumber remaining custom steps (skipping first 2 fixed steps)
+      for (let i = 2; i < updatedSteps.length; i++) {
+        updatedSteps[i].numero = String(i + 1).padStart(2, '0')
+      }
+      return { ...r, customSteps: updatedSteps, updatedAt: Date.now() }
+    })
+  }
+
   const setImages = (sectionId: string, imgs: SectionImage[]) =>
     setRapportWithHistory((r) =>
       r ? { ...r, images: { ...(r.images ?? {}), [sectionId]: imgs }, updatedAt: Date.now() } : r,
@@ -326,7 +371,14 @@ export function WorkspacePage() {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto">
-          <Stepper rapport={rapport} steps={activeSteps} currentId={step.id} onSelect={handleSelectStep} />
+          <Stepper 
+            rapport={rapport} 
+            steps={activeSteps} 
+            currentId={step.id} 
+            onSelect={handleSelectStep}
+            onAddStep={rapport.customSteps ? handleAddStep : undefined}
+            onDeleteStep={rapport.customSteps ? handleDeleteStep : undefined}
+          />
         </div>
       </aside>
 
