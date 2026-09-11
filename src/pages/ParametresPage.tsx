@@ -7,7 +7,7 @@ import { Badge, Button, Eyebrow, Field, Input } from '../components/ui'
 import type { Settings } from '../types'
 
 export function ParametresPage() {
-  const [settings, setSettings] = useState<Settings>({ geminiKey: '' })
+  const [settings, setSettings] = useState<Settings>({ geminiKey: '', geminiModel: '' })
   const [settingsLoading, setSettingsLoading] = useState(true)
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [settingsError, setSettingsError] = useState<string | null>(null)
@@ -117,26 +117,47 @@ export function ParametresPage() {
             </div>
             {settings.geminiKey ? <Badge>Configurée</Badge> : <Badge tone="neutral">Non configurée</Badge>}
           </div>
-          <Field
-            label="Clé d'API"
-            hint="Stockée uniquement sur cet appareil"
-            htmlFor="gemini-key"
-          >
-            <Input
-              id="gemini-key"
-              type="password"
-              value={settings.geminiKey}
-              placeholder="AIza…"
-              disabled={settingsLoading || settingsSaving}
-              onChange={(e) => {
-                setSettings({ geminiKey: e.target.value })
-                setSaved(false)
-                setSettingsError(null)
-              }}
-            />
-          </Field>
+          <div className="space-y-4">
+            <Field
+              label="Clé d'API"
+              hint="Stockée uniquement sur cet appareil"
+              htmlFor="gemini-key"
+            >
+              <Input
+                id="gemini-key"
+                type="password"
+                value={settings.geminiKey}
+                placeholder="AIza…"
+                disabled={settingsLoading || settingsSaving}
+                onChange={(e) => {
+                  setSettings({ ...settings, geminiKey: e.target.value })
+                  setSaved(false)
+                  setSettingsError(null)
+                }}
+              />
+            </Field>
+            
+            <Field
+              label="Modèle d'IA"
+              hint="Laissez vide pour le modèle par défaut"
+              htmlFor="gemini-model"
+            >
+              <Input
+                id="gemini-model"
+                type="text"
+                value={settings.geminiModel || ''}
+                placeholder="ex: gemini-3.5-flash-lite"
+                disabled={settingsLoading || settingsSaving}
+                onChange={(e) => {
+                  setSettings({ ...settings, geminiModel: e.target.value })
+                  setSaved(false)
+                  setSettingsError(null)
+                }}
+              />
+            </Field>
+          </div>
           <p className="mt-2 text-xs leading-relaxed text-muted">
-            Optionnelle. Sans clé, l'app utilise le mode local.
+            La clé est optionnelle. Sans clé, l'app utilise le mode local.
           </p>
           <div className="mt-4 flex items-center gap-3">
             <Button variant="primary" size="sm" onClick={enregistrer} loading={settingsSaving} disabled={settingsLoading}>
@@ -148,7 +169,7 @@ export function ParametresPage() {
                 variant="ghost"
                 disabled={settingsLoading || settingsSaving}
                 onClick={() => {
-                  const cleared = { geminiKey: '' }
+                  const cleared = { ...settings, geminiKey: '' }
                   setSettings(cleared)
                   void persistSettings(cleared)
                 }}

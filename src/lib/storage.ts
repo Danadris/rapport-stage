@@ -85,7 +85,7 @@ async function migrateLegacyStorage(): Promise<void> {
 
     const settings = localStorage.getItem(SETTINGS_KEY)
     if (settings !== null) {
-      await idbSet(SETTINGS_KEY, legacyRead<Settings>(SETTINGS_KEY, { geminiKey: '' }))
+      await idbSet(SETTINGS_KEY, legacyRead<Settings>(SETTINGS_KEY, { geminiKey: '', geminiModel: '' }))
     }
 
     await idbSet(MIGRATION_KEY, true)
@@ -212,9 +212,9 @@ export async function importBackup(raw: string): Promise<{ imported: number; tot
 export async function loadSettings(): Promise<Settings> {
   await migrateLegacyStorage()
   try {
-    return (await idbGet<Settings>(SETTINGS_KEY)) ?? { geminiKey: '' }
+    return (await idbGet<Settings>(SETTINGS_KEY)) ?? { geminiKey: '', geminiModel: '' }
   } catch {
-    return legacyRead<Settings>(SETTINGS_KEY, { geminiKey: '' })
+    return legacyRead<Settings>(SETTINGS_KEY, { geminiKey: '', geminiModel: '' })
   }
 }
 

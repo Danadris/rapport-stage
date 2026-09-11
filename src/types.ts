@@ -70,6 +70,7 @@ export interface Rapport {
 
 export interface Settings {
   geminiKey: string
+  geminiModel?: string
 }
 
 export const emptyCouverture = (): Couverture => ({

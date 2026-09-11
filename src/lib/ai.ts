@@ -11,7 +11,11 @@ export interface RechercheResultat {
 async function getClient() {
   const settings = await loadSettings()
   const key = settings.geminiKey.trim()
-  return key ? new GoogleGenAI({ apiKey: key }) : null
+  if (!key) return null
+  return {
+    ai: new GoogleGenAI({ apiKey: key }),
+    model: settings.geminiModel?.trim() || 'gemini-3.5-flash-lite',
+  }
 }
 
 function sentenceCase(text: string): string {
@@ -60,9 +64,9 @@ function generateOfflineParagraph(section: string, field: string, notes: string)
 }
 
 export async function rechercheEntreprise(nom: string, ville: string): Promise<RechercheResultat> {
-  const ai = await getClient()
+  const client = await getClient()
 
-  if (!ai) {
+  if (!client) {
     const res = await rechercheEntrepriseLocale(nom, ville)
     return { ...res, sources: ['Mode sans IA : exemple local à vérifier'] }
   }
@@ -115,8 +119,8 @@ Si l'entreprise est connue, utilise des informations réelles.
 Si l'entreprise n'est pas très connue, génère des informations vraisemblables et professionnelles pour une boulangerie/pâtisserie artisanale qui correspond à ce nom, en utilisant le vocabulaire métier.
 Réponds uniquement en JSON.`
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-3.5-flash-lite',
+  const response = await client.ai.models.generateContent({
+    model: client.model,
     contents: prompt,
     config: {
       responseMimeType: 'application/json',
@@ -133,9 +137,9 @@ Réponds uniquement en JSON.`
 }
 
 export async function genererParagraphe(section: string, field: string, notes: string): Promise<string> {
-  const ai = await getClient()
+  const client = await getClient()
 
-  if (!ai) {
+  if (!client) {
     return generateOfflineParagraph(section, field, notes)
   }
 
@@ -145,8 +149,8 @@ Le ton doit être celui d'un artisan compétent, sérieux mais sans être excess
 Notes de l'apprenti :
 "${notes}"`
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-3.5-flash-lite',
+  const response = await client.ai.models.generateContent({
+    model: client.model,
     contents: prompt,
   })
 
