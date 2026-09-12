@@ -11,7 +11,7 @@ import {
   type ReportPart,
   type SommaireEntry,
 } from '../lib/reportDocument'
-import logo from '../assets/ifmbp-logo.png'
+import logo from '../assets/ifmbp-logo-official.png'
 
 const INSTITUT_FR = 'Instituts de Formation aux Métiers de la Boulangerie et la Pâtisserie'
 const INSTITUT_AR = 'مـعـهـد الـتـكـويـن فـي مهن الخبازة والحلويات بالدار البيضاء'
