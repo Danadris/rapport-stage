@@ -1,4 +1,4 @@
-import type { Entreprise } from '../types'
+import type { Entreprise, OrgNode } from '../types'
 
 export interface RechercheResultat {
   entreprise: Omit<Entreprise, 'nom' | 'ville' | 'logoDataUrl' | 'sourceRecherche'>
@@ -39,4 +39,14 @@ export async function rechercheEntreprise(nom: string, ville: string): Promise<R
     },
     sources: base.sources,
   }
+}
+
+export function genererOrganigrammeOffline(): OrgNode[] {
+  return [
+    { id: '1', name: '—', title: 'Directeur Général' },
+    { id: '2', name: '—', title: 'Responsable de Production', parentId: '1' },
+    { id: '3', name: '—', title: 'Responsable Boutique', parentId: '1' },
+    { id: '4', name: '—', title: 'Boulanger / Pâtissier', parentId: '2' },
+    { id: '5', name: '—', title: 'Vendeur / Conseiller', parentId: '3' },
+  ]
 }
