@@ -5,9 +5,20 @@ export interface ReportEditPath {
   field: string
 }
 
-export interface ReportSubSection {
+export interface ReportSubSubSection {
+  id: string
   titre: string
+  prefix?: string
   texte: string
+  editPath?: ReportEditPath
+}
+
+export interface ReportSubSection {
+  id?: string
+  titre: string
+  numero?: number
+  texte: string
+  items?: ReportSubSubSection[]
   editPath?: ReportEditPath
 }
 
@@ -44,24 +55,39 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
 
   if (rapport.customSteps) {
     const parts: ReportPart[] = []
-    let currentPartNumber = 1
 
     for (const step of rapport.customSteps) {
       if (step.kind === 'couverture' || step.kind === 'entreprise') continue
 
       if (step.kind === 'notes') {
-        const sousSections = step.fields.map(f => ({
-          titre: f.label,
-          texte: note(rapport, step.id, f.id),
-          editPath: { source: 'section' as const, field: `${step.id}:${f.id}` }
-        }))
+        // Level 2 = fields without parentId
+        const level2Fields = step.fields.filter(f => !f.parentId)
 
-        // If there is only one field and its label is empty or matches the step title, 
-        // we could just render it as paragraphs. But for simplicity and consistency with subtitles,
-        // we'll always use sousSections.
+        const sousSections: ReportSubSection[] = level2Fields.map((parent, i) => {
+          // Level 3 = fields whose parentId matches this level-2 field
+          const children = step.fields.filter(f => f.parentId === parent.id)
+
+          const items: ReportSubSubSection[] = children.map((child, ci) => ({
+            id: child.id,
+            titre: child.label,
+            prefix: child.prefix || `${String.fromCharCode(97 + ci)}/`,
+            texte: note(rapport, step.id, child.id),
+            editPath: { source: 'section' as const, field: `${step.id}:${child.id}` },
+          }))
+
+          return {
+            id: parent.id,
+            titre: parent.label,
+            numero: i + 1,
+            texte: note(rapport, step.id, parent.id),
+            items: items.length > 0 ? items : undefined,
+            editPath: { source: 'section' as const, field: `${step.id}:${parent.id}` },
+          }
+        })
+
         parts.push({
           key: step.id,
-          numero: currentPartNumber++,
+          numero: null,       // Level 1 is UNNUMBERED (user requirement)
           titre: step.titre,
           sousSections,
         })
@@ -91,84 +117,84 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
     },
     {
       key: 'introduction',
-      numero: 1,
+      numero: null,
       titre: 'Introduction',
       paragraphes: intro ? toParagraphs(intro) : [],
       editPath: { stepId: 'introduction', fieldIds: ['presentationBreve', 'objectifsIntro'] },
     },
     {
       key: 'presentation',
-      numero: 2,
+      numero: null,
       titre: "Présentation de l'entreprise d'accueil",
       sousSections: [
-        { titre: "Organisme d'accueil", texte: e.organismeAccueil, editPath: { source: 'entreprise', field: 'organismeAccueil' } },
-        { titre: "Historique de l'entreprise", texte: e.historique, editPath: { source: 'entreprise', field: 'historique' } },
-        { titre: "Secteur d'activité", texte: e.secteurActivite, editPath: { source: 'entreprise', field: 'secteurActivite' } },
-        { titre: 'Missions et valeurs', texte: e.missionsValeurs, editPath: { source: 'entreprise', field: 'missionsValeurs' } },
+        { titre: "Organisme d'accueil", numero: 1, texte: e.organismeAccueil, editPath: { source: 'entreprise', field: 'organismeAccueil' } },
+        { titre: "Historique de l'entreprise", numero: 2, texte: e.historique, editPath: { source: 'entreprise', field: 'historique' } },
+        { titre: "Secteur d'activité", numero: 3, texte: e.secteurActivite, editPath: { source: 'entreprise', field: 'secteurActivite' } },
+        { titre: 'Missions et valeurs', numero: 4, texte: e.missionsValeurs, editPath: { source: 'entreprise', field: 'missionsValeurs' } },
       ],
     },
     {
       key: 'activites',
-      numero: 3,
+      numero: null,
       titre: "Les activités et équipements de l'entreprise",
       sousSections: [
-        { titre: 'Activités principales', texte: e.activitesPrincipales, editPath: { source: 'entreprise', field: 'activitesPrincipales' } },
-        { titre: 'Équipements utilisés', texte: e.equipements, editPath: { source: 'entreprise', field: 'equipements' } },
-        { titre: 'Technologies employées', texte: e.technologies, editPath: { source: 'entreprise', field: 'technologies' } },
+        { titre: 'Activités principales', numero: 1, texte: e.activitesPrincipales, editPath: { source: 'entreprise', field: 'activitesPrincipales' } },
+        { titre: 'Équipements utilisés', numero: 2, texte: e.equipements, editPath: { source: 'entreprise', field: 'equipements' } },
+        { titre: 'Technologies employées', numero: 3, texte: e.technologies, editPath: { source: 'entreprise', field: 'technologies' } },
       ],
     },
     {
       key: 'contexte',
-      numero: 4,
+      numero: null,
       titre: 'Contexte du stage',
       paragraphes: toParagraphs(note(rapport, 'contexte', 'rechercheStage')),
       editPath: { stepId: 'contexte', fieldIds: ['rechercheStage'] },
     },
     {
       key: 'objectifs',
-      numero: 5,
+      numero: null,
       titre: 'Objectifs du stage',
       paragraphes: toParagraphs(note(rapport, 'objectifs', 'objectifsFixes')),
       editPath: { stepId: 'objectifs', fieldIds: ['objectifsFixes'] },
     },
     {
       key: 'deroulement',
-      numero: 6,
+      numero: null,
       titre: 'Déroulement du stage',
       sousSections: [
-        { titre: 'Départements ou services visités', texte: note(rapport, 'deroulement', 'departements'), editPath: { source: 'section', field: 'deroulement:departements' } },
-        { titre: 'Tâches confiées', texte: note(rapport, 'deroulement', 'tachesConfiees'), editPath: { source: 'section', field: 'deroulement:tachesConfiees' } },
+        { titre: 'Départements ou services visités', numero: 1, texte: note(rapport, 'deroulement', 'departements'), editPath: { source: 'section', field: 'deroulement:departements' } },
+        { titre: 'Tâches confiées', numero: 2, texte: note(rapport, 'deroulement', 'tachesConfiees'), editPath: { source: 'section', field: 'deroulement:tachesConfiees' } },
       ],
     },
     {
       key: 'taches',
-      numero: 7,
+      numero: null,
       titre: 'Tâches effectuées pendant le stage',
       sousSections: [
-        { titre: 'Détail des missions confiées', texte: note(rapport, 'taches', 'missionsDetaillees'), editPath: { source: 'section', field: 'taches:missionsDetaillees' } },
-        { titre: 'Compétences développées', texte: note(rapport, 'taches', 'competencesDeveloppees'), editPath: { source: 'section', field: 'taches:competencesDeveloppees' } },
-        { titre: 'Problématiques rencontrées', texte: note(rapport, 'taches', 'problematiquesRencontrees'), editPath: { source: 'section', field: 'taches:problematiquesRencontrees' } },
+        { titre: 'Détail des missions confiées', numero: 1, texte: note(rapport, 'taches', 'missionsDetaillees'), editPath: { source: 'section', field: 'taches:missionsDetaillees' } },
+        { titre: 'Compétences développées', numero: 2, texte: note(rapport, 'taches', 'competencesDeveloppees'), editPath: { source: 'section', field: 'taches:competencesDeveloppees' } },
+        { titre: 'Problématiques rencontrées', numero: 3, texte: note(rapport, 'taches', 'problematiquesRencontrees'), editPath: { source: 'section', field: 'taches:problematiquesRencontrees' } },
       ],
     },
     {
       key: 'bilan',
-      numero: 8,
+      numero: null,
       titre: 'Bilan personnel',
       sousSections: [
-        { titre: 'Les compétences acquises', texte: note(rapport, 'bilan', 'competencesAcquises'), editPath: { source: 'section', field: 'bilan:competencesAcquises' } },
-        { titre: 'Les enseignements tirés', texte: note(rapport, 'bilan', 'enseignementsTires'), editPath: { source: 'section', field: 'bilan:enseignementsTires' } },
-        { titre: 'Les points à améliorer', texte: note(rapport, 'bilan', 'pointsAmeliorer'), editPath: { source: 'section', field: 'bilan:pointsAmeliorer' } },
+        { titre: 'Les compétences acquises', numero: 1, texte: note(rapport, 'bilan', 'competencesAcquises'), editPath: { source: 'section', field: 'bilan:competencesAcquises' } },
+        { titre: 'Les enseignements tirés', numero: 2, texte: note(rapport, 'bilan', 'enseignementsTires'), editPath: { source: 'section', field: 'bilan:enseignementsTires' } },
+        { titre: 'Les points à améliorer', numero: 3, texte: note(rapport, 'bilan', 'pointsAmeliorer'), editPath: { source: 'section', field: 'bilan:pointsAmeliorer' } },
       ],
     },
     {
       key: 'conclusion',
-      numero: 9,
+      numero: null,
       titre: 'Conclusion',
       paragraphes: conclusionParas,
       editPath: { stepId: 'conclusion', fieldIds: ['resumeExperiences', 'perspectives'] },
       sousSections: [
-        { titre: 'Annexes', texte: note(rapport, 'conclusion', 'annexes'), editPath: { source: 'section', field: 'conclusion:annexes' } },
-        { titre: 'Bibliographie', texte: note(rapport, 'conclusion', 'bibliographie'), editPath: { source: 'section', field: 'conclusion:bibliographie' } },
+        { titre: 'Annexes', numero: 1, texte: note(rapport, 'conclusion', 'annexes'), editPath: { source: 'section', field: 'conclusion:annexes' } },
+        { titre: 'Bibliographie', numero: 2, texte: note(rapport, 'conclusion', 'bibliographie'), editPath: { source: 'section', field: 'conclusion:bibliographie' } },
       ],
     },
   ]
@@ -178,13 +204,23 @@ export function buildSommaireEntries(parts: ReportPart[], numbers: Record<string
   const entries: SommaireEntry[] = []
 
   for (const part of parts) {
+    // Skip Level 1 entries with empty titles
+    if (!part.titre || !part.titre.trim()) continue
+
     entries.push({
-      label: part.numero !== null ? `${part.numero}. ${part.titre}` : part.titre,
+      label: part.titre,  // Level 1: no number
       page: numbers[part.key] || undefined,
     })
 
     for (const sousSection of part.sousSections ?? []) {
-      entries.push({ label: sousSection.titre, page: numbers[part.key] || undefined, sub: true })
+      // Skip Level 2 entries with empty titles
+      if (!sousSection.titre || !sousSection.titre.trim()) continue
+
+      const label = sousSection.numero !== undefined
+        ? `${sousSection.numero}. ${sousSection.titre}`
+        : sousSection.titre
+
+      entries.push({ label, page: numbers[part.key] || undefined, sub: true })
     }
   }
 

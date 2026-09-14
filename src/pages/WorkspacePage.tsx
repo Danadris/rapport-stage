@@ -380,7 +380,6 @@ export function WorkspacePage() {
   }
 
   const handleRenameSubSection = (stepId: string, fieldId: string, newLabel: string) => {
-    if (!newLabel.trim()) return
     setRapportWithHistory(r => {
       if (!r || !r.customSteps) return r
       const updated = r.customSteps.map(s => {
@@ -393,6 +392,45 @@ export function WorkspacePage() {
       return { ...r, customSteps: updated, updatedAt: Date.now() }
     })
   }
+
+  const handleAddLevel3Item = (stepId: string, parentFieldId: string) => {
+    setRapportWithHistory(r => {
+      if (!r || !r.customSteps) return r
+      const updated = r.customSteps.map(s => {
+        if (s.id !== stepId) return s
+        const children = s.fields.filter(f => f.parentId === parentFieldId)
+        const letter = String.fromCharCode(97 + children.length) // a, b, c...
+        const prefix = `${letter}/`
+        return {
+          ...s,
+          fields: [
+            ...s.fields,
+            {
+              id: crypto.randomUUID(),
+              label: '',
+              placeholder: 'Vos notes pour ce point…',
+              examples: [],
+              parentId: parentFieldId,
+              prefix,
+            }
+          ]
+        }
+      })
+      return { ...r, customSteps: updated, updatedAt: Date.now() }
+    })
+  }
+
+  const handleDeleteLevel3Item = (stepId: string, fieldId: string) => {
+    setRapportWithHistory(r => {
+      if (!r || !r.customSteps) return r
+      const updated = r.customSteps.map(s => {
+        if (s.id !== stepId) return s
+        return { ...s, fields: s.fields.filter(f => f.id !== fieldId) }
+      })
+      return { ...r, customSteps: updated, updatedAt: Date.now() }
+    })
+  }
+
 
   const setImages = (sectionId: string, imgs: SectionImage[]) =>
     setRapportWithHistory((r) =>
@@ -752,6 +790,8 @@ export function WorkspacePage() {
                   onAddSubSection={() => handleAddSubSection(step.id)}
                   onDeleteSubSection={(fieldId) => handleDeleteSubSection(step.id, fieldId)}
                   onRenameSubSection={(fieldId, newTitle) => handleRenameSubSection(step.id, fieldId, newTitle)}
+                  onAddLevel3Item={(parentFieldId) => handleAddLevel3Item(step.id, parentFieldId)}
+                  onDeleteLevel3Item={(fieldId) => handleDeleteLevel3Item(step.id, fieldId)}
                 />
               )}
               {step.kind !== 'couverture' && step.id !== 'remerciements' && step.id !== 'sommaire' && (
@@ -796,11 +836,15 @@ export function WorkspacePage() {
             {/* ── Preview ─────────────────────────────────────────── */}
             <div className="px-2 py-6 md:px-4 md:py-10 print:p-0">
               <div
-                className="print:!block print:!transform-none"
                 style={
                   isMobile
-                    ? { zoom: Math.min(1, (window.innerWidth - 16) / 794) }
-                    : { transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }
+                    ? { '--preview-zoom': Math.min(1, (window.innerWidth - 16) / 794) } as React.CSSProperties
+                    : { '--preview-scale': zoom / 100 } as React.CSSProperties
+                }
+                className={
+                  isMobile
+                    ? "print:!block print:![zoom:1] [zoom:var(--preview-zoom)]"
+                    : "print:!block print:!transform-none [transform:scale(var(--preview-scale))] origin-top"
                 }
               >
                 <PreviewA4 rapport={rapport} onEdit={handlePreviewEdit} onImagesChange={setImages} />

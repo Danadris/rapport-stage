@@ -9,8 +9,10 @@ import {
   formatPeriodeLabel,
   groupReportParts,
   type ReportPart,
+  type ReportSubSubSection,
   type SommaireEntry,
 } from '../lib/reportDocument'
+
 import logo from '../assets/ifmbp-logo-official.png'
 
 const INSTITUT_FR = 'Instituts de Formation aux Métiers de la Boulangerie et la Pâtisserie'
@@ -229,26 +231,31 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
 
   return (
     <div data-part={part.key}>
-      <h2 className="text-center font-bold" style={{ color: BLEU, fontSize: 'var(--doc-title-size)' }}>
-        {part.numero !== null ? `${part.numero}. ${part.titre}` : part.titre}
-      </h2>
+      {/* Level 1: unnumbered — omit entirely if empty */}
+      {part.titre && part.titre.trim() !== '' && (
+        <h2 className="text-center font-bold" style={{ color: BLEU, fontSize: 'var(--doc-title-size)' }}>
+          {part.titre}
+        </h2>
+      )}
       <div className="mt-5">
         {blocks.map((b, bi) => {
           // If blockIndex is undefined, we assume it's attached to the block matching its array index (for backward compatibility)
           const blockImages = images.filter((img) => (img.blockIndex ?? images.indexOf(img)) === bi)
-          
+          const blockItems = (b as any).items as ReportSubSubSection[] | undefined
+
           return (
-            <div 
-              key={bi} 
+            <div
+              key={bi}
               className={bi > 0 ? 'mt-7' : ''}
               onDragOver={(e) => { if (dragState) { e.preventDefault(); setDropOverBlock(bi) } }}
               onDragLeave={() => setDropOverBlock(null)}
               onDrop={(e) => handleDropOnBlock(e, bi)}
               style={dropOverBlock === bi ? { outline: '2px dashed #3b82f6', outlineOffset: '4px', borderRadius: '4px', background: 'rgba(59, 130, 246, 0.03)' } : { padding: '2px 0' }}
             >
-              {b.titre && (
+              {/* Level 2: numbered (1., 2., ...) — omit entirely if empty */}
+              {b.titre && b.titre.trim() !== '' && (
                 <h3 className="font-semibold" style={{ color: BLEU, fontSize: 'var(--doc-subtitle-size)' }}>
-                  {b.titre}
+                  {(b as any).numero !== undefined ? `${(b as any).numero}. ${b.titre}` : b.titre}
                 </h3>
               )}
               <div className="flow-root">
@@ -276,7 +283,7 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                     text={b.texte}
                     placeholder="Cliquez ici pour rédiger..."
                     onSave={onEdit && b.editPath ? (v) => onEdit(b.editPath!.source, b.editPath!.field, v) : undefined}
-                    className={`${b.titre ? 'mt-2.5' : ''} whitespace-pre-wrap`}
+                    className={`${b.titre && b.titre.trim() !== '' ? 'mt-2.5' : ''} whitespace-pre-wrap`}
                     style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}
                   />
                 ) : (
@@ -289,6 +296,44 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                   />
                 )}
               </div>
+
+              {/* Level 3: a/, b/, c/ — omit heading if title empty */}
+              {blockItems && blockItems.length > 0 && (
+                <div className="mt-4 space-y-4">
+                  {blockItems.map((item) => (
+                    <div key={item.id} className="pl-4 border-l-2 border-line/40">
+                      {/* Level 3 heading: "a/ Titre" — omit if titre is empty */}
+                      {item.titre && item.titre.trim() !== '' && (
+                        <h4
+                          className="font-semibold text-ink"
+                          style={{ fontSize: 'var(--doc-body-size)', fontFamily: 'var(--doc-title-font)' }}
+                        >
+                          <span style={{ color: BLEU, marginRight: '0.375rem' }}>{item.prefix || 'a/'}</span>
+                          {item.titre}
+                        </h4>
+                      )}
+                      {/* Level 3 content */}
+                      {item.texte && item.texte.trim() !== '' ? (
+                        <EditableText
+                          text={item.texte}
+                          placeholder="Cliquez ici pour rédiger..."
+                          onSave={onEdit && item.editPath ? (v) => onEdit(item.editPath!.source, item.editPath!.field, v) : undefined}
+                          className={`${item.titre && item.titre.trim() !== '' ? 'mt-1.5' : ''} whitespace-pre-wrap`}
+                          style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}
+                        />
+                      ) : (
+                        <EditableText
+                          text=""
+                          placeholder="Cliquez ici pour rédiger..."
+                          onSave={onEdit && item.editPath ? (v) => onEdit(item.editPath!.source, item.editPath!.field, v) : undefined}
+                          className="mt-1 italic text-neutral-400"
+                          style={{ fontSize: 'var(--doc-body-size)' }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )
         })}

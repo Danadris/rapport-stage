@@ -49,6 +49,8 @@ export interface NoteField {
   hint?: string
   placeholder: string
   examples: string[]
+  parentId?: string  // Present if this is a Level 3 sub-item under a Level 2 field
+  prefix?: string    // e.g. "a/", "b/" — auto-assigned for Level 3 items
 }
 
 export type StepKind = 'couverture' | 'entreprise' | 'presentation' | 'activites' | 'notes'
