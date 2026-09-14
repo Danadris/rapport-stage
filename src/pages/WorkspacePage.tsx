@@ -6,12 +6,13 @@ import { CouvertureStep } from '../components/steps/CouvertureStep'
 import { EntrepriseFieldsStep, type EntFieldDef } from '../components/steps/EntrepriseFieldsStep'
 import { EntrepriseStep } from '../components/steps/EntrepriseStep'
 import { NotesStep } from '../components/steps/NotesStep'
+import { OrganigrammeStep } from '../components/steps/OrganigrammeStep'
 import { PreviewA4 } from '../components/PreviewA4'
 import { progressOf, stepById, WIZARD_STEPS } from '../data/sections'
 import { getRapport, persistRapport } from '../lib/storage'
 import { persistReport as persistReportV3, buildReportMeta, buildReportData } from '../lib/storageV3'
 import { revokeReportUrls } from '../lib/imageRuntime'
-import type { Couverture, Entreprise, Rapport, SectionImage, RapportStyle } from '../types'
+import type { Couverture, Entreprise, Rapport, SectionImage, RapportStyle, Organigramme } from '../types'
 import { emptyCouverture } from '../types'
 import { Button, Eyebrow, SkeletonRow } from '../components/ui'
 import { cx } from '../lib/cx'
@@ -238,6 +239,11 @@ export function WorkspacePage() {
     setRapportWithHistory(
       (r) => (r ? { ...r, entreprise: { ...r.entreprise, ...patch }, updatedAt: Date.now() } : r),
       { isTextKeystroke: true },
+    )
+
+  const patchOrganigramme = (organigramme: Organigramme) =>
+    setRapportWithHistory(
+      (r) => (r ? { ...r, organigramme, updatedAt: Date.now() } : r),
     )
 
   const patchStyle = (patch: Partial<RapportStyle>) =>
@@ -471,6 +477,7 @@ export function WorkspacePage() {
 
         let newCouverture = r.couverture
         let newEntreprise = r.entreprise
+        let newOrganigramme = r.organigramme
 
         if (step.kind === 'couverture') {
           newCouverture = emptyCouverture()
@@ -482,6 +489,8 @@ export function WorkspacePage() {
             sourceRecherche: null,
             logoDataUrl: undefined,
           }
+        } else if (step.kind === 'organigramme') {
+          newOrganigramme = { nodes: [] }
         } else if (step.kind === 'presentation') {
           newEntreprise = {
             ...newEntreprise,
@@ -503,6 +512,7 @@ export function WorkspacePage() {
           ...r,
           couverture: newCouverture,
           entreprise: newEntreprise,
+          organigramme: newOrganigramme,
           sections: newSections,
           sectionsGenerated: newSectionsGenerated,
           images: newImages,
@@ -552,6 +562,13 @@ export function WorkspacePage() {
         for (const v of Object.values(sec)) {
           if (typeof v === 'string') texts.push(v)
         }
+      }
+    }
+    // organigramme
+    if (rapport.organigramme?.nodes) {
+      for (const n of rapport.organigramme.nodes) {
+        if (n.title) texts.push(n.title)
+        if (n.name && n.name !== '—') texts.push(n.name)
       }
     }
     return texts.join(' ').split(/\s+/).filter(Boolean).length
@@ -756,6 +773,13 @@ export function WorkspacePage() {
               )}
               {step.kind === 'entreprise' && (
                 <EntrepriseStep value={rapport.entreprise} onChange={patchEntreprise} />
+              )}
+              {step.kind === 'organigramme' && (
+                <OrganigrammeStep
+                  value={rapport.organigramme ?? { nodes: [] }}
+                  onChange={patchOrganigramme}
+                  entreprise={rapport.entreprise}
+                />
               )}
               {step.kind === 'presentation' && (
                 <EntrepriseFieldsStep
