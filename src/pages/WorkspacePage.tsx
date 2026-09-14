@@ -348,7 +348,6 @@ export function WorkspacePage() {
   }
 
   const handleRenameStep = (stepId: string, newTitle: string) => {
-    if (!newTitle.trim()) return
     setRapportWithHistory(r => {
       if (!r || !r.customSteps) return r
       const isOrg = newTitle.toLowerCase().includes('organigramme')
@@ -692,7 +691,8 @@ export function WorkspacePage() {
                       type="text"
                       value={step.titre}
                       onChange={(e) => handleRenameStep(step.id, e.target.value)}
-                      className="truncate text-[14px] sm:text-[15px] font-semibold text-ink bg-transparent focus:outline-none focus:border-b focus:border-gold border-b border-transparent p-0 w-full"
+                      placeholder="Titre de la section (optionnel)"
+                      className="truncate text-[14px] sm:text-[15px] font-semibold text-ink bg-transparent focus:outline-none focus:border-b focus:border-gold border-b border-transparent p-0 w-full placeholder:text-faint"
                     />
                   ) : (
                     <h1 className="truncate text-[14px] sm:text-[15px] font-semibold text-ink">{step.titre}</h1>

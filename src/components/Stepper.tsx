@@ -110,7 +110,7 @@ export function Stepper({ rapport, steps, currentId, onSelect, onDeleteStep, onA
                       current ? 'font-semibold text-ink' : done ? 'text-ink' : 'text-muted',
                     )}
                   >
-                    {step.titre}
+                    {step.titre || <span className="italic text-faint">Sans titre</span>}
                   </span>
                   <span className="block truncate text-[11px] text-faint">{step.sousTitre}</span>
                   {(() => {
@@ -145,7 +145,7 @@ export function Stepper({ rapport, steps, currentId, onSelect, onDeleteStep, onA
                   ) : (
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmingId(step.id) }}
-                      aria-label={`Supprimer ${step.titre}`}
+                      aria-label={`Supprimer ${step.titre || 'cette section'}`}
                       className="rounded p-1 text-faint opacity-0 group-hover:opacity-100 hover:bg-danger/10 hover:text-danger transition-all duration-150"
                     >
                       <Trash2 size={12} />
