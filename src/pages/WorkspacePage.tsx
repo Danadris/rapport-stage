@@ -241,9 +241,17 @@ export function WorkspacePage() {
       { isTextKeystroke: true },
     )
 
-  const patchOrganigramme = (organigramme: Organigramme) =>
+  const patchOrganigramme = (organigramme: Organigramme, key?: string) =>
     setRapportWithHistory(
-      (r) => (r ? { ...r, organigramme, updatedAt: Date.now() } : r),
+      (r) => {
+        if (!r) return r
+        return {
+          ...r,
+          organigramme,
+          ...(key ? { organigrammes: { ...(r.organigrammes ?? {}), [key]: organigramme } } : {}),
+          updatedAt: Date.now(),
+        }
+      },
     )
 
   const patchStyle = (patch: Partial<RapportStyle>) =>
@@ -343,10 +351,58 @@ export function WorkspacePage() {
     if (!newTitle.trim()) return
     setRapportWithHistory(r => {
       if (!r || !r.customSteps) return r
+      const isOrg = newTitle.toLowerCase().includes('organigramme')
       const updated = r.customSteps.map(s => s.id === stepId ? { 
         ...s, 
         titre: newTitle,
+        ...(isOrg ? { kind: 'organigramme' as const } : {}),
       } : s)
+      return { ...r, customSteps: updated, updatedAt: Date.now() }
+    })
+  }
+
+  const handleToggleStepKind = (stepId: string, kind: 'notes' | 'organigramme') => {
+    setRapportWithHistory(r => {
+      if (!r || !r.customSteps) return r
+      const updated = r.customSteps.map(s => {
+        if (s.id !== stepId) return s
+        return {
+          ...s,
+          kind,
+          fields: kind === 'notes' && s.fields.length === 0
+            ? [{ id: 'contenu', label: s.titre, placeholder: 'Vos notes pour cette section…', examples: [] }]
+            : s.fields,
+        }
+      })
+      return { ...r, customSteps: updated, updatedAt: Date.now() }
+    })
+  }
+
+  const handleFieldOrganigrammeChange = (fieldId: string, org: Organigramme) => {
+    setRapportWithHistory((r) => {
+      if (!r) return r
+      return {
+        ...r,
+        organigramme: org,
+        organigrammes: {
+          ...(r.organigrammes ?? {}),
+          [fieldId]: org,
+        },
+        updatedAt: Date.now(),
+      }
+    })
+  }
+
+  const handleToggleFieldMode = (stepId: string, fieldId: string, isOrg: boolean) => {
+    setRapportWithHistory(r => {
+      if (!r || !r.customSteps) return r
+      const updated = r.customSteps.map(s => {
+        if (s.id !== stepId) return s
+        return {
+          ...s,
+          fields: s.fields.map(f => f.id === fieldId ? { ...f, isOrganigramme: isOrg } : f)
+        }
+      })
       return { ...r, customSteps: updated, updatedAt: Date.now() }
     })
   }
@@ -388,11 +444,19 @@ export function WorkspacePage() {
   const handleRenameSubSection = (stepId: string, fieldId: string, newLabel: string) => {
     setRapportWithHistory(r => {
       if (!r || !r.customSteps) return r
+      const isOrg = newLabel.toLowerCase().includes('organigramme')
       const updated = r.customSteps.map(s => {
         if (s.id !== stepId) return s
         return {
           ...s,
-          fields: s.fields.map(f => f.id === fieldId ? { ...f, label: newLabel } : f)
+          fields: s.fields.map(f => {
+            if (f.id !== fieldId) return f
+            return {
+              ...f,
+              label: newLabel,
+              ...(isOrg ? { isOrganigramme: true } : {}),
+            }
+          })
         }
       })
       return { ...r, customSteps: updated, updatedAt: Date.now() }
@@ -768,6 +832,33 @@ export function WorkspacePage() {
           <>
             <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 md:px-10 md:py-8">
               <p className="mb-7 text-sm leading-relaxed text-muted">{step.consigne}</p>
+              {rapport.customSteps && step.id.startsWith('custom-') && (
+                <div className="mb-6 flex items-center justify-between rounded-xl border border-line bg-paper px-4 py-2.5 shadow-xs">
+                  <span className="text-xs font-medium text-muted">Format de cette section :</span>
+                  <div className="flex gap-1 rounded-lg bg-cream p-1 border border-line/60">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleStepKind(step.id, 'notes')}
+                      className={cx(
+                        "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                        step.kind === 'notes' ? "bg-paper text-ink shadow-xs" : "text-muted hover:text-ink"
+                      )}
+                    >
+                      📝 Texte rédigé
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleStepKind(step.id, 'organigramme')}
+                      className={cx(
+                        "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                        step.kind === 'organigramme' ? "bg-paper text-gold-deep shadow-xs font-semibold" : "text-muted hover:text-ink"
+                      )}
+                    >
+                      🏢 Organigramme
+                    </button>
+                  </div>
+                </div>
+              )}
               {step.kind === 'couverture' && (
                 <CouvertureStep value={rapport.couverture} onChange={patchCouverture} />
               )}
@@ -785,8 +876,8 @@ export function WorkspacePage() {
               )}
               {step.kind === 'organigramme' && (
                 <OrganigrammeStep
-                  value={rapport.organigramme ?? { nodes: [] }}
-                  onChange={patchOrganigramme}
+                  value={(rapport.organigrammes && rapport.organigrammes[step.id]) ?? rapport.organigramme ?? { nodes: [] }}
+                  onChange={(val) => patchOrganigramme(val, step.id)}
                   entreprise={rapport.entreprise}
                 />
               )}
@@ -816,6 +907,11 @@ export function WorkspacePage() {
                   onRenameSubSection={(fieldId, newTitle) => handleRenameSubSection(step.id, fieldId, newTitle)}
                   onAddLevel3Item={(parentFieldId) => handleAddLevel3Item(step.id, parentFieldId)}
                   onDeleteLevel3Item={(fieldId) => handleDeleteLevel3Item(step.id, fieldId)}
+                  organigramme={rapport.organigramme}
+                  organigrammes={rapport.organigrammes}
+                  onOrganigrammeChange={handleFieldOrganigrammeChange}
+                  onToggleFieldMode={(fieldId, isOrg) => handleToggleFieldMode(step.id, fieldId, isOrg)}
+                  entreprise={rapport.entreprise}
                 />
               )}
               {step.kind !== 'couverture' && step.id !== 'remerciements' && step.id !== 'sommaire' && (

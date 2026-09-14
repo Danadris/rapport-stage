@@ -59,22 +59,29 @@ export function PlanPickerModal({ onConfirm, onClose }: PlanPickerModalProps) {
     const validSections = sections.filter((s) => s.titre.trim() !== '')
     if (validSections.length === 0) return
 
-    const customContentSteps: WizardStep[] = validSections.map((s, i) => ({
-      id: `custom-${s.id}`,
-      numero: stepNumero(i),
-      titre: s.titre.trim(),
-      sousTitre: 'Section personnalisée',
-      consigne: 'Décrivez librement le contenu de cette section.',
-      kind: 'notes',
-      fields: [
-        {
-          id: 'contenu',
-          label: s.titre.trim(),
-          placeholder: 'Vos notes pour cette section…',
-          examples: [],
-        },
-      ],
-    }))
+    const customContentSteps: WizardStep[] = validSections.map((s, i) => {
+      const isOrg = s.titre.trim().toLowerCase().includes('organigramme')
+      return {
+        id: `custom-${s.id}`,
+        numero: stepNumero(i),
+        titre: s.titre.trim(),
+        sousTitre: isOrg ? "Structure de l'entreprise" : 'Section personnalisée',
+        consigne: isOrg
+          ? "Renseignez les postes et la hiérarchie de l'entreprise d'accueil."
+          : 'Décrivez librement le contenu de cette section.',
+        kind: isOrg ? 'organigramme' : 'notes',
+        fields: isOrg
+          ? []
+          : [
+              {
+                id: 'contenu',
+                label: s.titre.trim(),
+                placeholder: 'Vos notes pour cette section…',
+                examples: [],
+              },
+            ],
+      }
+    })
 
     // Always prepend couverture + entreprise
     onConfirm([...FIXED_STEPS, ...customContentSteps])
@@ -174,13 +181,20 @@ export function PlanPickerModal({ onConfirm, onClose }: PlanPickerModalProps) {
                   <span className="font-mono text-[11px] text-faint w-6 shrink-0 text-center">
                     {stepNumero(i)}
                   </span>
-                  <input
-                    type="text"
-                    value={section.titre}
-                    onChange={(e) => updateTitle(section.id, e.target.value)}
-                    placeholder={`Section ${i + 1}…`}
-                    className="flex-1 rounded-lg border border-line bg-paper px-3 py-1.5 text-[13px] text-ink placeholder:text-faint focus:border-gold-deep focus:outline-none"
-                  />
+                  <div className="relative flex-1 flex items-center">
+                    <input
+                      type="text"
+                      value={section.titre}
+                      onChange={(e) => updateTitle(section.id, e.target.value)}
+                      placeholder={`Section ${i + 1}…`}
+                      className="w-full rounded-lg border border-line bg-paper px-3 py-1.5 text-[13px] text-ink placeholder:text-faint focus:border-gold-deep focus:outline-none pr-28"
+                    />
+                    {section.titre.toLowerCase().includes('organigramme') && (
+                      <span className="absolute right-2 rounded-md bg-gold-soft px-1.5 py-0.5 text-[10px] font-semibold text-gold-deep border border-gold/20 pointer-events-none">
+                        🏢 Organigramme
+                      </span>
+                    )}
+                  </div>
                   <button
                     onClick={() => moveUp(i)}
                     disabled={i === 0}

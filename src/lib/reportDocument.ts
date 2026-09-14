@@ -11,6 +11,7 @@ export interface ReportSubSubSection {
   prefix?: string
   texte: string
   editPath?: ReportEditPath
+  isOrganigramme?: boolean
 }
 
 export interface ReportSubSection {
@@ -20,6 +21,7 @@ export interface ReportSubSection {
   texte: string
   items?: ReportSubSubSection[]
   editPath?: ReportEditPath
+  isOrganigramme?: boolean
 }
 
 export interface ReportPart {
@@ -29,7 +31,14 @@ export interface ReportPart {
   sousSections?: ReportSubSection[]
   paragraphes?: string[]
   editPath?: { stepId: string; fieldIds: string[] }
+  isOrganigramme?: boolean
 }
+
+export function isOrganigrammeTitle(title?: string): boolean {
+  if (!title) return false
+  return title.toLowerCase().includes('organigramme')
+}
+
 
 export interface SommaireEntry {
   label: string
@@ -59,6 +68,16 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
     for (const step of rapport.customSteps) {
       if (step.kind === 'couverture' || step.kind === 'entreprise') continue
 
+      if (step.kind === 'organigramme' || isOrganigrammeTitle(step.titre)) {
+        parts.push({
+          key: step.id,
+          numero: null,
+          titre: step.titre,
+          isOrganigramme: true,
+        })
+        continue
+      }
+
       if (step.kind === 'notes') {
         // Level 2 = fields without parentId
         const level2Fields = step.fields.filter(f => !f.parentId)
@@ -66,6 +85,7 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
         const sousSections: ReportSubSection[] = level2Fields.map((parent, i) => {
           // Level 3 = fields whose parentId matches this level-2 field
           const children = step.fields.filter(f => f.parentId === parent.id)
+          const isParentOrg = parent.isOrganigramme ?? isOrganigrammeTitle(parent.label)
 
           const items: ReportSubSubSection[] = children.map((child, ci) => ({
             id: child.id,
@@ -73,6 +93,7 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
             prefix: child.prefix || `${String.fromCharCode(97 + ci)}/`,
             texte: note(rapport, step.id, child.id),
             editPath: { source: 'section' as const, field: `${step.id}:${child.id}` },
+            isOrganigramme: child.isOrganigramme ?? isOrganigrammeTitle(child.label),
           }))
 
           return {
@@ -82,6 +103,7 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
             texte: note(rapport, step.id, parent.id),
             items: items.length > 0 ? items : undefined,
             editPath: { source: 'section' as const, field: `${step.id}:${parent.id}` },
+            isOrganigramme: isParentOrg,
           }
         })
 
@@ -137,6 +159,7 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
       key: 'organigramme',
       numero: null,
       titre: "Organigramme de l'entreprise",
+      isOrganigramme: true,
     },
     {
       key: 'activites',
