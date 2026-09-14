@@ -187,6 +187,8 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
   organigramme?: Organigramme
   primaryColor?: string
 }) {
+  const [dropOverBlock, setDropOverBlock] = useState<number | null>(null)
+
   if (part.key === 'organigramme') {
     return (
       <div data-part="organigramme">
@@ -216,7 +218,6 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
     onEdit('section', `${stepId}:${fieldIds[0]}`, newText)
   }
 
-  const [dropOverBlock, setDropOverBlock] = useState<number | null>(null)
 
   const handleUpdate = (id: string, patch: Partial<SectionImage>) => {
     if (!onImagesChange) return
