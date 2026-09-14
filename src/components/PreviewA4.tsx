@@ -14,6 +14,8 @@ import {
 } from '../lib/reportDocument'
 
 import logo from '../assets/ifmbp-logo-official.png'
+import { OrgChart } from './preview/OrgChart'
+import type { Organigramme } from '../types'
 
 const INSTITUT_FR = 'Instituts de Formation aux Métiers de la Boulangerie et la Pâtisserie'
 const INSTITUT_AR = 'مـعـهـد الـتـكـويـن فـي مهن الخبازة والحلويات بالدار البيضاء'
@@ -173,7 +175,7 @@ interface DragState {
   fromSection: string
 }
 
-function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragState, setDragState, onDragEnd }: { 
+function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragState, setDragState, onDragEnd, organigramme, primaryColor }: { 
   part: ReportPart
   images: SectionImage[]
   onEdit?: EditHandler
@@ -182,7 +184,24 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
   dragState?: DragState | null
   setDragState?: (state: DragState | null) => void
   onDragEnd?: () => void
+  organigramme?: Organigramme
+  primaryColor?: string
 }) {
+  if (part.key === 'organigramme') {
+    return (
+      <div data-part="organigramme">
+        {part.titre && part.titre.trim() !== '' && (
+          <h2 className="text-center font-bold" style={{ color: BLEU, fontSize: 'var(--doc-title-size)' }}>
+            {part.titre}
+          </h2>
+        )}
+        <div className="mt-8">
+          <OrgChart nodes={organigramme?.nodes ?? []} primaryColor={primaryColor} />
+        </div>
+      </div>
+    )
+  }
+
   const blocks: { titre?: string; paragraphes?: string[]; texte?: string; editPath?: { source: 'entreprise' | 'section'; field: string } }[] = []
   if (part.paragraphes && part.paragraphes.length > 0) blocks.push({ paragraphes: part.paragraphes })
   for (const ss of part.sousSections ?? []) blocks.push({ titre: ss.titre, texte: ss.texte, editPath: ss.editPath })
@@ -449,6 +468,8 @@ export function PreviewA4({
           dragState={dragState}
           setDragState={setDragState}
           onDragEnd={makeOnDragEnd}
+          organigramme={rapport.organigramme}
+          primaryColor={rapport.style?.primaryColor}
         />
       </Page>
       <Sommaire
@@ -473,6 +494,8 @@ export function PreviewA4({
                 dragState={dragState}
                 setDragState={setDragState}
                 onDragEnd={makeOnDragEnd}
+                organigramme={rapport.organigramme}
+                primaryColor={rapport.style?.primaryColor}
               />
             </div>
           ))}
