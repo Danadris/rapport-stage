@@ -149,16 +149,17 @@ function FieldBox({
             </div>
 
             {isOrg ? (
-              <div className="mt-2 space-y-3 rounded-xl border border-gold/40 bg-gold-soft/10 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-2.5 py-0.5 text-xs font-semibold text-gold-deep border border-gold/30">
-                    🏢 Organigramme hiérarchique
+              <div className="mt-2 space-y-3 rounded-xl border border-line bg-paper p-4">
+                <div className="flex items-center justify-between pb-2 border-b border-line">
+                  <span className="text-[12px] font-semibold text-ink flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-gold-deep" />
+                    Structure hiérarchique
                   </span>
                   {onToggleMode && (
                     <button
                       type="button"
                       onClick={() => onToggleMode(false)}
-                      className="text-xs text-muted hover:text-ink underline transition-colors"
+                      className="text-[12px] text-faint hover:text-ink transition-colors"
                     >
                       Basculer en texte simple
                     </button>
@@ -317,16 +318,17 @@ function Level3Box({
       </div>
 
       {isOrg ? (
-        <div className="space-y-3 rounded-xl border border-gold/40 bg-gold-soft/10 p-3">
-          <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-[11px] font-semibold text-gold-deep border border-gold/30">
-              🏢 Organigramme
+        <div className="space-y-3 rounded-xl border border-line bg-paper p-3">
+          <div className="flex items-center justify-between pb-2 border-b border-line">
+            <span className="text-[11px] font-semibold text-ink flex items-center gap-1.5">
+              <Sparkles size={12} className="text-gold-deep" />
+              Structure hiérarchique
             </span>
             {onToggleMode && (
               <button
                 type="button"
                 onClick={() => onToggleMode(false)}
-                className="text-[11px] text-muted hover:text-ink underline transition-colors"
+                className="text-[11px] text-faint hover:text-ink transition-colors"
               >
                 Basculer en texte simple
               </button>
