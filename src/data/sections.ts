@@ -30,18 +30,8 @@ export const WIZARD_STEPS: WizardStep[] = [
     fields: [],
   },
   {
-    id: 'organigramme',
-    numero: '03',
-    titre: 'Organigramme',
-    sousTitre: 'Structure de l\'entreprise',
-    consigne:
-      'Renseignez les postes et la hiérarchie de l\'entreprise d\'accueil. Vous pouvez utiliser l\'IA pour générer automatiquement la structure à partir des informations de l\'entreprise.',
-    kind: 'organigramme',
-    fields: [],
-  },
-  {
     id: 'remerciements',
-    numero: '04',
+    numero: '03',
     titre: 'Remerciements',
     sousTitre: 'Section obligatoire',
     consigne:
@@ -68,7 +58,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'introduction',
-    numero: '05',
+    numero: '04',
     titre: 'Introduction',
     sousTitre: 'Section obligatoire',
     consigne:
@@ -99,12 +89,22 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'presentation',
-    numero: '06',
+    numero: '05',
     titre: 'Présentation de l\'entreprise',
     sousTitre: 'Rempli par la recherche',
     consigne:
       'Historique, secteur d\'activité et valeurs de l\'organisme d\'accueil. Si vous avez lancé la recherche automatique, ces champs sont déjà remplis : relisez-les et corrigez ce qui doit l\'être.',
     kind: 'presentation',
+    fields: [],
+  },
+  {
+    id: 'organigramme',
+    numero: '06',
+    titre: 'Organigramme',
+    sousTitre: 'Structure de l\'entreprise',
+    consigne:
+      'Renseignez les postes et la hiérarchie de l\'entreprise d\'accueil. Vous pouvez utiliser l\'IA pour générer automatiquement la structure à partir des informations de l\'entreprise.',
+    kind: 'organigramme',
     fields: [],
   },
   {

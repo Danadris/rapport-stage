@@ -774,13 +774,6 @@ export function WorkspacePage() {
               {step.kind === 'entreprise' && (
                 <EntrepriseStep value={rapport.entreprise} onChange={patchEntreprise} />
               )}
-              {step.kind === 'organigramme' && (
-                <OrganigrammeStep
-                  value={rapport.organigramme ?? { nodes: [] }}
-                  onChange={patchOrganigramme}
-                  entreprise={rapport.entreprise}
-                />
-              )}
               {step.kind === 'presentation' && (
                 <EntrepriseFieldsStep
                   fields={PRESENTATION_FIELDS}
@@ -788,6 +781,13 @@ export function WorkspacePage() {
                   onChange={patchEntreprise}
                   images={rapport.images?.[step.id] ?? []}
                   onImagesChange={(imgs) => setImages(step.id, imgs)}
+                />
+              )}
+              {step.kind === 'organigramme' && (
+                <OrganigrammeStep
+                  value={rapport.organigramme ?? { nodes: [] }}
+                  onChange={patchOrganigramme}
+                  entreprise={rapport.entreprise}
                 />
               )}
               {step.kind === 'activites' && (
