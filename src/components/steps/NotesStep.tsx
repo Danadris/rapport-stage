@@ -1,10 +1,10 @@
 import { ChevronDown, Lightbulb, Sparkles, AlertCircle, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import type { NoteField } from '../../types'
-import type { SectionImage } from '../../types'
+import type { NoteField, Organigramme, Entreprise, SectionImage } from '../../types'
 import { Field, Textarea, Button } from '../ui'
 import { ImageManager } from '../ImageManager'
 import { genererParagraphe } from '../../lib/ai'
+import { OrganigrammeStep } from './OrganigrammeStep'
 
 interface Props {
   stepId: string
@@ -22,6 +22,11 @@ interface Props {
   onRenameSubSection?: (fieldId: string, newLabel: string) => void
   onAddLevel3Item?: (parentFieldId: string) => void
   onDeleteLevel3Item?: (fieldId: string) => void
+  organigramme?: Organigramme
+  organigrammes?: Record<string, Organigramme>
+  onOrganigrammeChange?: (fieldId: string, org: Organigramme) => void
+  onToggleFieldMode?: (fieldId: string, isOrg: boolean) => void
+  entreprise?: Entreprise
 }
 
 function Examples({ examples, onPick }: { examples: string[]; onPick: (text: string) => void }) {
@@ -69,11 +74,31 @@ interface FieldBoxProps {
   isCustom?: boolean
   onRename?: (newLabel: string) => void
   onDelete?: () => void
+  organigrammeData?: Organigramme
+  onOrganigrammeChange?: (val: Organigramme) => void
+  onToggleMode?: (isOrg: boolean) => void
+  entreprise?: Entreprise
 }
 
-function FieldBox({ f, stepTitle, current, generated, onChange, onGenerate, isCustom, onRename, onDelete }: FieldBoxProps) {
+function FieldBox({
+  f,
+  stepTitle,
+  current,
+  generated,
+  onChange,
+  onGenerate,
+  isCustom,
+  onRename,
+  onDelete,
+  organigrammeData,
+  onOrganigrammeChange,
+  onToggleMode,
+  entreprise,
+}: FieldBoxProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const isOrg = f.isOrganigramme ?? (f.label.toLowerCase().includes('organigramme') || false)
 
   const handleGenerate = async () => {
     if (!current.trim()) return
@@ -102,6 +127,16 @@ function FieldBox({ f, stepTitle, current, generated, onChange, onGenerate, isCu
                 placeholder="Sous-titre (optionnel)"
                 className="flex-1 bg-transparent text-[13px] font-medium text-ink focus:outline-none focus:border-b focus:border-gold border-b border-transparent p-0"
               />
+              {onToggleMode && (
+                <button
+                  type="button"
+                  onClick={() => onToggleMode(!isOrg)}
+                  title={isOrg ? 'Passer en texte simple' : 'Convertir en organigramme'}
+                  className="rounded px-2 py-0.5 text-[11px] font-medium text-gold-deep hover:bg-gold-soft/60 transition-colors"
+                >
+                  {isOrg ? '📝 Texte' : '🏢 Organigramme'}
+                </button>
+              )}
               {onDelete && (
                 <button
                   onClick={onDelete}
@@ -112,14 +147,39 @@ function FieldBox({ f, stepTitle, current, generated, onChange, onGenerate, isCu
                 </button>
               )}
             </div>
-            <Textarea
-              id={`f-${f.id}`}
-              rows={3}
-              counter
-              value={current}
-              onChange={(e) => onChange(f.id, e.target.value)}
-              placeholder={f.placeholder}
-            />
+
+            {isOrg ? (
+              <div className="mt-2 space-y-3 rounded-xl border border-gold/40 bg-gold-soft/10 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-2.5 py-0.5 text-xs font-semibold text-gold-deep border border-gold/30">
+                    🏢 Organigramme hiérarchique
+                  </span>
+                  {onToggleMode && (
+                    <button
+                      type="button"
+                      onClick={() => onToggleMode(false)}
+                      className="text-xs text-muted hover:text-ink underline transition-colors"
+                    >
+                      Basculer en texte simple
+                    </button>
+                  )}
+                </div>
+                <OrganigrammeStep
+                  value={organigrammeData ?? { nodes: [] }}
+                  onChange={(val) => onOrganigrammeChange?.(val)}
+                  entreprise={entreprise ?? { nom: '', ville: '', secteurActivite: '', historique: '', organismeAccueil: '', missionsValeurs: '', activitesPrincipales: '', equipements: '', technologies: '', sourceRecherche: null }}
+                />
+              </div>
+            ) : (
+              <Textarea
+                id={`f-${f.id}`}
+                rows={3}
+                counter
+                value={current}
+                onChange={(e) => onChange(f.id, e.target.value)}
+                placeholder={f.placeholder}
+              />
+            )}
           </>
         ) : (
           <Field label={f.label} hint={f.hint} optional={f.hint === 'Optionnel'} htmlFor={`f-${f.id}`}>
@@ -133,7 +193,7 @@ function FieldBox({ f, stepTitle, current, generated, onChange, onGenerate, isCu
             />
           </Field>
         )}
-        {(!isCustom || f.examples?.length > 0) && (
+        {(!isCustom || (!isOrg && f.examples?.length > 0)) && (
           <Examples
             examples={f.examples || []}
             onPick={(ex) => onChange(f.id, current.trim() === '' ? ex : `${current.trimEnd()} ${ex}`)}
@@ -141,34 +201,36 @@ function FieldBox({ f, stepTitle, current, generated, onChange, onGenerate, isCu
         )}
       </div>
 
-      <div className="rounded-lg border border-line bg-cream p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold text-ink">Texte final A4</span>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={handleGenerate}
-            disabled={loading || !current.trim()}
-          >
-            <Sparkles size={14} className={loading ? "animate-pulse" : "text-gold-deep"} />
-            {loading ? 'Rédaction...' : 'Rédiger'}
-          </Button>
-        </div>
-
-        {error && (
-          <div className="mb-2 flex items-center gap-1.5 text-xs text-danger">
-            <AlertCircle size={14} /> {error}
+      {!isOrg && (
+        <div className="rounded-lg border border-line bg-cream p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-ink">Texte final A4</span>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleGenerate}
+              disabled={loading || !current.trim()}
+            >
+              <Sparkles size={14} className={loading ? "animate-pulse" : "text-gold-deep"} />
+              {loading ? 'Rédaction...' : 'Rédiger'}
+            </Button>
           </div>
-        )}
 
-        <Textarea
-          rows={generated ? 4 : 2}
-          value={generated}
-          onChange={(e) => onGenerate(f.id, e.target.value)}
-          placeholder="Texte final..."
-          className="bg-paper"
-        />
-      </div>
+          {error && (
+            <div className="mb-2 flex items-center gap-1.5 text-xs text-danger">
+              <AlertCircle size={14} /> {error}
+            </div>
+          )}
+
+          <Textarea
+            rows={generated ? 4 : 2}
+            value={generated}
+            onChange={(e) => onGenerate(f.id, e.target.value)}
+            placeholder="Texte final..."
+            className="bg-paper"
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -182,11 +244,30 @@ interface Level3BoxProps {
   onGenerate: (fieldId: string, value: string) => void
   onDelete?: () => void
   onRename?: (newLabel: string) => void
+  organigrammeData?: Organigramme
+  onOrganigrammeChange?: (val: Organigramme) => void
+  onToggleMode?: (isOrg: boolean) => void
+  entreprise?: Entreprise
 }
 
-function Level3Box({ f, stepTitle, current, generated, onChange, onGenerate, onDelete, onRename }: Level3BoxProps) {
+function Level3Box({
+  f,
+  stepTitle,
+  current,
+  generated,
+  onChange,
+  onGenerate,
+  onDelete,
+  onRename,
+  organigrammeData,
+  onOrganigrammeChange,
+  onToggleMode,
+  entreprise,
+}: Level3BoxProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const isOrg = f.isOrganigramme ?? (f.label.toLowerCase().includes('organigramme') || false)
 
   const handleGenerate = async () => {
     if (!current.trim()) return
@@ -214,6 +295,16 @@ function Level3Box({ f, stepTitle, current, generated, onChange, onGenerate, onD
           placeholder="Point (optionnel)"
           className="flex-1 bg-transparent text-[13px] font-medium text-ink focus:outline-none focus:border-b focus:border-gold border-b border-transparent p-0"
         />
+        {onToggleMode && (
+          <button
+            type="button"
+            onClick={() => onToggleMode(!isOrg)}
+            title={isOrg ? 'Passer en texte simple' : 'Convertir en organigramme'}
+            className="rounded px-1.5 py-0.5 text-[10px] font-medium text-gold-deep hover:bg-gold-soft/60 transition-colors"
+          >
+            {isOrg ? '📝 Texte' : '🏢 Organigramme'}
+          </button>
+        )}
         {onDelete && (
           <button
             onClick={onDelete}
@@ -225,37 +316,63 @@ function Level3Box({ f, stepTitle, current, generated, onChange, onGenerate, onD
         )}
       </div>
 
-      {/* Notes textarea */}
-      <Textarea
-        rows={2}
-        counter
-        value={current}
-        onChange={(e) => onChange(f.id, e.target.value)}
-        placeholder={f.placeholder || 'Vos notes pour ce point…'}
-      />
-
-      {/* AI drafting */}
-      <div className="rounded-lg border border-line bg-cream p-3">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold text-ink">Texte final A4</span>
-          <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={loading || !current.trim()}>
-            <Sparkles size={13} className={loading ? 'animate-pulse' : 'text-gold-deep'} />
-            {loading ? 'Rédaction...' : 'Rédiger'}
-          </Button>
-        </div>
-        {error && (
-          <div className="mb-2 flex items-center gap-1.5 text-xs text-danger">
-            <AlertCircle size={13} /> {error}
+      {isOrg ? (
+        <div className="space-y-3 rounded-xl border border-gold/40 bg-gold-soft/10 p-3">
+          <div className="flex items-center justify-between">
+            <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-[11px] font-semibold text-gold-deep border border-gold/30">
+              🏢 Organigramme
+            </span>
+            {onToggleMode && (
+              <button
+                type="button"
+                onClick={() => onToggleMode(false)}
+                className="text-[11px] text-muted hover:text-ink underline transition-colors"
+              >
+                Basculer en texte simple
+              </button>
+            )}
           </div>
-        )}
-        <Textarea
-          rows={generated ? 3 : 2}
-          value={generated}
-          onChange={(e) => onGenerate(f.id, e.target.value)}
-          placeholder="Texte final..."
-          className="bg-paper"
-        />
-      </div>
+          <OrganigrammeStep
+            value={organigrammeData ?? { nodes: [] }}
+            onChange={(val) => onOrganigrammeChange?.(val)}
+            entreprise={entreprise ?? { nom: '', ville: '', secteurActivite: '', historique: '', organismeAccueil: '', missionsValeurs: '', activitesPrincipales: '', equipements: '', technologies: '', sourceRecherche: null }}
+          />
+        </div>
+      ) : (
+        <>
+          {/* Notes textarea */}
+          <Textarea
+            rows={2}
+            counter
+            value={current}
+            onChange={(e) => onChange(f.id, e.target.value)}
+            placeholder={f.placeholder || 'Vos notes pour ce point…'}
+          />
+
+          {/* AI drafting */}
+          <div className="rounded-lg border border-line bg-cream p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-ink">Texte final A4</span>
+              <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={loading || !current.trim()}>
+                <Sparkles size={13} className={loading ? 'animate-pulse' : 'text-gold-deep'} />
+                {loading ? 'Rédaction...' : 'Rédiger'}
+              </Button>
+            </div>
+            {error && (
+              <div className="mb-2 flex items-center gap-1.5 text-xs text-danger">
+                <AlertCircle size={13} /> {error}
+              </div>
+            )}
+            <Textarea
+              rows={generated ? 3 : 2}
+              value={generated}
+              onChange={(e) => onGenerate(f.id, e.target.value)}
+              placeholder="Texte final..."
+              className="bg-paper"
+            />
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -275,9 +392,19 @@ export function NotesStep({
   onRenameSubSection,
   onAddLevel3Item,
   onDeleteLevel3Item,
+  organigramme,
+  organigrammes,
+  onOrganigrammeChange,
+  onToggleFieldMode,
+  entreprise,
 }: Props) {
   // Separate Level 2 (no parentId) from Level 3 (has parentId)
   const level2Fields = fields.filter(f => !f.parentId)
+
+  const getFieldOrg = (fieldId: string): Organigramme => {
+    if (organigrammes?.[fieldId]?.nodes?.length) return organigrammes[fieldId]
+    return organigramme ?? { nodes: [] }
+  }
 
   return (
     <div className="space-y-10">
@@ -304,6 +431,10 @@ export function NotesStep({
               isCustom={isCustom}
               onRename={isCustom && onRenameSubSection ? (val) => onRenameSubSection(f.id, val) : undefined}
               onDelete={isCustom && onDeleteSubSection && level2Fields.length > 1 ? () => onDeleteSubSection(f.id) : undefined}
+              organigrammeData={getFieldOrg(f.id)}
+              onOrganigrammeChange={onOrganigrammeChange ? (val) => onOrganigrammeChange(f.id, val) : undefined}
+              onToggleMode={onToggleFieldMode ? (isOrg) => onToggleFieldMode(f.id, isOrg) : undefined}
+              entreprise={entreprise}
             />
 
             {/* Level 3 sub-items */}
@@ -320,6 +451,10 @@ export function NotesStep({
                     onGenerate={onGenerate}
                     onRename={onRenameSubSection ? (val) => onRenameSubSection(child.id, val) : undefined}
                     onDelete={onDeleteLevel3Item ? () => onDeleteLevel3Item(child.id) : undefined}
+                    organigrammeData={getFieldOrg(child.id)}
+                    onOrganigrammeChange={onOrganigrammeChange ? (val) => onOrganigrammeChange(child.id, val) : undefined}
+                    onToggleMode={onToggleFieldMode ? (isOrg) => onToggleFieldMode(child.id, isOrg) : undefined}
+                    entreprise={entreprise}
                   />
                 ))}
               </div>

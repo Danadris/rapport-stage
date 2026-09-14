@@ -175,7 +175,7 @@ interface DragState {
   fromSection: string
 }
 
-function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragState, setDragState, onDragEnd, organigramme, primaryColor }: { 
+function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragState, setDragState, onDragEnd, organigramme, organigrammes, primaryColor }: { 
   part: ReportPart
   images: SectionImage[]
   onEdit?: EditHandler
@@ -185,20 +185,28 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
   setDragState?: (state: DragState | null) => void
   onDragEnd?: () => void
   organigramme?: Organigramme
+  organigrammes?: Record<string, Organigramme>
   primaryColor?: string
 }) {
   const [dropOverBlock, setDropOverBlock] = useState<number | null>(null)
 
-  if (part.key === 'organigramme') {
+  const getOrg = (key?: string) => {
+    if (key && organigrammes?.[key]?.nodes?.length) return organigrammes[key]
+    if (part.key && organigrammes?.[part.key]?.nodes?.length) return organigrammes[part.key]
+    return organigramme
+  }
+
+  if (part.key === 'organigramme' || part.isOrganigramme) {
+    const orgData = getOrg(part.key)
     return (
-      <div data-part="organigramme">
+      <div data-part={part.key}>
         {part.titre && part.titre.trim() !== '' && (
           <h2 className="text-center font-bold" style={{ color: BLEU, fontSize: 'var(--doc-title-size)' }}>
             {part.titre}
           </h2>
         )}
         <div className="mt-8">
-          <OrgChart nodes={organigramme?.nodes ?? []} primaryColor={primaryColor} />
+          <OrgChart nodes={orgData?.nodes ?? []} primaryColor={primaryColor} />
         </div>
       </div>
     )
@@ -278,44 +286,50 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                   {(b as any).numero !== undefined ? `${(b as any).numero}. ${b.titre}` : b.titre}
                 </h3>
               )}
-              <div className="flow-root">
-                {blockImages.map((img) => (
-                  <Figure
-                    key={img.id}
-                    img={img}
-                    onUpdate={onImagesChange ? (patch) => handleUpdate(img.id, patch) : undefined}
-                    onDragStart={(e) => handleImgDragStart(e, img.id)}
-                    onDragEnd={handleImgDragEnd}
-                    isDragging={dragState?.imgId === img.id}
-                  />
-                ))}
-                {b.paragraphes ? (
-                  <div className="space-y-3.5" style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}>
-                    <EditableText
-                      text={b.paragraphes.join('\n\n')}
-                      placeholder="Cliquez ici pour rédiger..."
-                      onSave={onEdit ? handleParagraphsSave : undefined}
-                      className="whitespace-pre-wrap"
+              {(b as any).isOrganigramme ? (
+                <div className="mt-4">
+                  <OrgChart nodes={getOrg((b as any).id)?.nodes ?? []} primaryColor={primaryColor} />
+                </div>
+              ) : (
+                <div className="flow-root">
+                  {blockImages.map((img) => (
+                    <Figure
+                      key={img.id}
+                      img={img}
+                      onUpdate={onImagesChange ? (patch) => handleUpdate(img.id, patch) : undefined}
+                      onDragStart={(e) => handleImgDragStart(e, img.id)}
+                      onDragEnd={handleImgDragEnd}
+                      isDragging={dragState?.imgId === img.id}
                     />
-                  </div>
-                ) : b.texte && b.texte.trim() !== '' ? (
-                  <EditableText
-                    text={b.texte}
-                    placeholder="Cliquez ici pour rédiger..."
-                    onSave={onEdit && b.editPath ? (v) => onEdit(b.editPath!.source, b.editPath!.field, v) : undefined}
-                    className={`${b.titre && b.titre.trim() !== '' ? 'mt-2.5' : ''} whitespace-pre-wrap`}
-                    style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}
-                  />
-                ) : (
-                  <EditableText
-                    text=""
-                    placeholder="Cliquez ici pour rédiger..."
-                    onSave={onEdit && b.editPath ? (v) => onEdit(b.editPath!.source, b.editPath!.field, v) : undefined}
-                    className="mt-2 italic text-neutral-400"
-                    style={{ fontSize: 'var(--doc-body-size)' }}
-                  />
-                )}
-              </div>
+                  ))}
+                  {b.paragraphes ? (
+                    <div className="space-y-3.5" style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}>
+                      <EditableText
+                        text={b.paragraphes.join('\n\n')}
+                        placeholder="Cliquez ici pour rédiger..."
+                        onSave={onEdit ? handleParagraphsSave : undefined}
+                        className="whitespace-pre-wrap"
+                      />
+                    </div>
+                  ) : b.texte && b.texte.trim() !== '' ? (
+                    <EditableText
+                      text={b.texte}
+                      placeholder="Cliquez ici pour rédiger..."
+                      onSave={onEdit && b.editPath ? (v) => onEdit(b.editPath!.source, b.editPath!.field, v) : undefined}
+                      className={`${b.titre && b.titre.trim() !== '' ? 'mt-2.5' : ''} whitespace-pre-wrap`}
+                      style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}
+                    />
+                  ) : (
+                    <EditableText
+                      text=""
+                      placeholder="Cliquez ici pour rédiger..."
+                      onSave={onEdit && b.editPath ? (v) => onEdit(b.editPath!.source, b.editPath!.field, v) : undefined}
+                      className="mt-2 italic text-neutral-400"
+                      style={{ fontSize: 'var(--doc-body-size)' }}
+                    />
+                  )}
+                </div>
+              )}
 
               {/* Level 3: a/, b/, c/ — omit heading if title empty */}
               {blockItems && blockItems.length > 0 && (
@@ -332,23 +346,28 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                           {item.titre}
                         </h4>
                       )}
-                      {/* Level 3 content */}
-                      {item.texte && item.texte.trim() !== '' ? (
-                        <EditableText
-                          text={item.texte}
-                          placeholder="Cliquez ici pour rédiger..."
-                          onSave={onEdit && item.editPath ? (v) => onEdit(item.editPath!.source, item.editPath!.field, v) : undefined}
-                          className={`${item.titre && item.titre.trim() !== '' ? 'mt-1.5' : ''} whitespace-pre-wrap`}
-                          style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}
-                        />
+                      {item.isOrganigramme ? (
+                        <div className="mt-2">
+                          <OrgChart nodes={getOrg(item.id)?.nodes ?? []} primaryColor={primaryColor} />
+                        </div>
                       ) : (
-                        <EditableText
-                          text=""
-                          placeholder="Cliquez ici pour rédiger..."
-                          onSave={onEdit && item.editPath ? (v) => onEdit(item.editPath!.source, item.editPath!.field, v) : undefined}
-                          className="mt-1 italic text-neutral-400"
-                          style={{ fontSize: 'var(--doc-body-size)' }}
-                        />
+                        item.texte && item.texte.trim() !== '' ? (
+                          <EditableText
+                            text={item.texte}
+                            placeholder="Cliquez ici pour rédiger..."
+                            onSave={onEdit && item.editPath ? (v) => onEdit(item.editPath!.source, item.editPath!.field, v) : undefined}
+                            className={`${item.titre && item.titre.trim() !== '' ? 'mt-1.5' : ''} whitespace-pre-wrap`}
+                            style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}
+                          />
+                        ) : (
+                          <EditableText
+                            text=""
+                            placeholder="Cliquez ici pour rédiger..."
+                            onSave={onEdit && item.editPath ? (v) => onEdit(item.editPath!.source, item.editPath!.field, v) : undefined}
+                            className="mt-1 italic text-neutral-400"
+                            style={{ fontSize: 'var(--doc-body-size)' }}
+                          />
+                        )
                       )}
                     </div>
                   ))}
@@ -470,6 +489,7 @@ export function PreviewA4({
           setDragState={setDragState}
           onDragEnd={makeOnDragEnd}
           organigramme={rapport.organigramme}
+          organigrammes={rapport.organigrammes}
           primaryColor={rapport.style?.primaryColor}
         />
       </Page>
@@ -496,6 +516,7 @@ export function PreviewA4({
                 setDragState={setDragState}
                 onDragEnd={makeOnDragEnd}
                 organigramme={rapport.organigramme}
+                organigrammes={rapport.organigrammes}
                 primaryColor={rapport.style?.primaryColor}
               />
             </div>

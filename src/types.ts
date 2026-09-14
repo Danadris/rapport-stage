@@ -51,6 +51,7 @@ export interface NoteField {
   examples: string[]
   parentId?: string  // Present if this is a Level 3 sub-item under a Level 2 field
   prefix?: string    // e.g. "a/", "b/" — auto-assigned for Level 3 items
+  isOrganigramme?: boolean // Explicit toggle or override for organigramme mode
 }
 
 export interface OrgNode {
@@ -102,6 +103,7 @@ export interface Rapport {
   /** Custom plan defined by the user. undefined = use official WIZARD_STEPS */
   customSteps?: WizardStep[]
   organigramme?: Organigramme
+  organigrammes?: Record<string, Organigramme>
 }
 
 // --- V3.1 Architecture Types ---
@@ -141,6 +143,7 @@ export interface ReportData {
   customSteps?: WizardStep[]
   images?: Record<string, ImageReference[]> // No Base64 data here!
   organigramme?: Organigramme
+  organigrammes?: Record<string, Organigramme>
 }
 
 export interface StoredImage {
