@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from '@google/genai'
-import type { Entreprise } from '../types'
+import type { Entreprise, OrgNode } from '../types'
 import { loadSettings } from './storage'
-import { rechercheEntreprise as rechercheEntrepriseLocale } from './ai-stub'
+import { rechercheEntreprise as rechercheEntrepriseLocale, genererOrganigrammeOffline } from './ai-stub'
 
 export interface RechercheResultat {
   entreprise: Omit<Entreprise, 'nom' | 'ville' | 'logoDataUrl' | 'sourceRecherche'>
@@ -156,3 +156,73 @@ Notes de l'apprenti :
 
   return (response.text || '').trim()
 }
+
+export async function genererOrganigramme(
+  companyContext: string,
+  freeText: string,
+): Promise<OrgNode[]> {
+  const client = await getClient()
+
+  const promptText = [
+    companyContext.trim() ? `Informations sur l'entreprise :\n${companyContext.trim()}` : '',
+    freeText.trim() ? `Description de la structure par le stagiaire :\n${freeText.trim()}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+
+  if (!promptText.trim() || !client) {
+    return genererOrganigrammeOffline()
+  }
+
+  try {
+    const prompt = `Tu es un assistant qui génère des organigrammes d'entreprise pour des rapports de stage.
+À partir des informations suivantes, génère un organigramme JSON hiérarchique réaliste, cohérent et adapté à la taille de l'entreprise.
+
+${promptText}
+
+Règles :
+1. Crée entre 3 et 12 postes pertinents.
+2. Le poste le plus haut placé (ex: Directeur Général, Gérant, Chef d'entreprise) n'a pas de parentId (ou parentId null).
+3. Tous les autres postes ont un "parentId" qui correspond exactement à l'"id" de leur responsable direct.
+4. "name": Nom et prénom de la personne si mentionné, sinon "—" ou un nom plausible.
+5. "title": Intitulé du poste clair (ex: "Directeur Général", "Chef de Fournil", "Responsable Pâtisserie", "Boulanger", "Vendeur en boutique").`
+
+    const response = await client.ai.models.generateContent({
+      model: client.model,
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.STRING },
+              name: { type: Type.STRING },
+              title: { type: Type.STRING },
+              parentId: { type: Type.STRING },
+            },
+            required: ['id', 'name', 'title'],
+          },
+        },
+      },
+    })
+
+    const raw = response.text ?? '[]'
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return genererOrganigrammeOffline()
+    }
+
+    return parsed.map((n: any) => ({
+      id: String(n.id || crypto.randomUUID()),
+      name: String(n.name || '—'),
+      title: String(n.title || 'Poste'),
+      parentId: n.parentId ? String(n.parentId) : undefined,
+    }))
+  } catch (err) {
+    console.warn('AI org chart generation error, falling back to offline stub', err)
+    return genererOrganigrammeOffline()
+  }
+}
+

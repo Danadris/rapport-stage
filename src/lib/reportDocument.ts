@@ -134,6 +134,11 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
       ],
     },
     {
+      key: 'organigramme',
+      numero: null,
+      titre: "Organigramme de l'entreprise",
+    },
+    {
       key: 'activites',
       numero: null,
       titre: "Les activités et équipements de l'entreprise",

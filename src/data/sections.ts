@@ -30,8 +30,18 @@ export const WIZARD_STEPS: WizardStep[] = [
     fields: [],
   },
   {
-    id: 'remerciements',
+    id: 'organigramme',
     numero: '03',
+    titre: 'Organigramme',
+    sousTitre: 'Structure de l\'entreprise',
+    consigne:
+      'Renseignez les postes et la hiérarchie de l\'entreprise d\'accueil. Vous pouvez utiliser l\'IA pour générer automatiquement la structure à partir des informations de l\'entreprise.',
+    kind: 'organigramme',
+    fields: [],
+  },
+  {
+    id: 'remerciements',
+    numero: '04',
     titre: 'Remerciements',
     sousTitre: 'Section obligatoire',
     consigne:
@@ -58,7 +68,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'introduction',
-    numero: '04',
+    numero: '05',
     titre: 'Introduction',
     sousTitre: 'Section obligatoire',
     consigne:
@@ -89,7 +99,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'presentation',
-    numero: '05',
+    numero: '06',
     titre: 'Présentation de l\'entreprise',
     sousTitre: 'Rempli par la recherche',
     consigne:
@@ -99,7 +109,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'activites',
-    numero: '06',
+    numero: '07',
     titre: 'Activités et équipements',
     sousTitre: 'Section obligatoire',
     consigne:
@@ -109,7 +119,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'contexte',
-    numero: '07',
+    numero: '08',
     titre: 'Contexte du stage',
     sousTitre: 'Section obligatoire',
     consigne:
@@ -130,7 +140,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'objectifs',
-    numero: '08',
+    numero: '09',
     titre: 'Objectifs du stage',
     sousTitre: 'Section obligatoire',
     consigne:
@@ -151,7 +161,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'deroulement',
-    numero: '09',
+    numero: '10',
     titre: 'Déroulement du stage',
     sousTitre: 'Section obligatoire',
     consigne:
@@ -183,7 +193,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'taches',
-    numero: '10',
+    numero: '11',
     titre: 'Tâches effectuées',
     sousTitre: 'Section obligatoire',
     consigne:
@@ -223,7 +233,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'bilan',
-    numero: '11',
+    numero: '12',
     titre: 'Bilan personnel',
     sousTitre: 'Section obligatoire',
     consigne:
@@ -251,7 +261,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'conclusion',
-    numero: '12',
+    numero: '13',
     titre: 'Conclusion & finitions',
     sousTitre: 'Sections finales',
     consigne:
@@ -304,6 +314,10 @@ export function progressOf(
   total += entFields.length
   done += entFields.filter((v) => v && v.trim() !== '').length
   for (const step of steps) {
+    if (step.kind === 'organigramme') {
+      total++
+      if ((rapport.organigramme?.nodes?.length ?? 0) > 0) done++
+    }
     if (step.kind === 'notes') {
       for (const field of step.fields) {
         if (field.hint === 'Optionnel') continue

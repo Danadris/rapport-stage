@@ -25,6 +25,7 @@ function stepComplete(rapport: Rapport, step: WizardStep): boolean {
     )
   }
   if (step.kind === 'entreprise') return rapport.entreprise.nom.trim() !== ''
+  if (step.kind === 'organigramme') return (rapport.organigramme?.nodes?.length ?? 0) > 0
   if (step.kind === 'presentation' || step.kind === 'activites') {
     const e = rapport.entreprise
     return step.kind === 'presentation'
@@ -46,6 +47,7 @@ function stepProgress(rapport: Rapport, step: WizardStep): number {
     return Math.round((filled / 5) * 100)
   }
   if (step.kind === 'entreprise') return rapport.entreprise.nom.trim() !== '' ? 100 : 0
+  if (step.kind === 'organigramme') return (rapport.organigramme?.nodes?.length ?? 0) > 0 ? 100 : 0
   if (step.kind === 'presentation') {
     const e = rapport.entreprise
     const filled = [e.organismeAccueil, e.historique, e.secteurActivite, e.missionsValeurs].filter(v => v.trim() !== '').length
