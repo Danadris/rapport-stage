@@ -107,7 +107,7 @@ export function removeWhiteBackground(dataUrl: string, tolerance: number = 32): 
         const height = img.naturalHeight || img.height
 
         if (!width || !height) {
-          resolve(dataUrl)
+          reject(new Error("Dimensions de l'image invalides"))
           return
         }
 
@@ -115,7 +115,7 @@ export function removeWhiteBackground(dataUrl: string, tolerance: number = 32): 
         canvas.height = height
         const ctx = canvas.getContext('2d')
         if (!ctx) {
-          resolve(dataUrl)
+          reject(new Error("Impossible d'obtenir le contexte 2D du canvas"))
           return
         }
 
@@ -131,20 +131,19 @@ export function removeWhiteBackground(dataUrl: string, tolerance: number = 32): 
           ((height - 1) * width + (width - 1)) * 4,
         ]
 
-        let isNearWhite = false
+        let whiteCornersCount = 0
         for (const idx of cornerIndices) {
           const a = data[idx + 3]
           const r = data[idx]
           const g = data[idx + 1]
           const b = data[idx + 2]
           if (a > 50 && r > 220 && g > 220 && b > 220) {
-            isNearWhite = true
-            break
+            whiteCornersCount++
           }
         }
 
-        if (!isNearWhite) {
-          reject(new Error('Corner pixels are not white or near-white'))
+        if (whiteCornersCount < 2) {
+          reject(new Error('Moins de 2 coins blancs ou quasi-blancs détectés'))
           return
         }
 
@@ -181,7 +180,7 @@ export function removeWhiteBackground(dataUrl: string, tolerance: number = 32): 
         reject(err)
       }
     }
-    img.onerror = (err) => reject(err)
+    img.onerror = () => reject(new Error("Échec du chargement de l'image"))
     img.src = dataUrl
   })
 }

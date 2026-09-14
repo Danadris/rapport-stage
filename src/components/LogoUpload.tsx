@@ -21,12 +21,16 @@ export function LogoUpload({ value, onChange, label, aspect = 'wide' }: LogoUplo
   const [isProcessing, setIsProcessing] = useState(false)
 
   const isCutoutRef = useRef(false)
+  const cutoutUrlRef = useRef<string | undefined>(undefined)
   const lastPropValueRef = useRef(value)
 
   useEffect(() => {
     if (value !== lastPropValueRef.current) {
       lastPropValueRef.current = value
-      if (!isCutoutRef.current) {
+      if (value !== cutoutUrlRef.current) {
+        cutoutUrlRef.current = undefined
+        isCutoutRef.current = false
+        setIsCutout(false)
         setOriginalDataUrl(value)
       }
     }
@@ -39,6 +43,7 @@ export function LogoUpload({ value, onChange, label, aspect = 'wide' }: LogoUplo
     reader.onload = () => {
       if (typeof reader.result === 'string') {
         const dataUrl = reader.result
+        cutoutUrlRef.current = undefined
         setOriginalDataUrl(dataUrl)
         setIsCutout(false)
         isCutoutRef.current = false
@@ -49,23 +54,25 @@ export function LogoUpload({ value, onChange, label, aspect = 'wide' }: LogoUplo
   }
 
   const handleRemoveBg = async () => {
-    if (!value || isRemovingBg || isProcessing) return
+    if (!value || isRemovingBg || isProcessing || isCutout) return
     clearError()
     setIsProcessing(true)
 
-    const currentImage = value
+    const currentImage = originalDataUrl || value
     if (!originalDataUrl) {
       setOriginalDataUrl(currentImage)
     }
 
     try {
       const cutout = await removeWhiteBackground(currentImage)
+      cutoutUrlRef.current = cutout
       isCutoutRef.current = true
       setIsCutout(true)
       onChange(cutout)
     } catch (err) {
       console.warn('Canvas white background removal skipped/failed, trying neural worker', err)
       await removeBackground('logo', currentImage, (cutout) => {
+        cutoutUrlRef.current = cutout
         isCutoutRef.current = true
         setIsCutout(true)
         onChange(cutout)
@@ -78,6 +85,7 @@ export function LogoUpload({ value, onChange, label, aspect = 'wide' }: LogoUplo
   const handleRevert = () => {
     if (!originalDataUrl) return
     clearError()
+    cutoutUrlRef.current = undefined
     isCutoutRef.current = false
     setIsCutout(false)
     onChange(originalDataUrl)
@@ -85,6 +93,7 @@ export function LogoUpload({ value, onChange, label, aspect = 'wide' }: LogoUplo
 
   const handleDelete = () => {
     clearError()
+    cutoutUrlRef.current = undefined
     isCutoutRef.current = false
     setIsCutout(false)
     setOriginalDataUrl(undefined)
@@ -137,15 +146,20 @@ export function LogoUpload({ value, onChange, label, aspect = 'wide' }: LogoUplo
             <button
               type="button"
               aria-label="Retirer le fond"
-              title="Retirer le fond"
+              title={isCutout ? 'Le fond a déjà été retiré' : 'Retirer le fond'}
               onClick={handleRemoveBg}
-              disabled={isBusy}
-              className="inline-flex items-center gap-1.5 rounded-md border border-line bg-paper px-2.5 py-1 text-[12px] font-medium text-muted transition-colors duration-150 hover:border-gold hover:bg-gold-soft/50 hover:text-gold-deep disabled:opacity-50 cursor-pointer"
+              disabled={isBusy || isCutout}
+              className={cx(
+                'inline-flex items-center gap-1.5 rounded-md border border-line bg-paper px-2.5 py-1 text-[12px] font-medium transition-colors duration-150',
+                isCutout
+                  ? 'cursor-not-allowed text-faint opacity-50'
+                  : 'cursor-pointer text-muted hover:border-gold hover:bg-gold-soft/50 hover:text-gold-deep disabled:opacity-50',
+              )}
             >
               {isBusy ? (
                 <Loader2 size={13} className="animate-spin text-ink" />
               ) : (
-                <Wand2 size={13} className="text-gold-deep" />
+                <Wand2 size={13} className={isCutout ? 'text-faint' : 'text-gold-deep'} />
               )}
               <span>Retirer le fond</span>
             </button>
