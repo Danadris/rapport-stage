@@ -53,7 +53,18 @@ export interface NoteField {
   prefix?: string    // e.g. "a/", "b/" — auto-assigned for Level 3 items
 }
 
-export type StepKind = 'couverture' | 'entreprise' | 'presentation' | 'activites' | 'notes'
+export interface OrgNode {
+  id: string
+  name: string      // e.g. "M. Ahmed Benali"
+  title: string     // e.g. "Directeur Général"
+  parentId?: string // undefined = root node
+}
+
+export interface Organigramme {
+  nodes: OrgNode[]
+}
+
+export type StepKind = 'couverture' | 'entreprise' | 'organigramme' | 'presentation' | 'activites' | 'notes'
 
 export interface WizardStep {
   id: string
@@ -90,6 +101,7 @@ export interface Rapport {
   pageBreaks?: Record<string, boolean>
   /** Custom plan defined by the user. undefined = use official WIZARD_STEPS */
   customSteps?: WizardStep[]
+  organigramme?: Organigramme
 }
 
 // --- V3.1 Architecture Types ---
@@ -128,6 +140,7 @@ export interface ReportData {
   pageBreaks?: Record<string, boolean>
   customSteps?: WizardStep[]
   images?: Record<string, ImageReference[]> // No Base64 data here!
+  organigramme?: Organigramme
 }
 
 export interface StoredImage {
