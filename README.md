@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Puis ouvrir http://localhost:5173.
+Puis ouvrir http://localhost:####.
 
 ## Android APK
 
