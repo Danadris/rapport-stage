@@ -910,7 +910,14 @@ export function WorkspacePage() {
           <>
             <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 md:px-10 md:py-8">
               <p className="mb-7 text-sm leading-relaxed text-muted">{step.consigne}</p>
-              {rapport.customSteps && step.id.startsWith('custom-') && (
+              {/* The organigramme format switch makes sense only for the section
+                  that IS the organigramme — showing it on every custom step made
+                  the 🏢 Organigramme button appear in Introduction, Contexte de
+                  stage, etc. It is therefore only rendered for steps whose title
+                  is (or whose format already is) the organigramme. */}
+              {rapport.customSteps &&
+                step.id.startsWith('custom-') &&
+                (step.kind === 'organigramme' || step.titre.toLowerCase().includes('organigramme')) && (
                 <div className="mb-6 flex items-center justify-between rounded-xl border border-line bg-paper px-4 py-2.5 shadow-xs">
                   <span className="text-xs font-medium text-muted">Format de cette section :</span>
                   <div className="flex gap-1 rounded-lg bg-cream p-1 border border-line/60">

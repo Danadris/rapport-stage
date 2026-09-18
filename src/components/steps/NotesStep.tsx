@@ -98,7 +98,9 @@ function FieldBox({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const isOrg = f.isOrganigramme ?? (f.label.toLowerCase().includes('organigramme') || false)
+  // An organigramme must only live in the section (or subtitle) titled
+  // "organigramme" — never auto-detected from random labels.
+  const isOrg = f.isOrganigramme ?? false
 
   const handleGenerate = async () => {
     if (!current.trim()) return
@@ -127,7 +129,7 @@ function FieldBox({
                 placeholder="Sous-titre (optionnel)"
                 className="flex-1 bg-transparent text-[13px] font-medium text-ink focus:outline-none focus:border-b focus:border-gold border-b border-transparent p-0"
               />
-              {onToggleMode && (
+              {onToggleMode && (isOrg || f.label.toLowerCase().includes('organigramme')) && (
                 <button
                   type="button"
                   onClick={() => onToggleMode(!isOrg)}
@@ -270,7 +272,9 @@ function Level3Box({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const isOrg = f.isOrganigramme ?? (f.label.toLowerCase().includes('organigramme') || false)
+  // An organigramme must only live in the section (or subtitle) titled
+  // "organigramme" — never auto-detected from random labels.
+  const isOrg = f.isOrganigramme ?? false
 
   const handleGenerate = async () => {
     if (!current.trim()) return
@@ -298,7 +302,7 @@ function Level3Box({
           placeholder="Point (optionnel)"
           className="flex-1 bg-transparent text-[13px] font-medium text-ink focus:outline-none focus:border-b focus:border-gold border-b border-transparent p-0"
         />
-        {onToggleMode && (
+        {onToggleMode && (isOrg || f.label.toLowerCase().includes('organigramme')) && (
           <button
             type="button"
             onClick={() => onToggleMode(!isOrg)}
