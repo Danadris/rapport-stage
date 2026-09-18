@@ -782,9 +782,9 @@ export function WorkspacePage() {
               </div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-              <div className="hidden sm:flex items-center gap-1">
-                <button onClick={undo} disabled={!canUndo} className="rounded p-1.5 text-muted hover:text-ink disabled:opacity-30" title="Annuler (Ctrl+Z)"><Undo2 size={15} /></button>
-                <button onClick={redo} disabled={!canRedo} className="rounded p-1.5 text-muted hover:text-ink disabled:opacity-30" title="Rétablir (Ctrl+Y)"><Redo2 size={15} /></button>
+              <div className="flex items-center gap-1">
+                <button onClick={undo} disabled={!canUndo} title="Annuler" aria-label="Annuler" className="flex h-10 sm:h-auto items-center rounded-lg px-2.5 sm:px-1.5 py-1 sm:py-1.5 text-muted hover:text-ink active:bg-gold-soft/60 disabled:opacity-30"><Undo2 size={15} /></button>
+                <button onClick={redo} disabled={!canRedo} title="Rétablir" aria-label="Rétablir" className="flex h-10 sm:h-auto items-center rounded-lg px-2.5 sm:px-1.5 py-1 sm:py-1.5 text-muted hover:text-ink active:bg-gold-soft/60 disabled:opacity-30"><Redo2 size={15} /></button>
               </div>
               
               {/* Style / PDF buttons integrated into nav bar for ALL sizes */}
