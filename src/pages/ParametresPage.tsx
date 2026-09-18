@@ -1,4 +1,7 @@
 import { AlertCircle, CheckCircle2, Download, KeyRound, Monitor, Moon, Palette, Sun, Upload } from 'lucide-react'
+import { Capacitor } from '@capacitor/core'
+import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
+import { Share } from '@capacitor/share'
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { createBackup, importBackup, loadSettings, saveSettings } from '../lib/storage'
 import { createBackupV3, importBackupV3 } from '../lib/backupV3'
@@ -67,18 +70,37 @@ export function ParametresPage() {
         backupPayload = await createBackup()
       }
 
-      const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `rapport-stage-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(url)
-
+      const json = JSON.stringify(backupPayload, null, 2)
+      const fileName = `rapport-stage-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`
       const reportCount = backupPayload.reports?.length ?? backupPayload.rapports?.length ?? 0
-      setBackupStatus({ tone: 'success', text: `${reportCount} rapport(s) exporté(s) avec succès.` })
+
+      if (Capacitor.isNativePlatform()) {
+        // On a phone the plain browser download doesn't exist, so write the
+        // backup to the app cache and open the native share sheet: the user
+        // picks "Save to Files" (or Drive, WhatsApp, …) to store it anywhere.
+        await Filesystem.writeFile({ path: fileName, data: json, directory: Directory.Cache, encoding: Encoding.UTF8 })
+        const { uri } = await Filesystem.getUri({ path: fileName, directory: Directory.Cache })
+        await Share.share({
+          title: 'Rapport de stage — sauvegarde',
+          files: [uri],
+          dialogTitle: `Exporter ${reportCount} rapport(s)`,
+        })
+        setBackupStatus({
+          tone: 'success',
+          text: `${reportCount} rapport(s) exporté(s). Dans le menu de partage, choisissez « Enregistrer dans Fichiers » pour sélectionner l'emplacement.`,
+        })
+      } else {
+        const blob = new Blob([json], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(url)
+        setBackupStatus({ tone: 'success', text: `${reportCount} rapport(s) exporté(s) avec succès.` })
+      }
     } catch {
       setBackupStatus({ tone: 'error', text: "L'export de la sauvegarde a échoué." })
     } finally {
@@ -217,7 +239,8 @@ export function ParametresPage() {
             <Badge tone="neutral">JSON</Badge>
           </div>
           <p className="mb-4 text-xs leading-relaxed text-muted">
-            Rapports stockés sur cet appareil. Exportez avant de changer d'appareil.
+            Rapports stockés sur cet appareil. Exportez-les avant de changer d'appareil. Sur mobile, le menu de
+            partage s'ouvre : choisissez « Enregistrer dans Fichiers » pour choisir l'emplacement.
           </p>
           <input
             ref={backupInputRef}
