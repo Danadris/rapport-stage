@@ -866,19 +866,19 @@ export function WorkspacePage() {
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-semibold uppercase tracking-wider text-muted">Taille titres</label>
                     <select value={rapport.style?.titleSize || 17} onChange={(e) => patchStyle({ titleSize: Number(e.target.value) })} className="h-8 w-full rounded border border-line bg-paper px-2 text-xs text-ink">
-                      {[14, 15, 16, 17, 18, 20, 22, 24].map((s) => <option key={s} value={s}>{s}px</option>)}
+                      {[14, 15, 16, 17, 18, 20, 22, 24, 26, 28, 30].map((s) => <option key={s} value={s}>{s}px</option>)}
                     </select>
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-semibold uppercase tracking-wider text-muted">Sous-titres</label>
                     <select value={rapport.style?.subtitleSize || 14} onChange={(e) => patchStyle({ subtitleSize: Number(e.target.value) })} className="h-8 w-full rounded border border-line bg-paper px-2 text-xs text-ink">
-                      {[11, 12, 13, 14, 15, 16, 17, 18].map((s) => <option key={s} value={s}>{s}px</option>)}
+                      {[11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 24].map((s) => <option key={s} value={s}>{s}px</option>)}
                     </select>
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-semibold uppercase tracking-wider text-muted">Taille texte</label>
                     <select value={rapport.style?.bodySize || 13} onChange={(e) => patchStyle({ bodySize: Number(e.target.value) })} className="h-8 w-full rounded border border-line bg-paper px-2 text-xs text-ink">
-                      {[10, 11, 12, 13, 14, 15, 16].map((s) => <option key={s} value={s}>{s}px</option>)}
+                      {[10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22].map((s) => <option key={s} value={s}>{s}px</option>)}
                     </select>
                   </div>
                   <div className="flex flex-col gap-1">
