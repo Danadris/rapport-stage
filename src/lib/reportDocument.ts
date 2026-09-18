@@ -89,7 +89,7 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
     for (const step of rapport.customSteps) {
       if (step.kind === 'couverture' || step.kind === 'entreprise') continue
 
-      if (step.kind === 'organigramme' || isOrganigrammeTitle(step.titre)) {
+      if (step.kind === 'organigramme') {
         parts.push({
           key: step.id,
           numero: null,
@@ -207,7 +207,7 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
         const sousSections: ReportSubSection[] = level2Fields.map((parent, i) => {
           // Level 3 = fields whose parentId matches this level-2 field
           const children = step.fields.filter(f => f.parentId === parent.id)
-          const isParentOrg = parent.isOrganigramme ?? isOrganigrammeTitle(parent.label)
+          const isParentOrg = parent.isOrganigramme ?? false
 
           const items: ReportSubSubSection[] = children.map((child, ci) => ({
             id: child.id,
@@ -215,7 +215,7 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
             prefix: child.prefix || `${String.fromCharCode(97 + ci)}/`,
             texte: note(rapport, step.id, child.id),
             editPath: { source: 'section' as const, field: `${step.id}:${child.id}` },
-            isOrganigramme: child.isOrganigramme ?? isOrganigrammeTitle(child.label),
+            isOrganigramme: child.isOrganigramme ?? false,
           }))
 
           return {

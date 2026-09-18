@@ -45,12 +45,29 @@ export function WorkspacePage() {
   const [showSettings, setShowSettings] = useState(false)
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
+  const previewWrapRef = useRef<HTMLDivElement>(null)
+  const [previewWrapWidth, setPreviewWrapWidth] = useState<number | null>(null)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // Fit the A4 preview to the actual preview column width on mobile — the pages
+  // are fixed at 794px, so the zoom must track the container (not innerWidth,
+  // which includes the sidebar) and must never be floored, or the A4 page
+  // overflows the screen instead of fitting it.
+  useEffect(() => {
+    if (!isMobile) return
+    const el = previewWrapRef.current
+    if (!el) return
+    const measure = () => setPreviewWrapWidth(el.offsetWidth)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [isMobile])
   const saveTimer = useRef<number | undefined>(undefined)
   const saveSeq = useRef(0)
 
@@ -1029,11 +1046,11 @@ export function WorkspacePage() {
 
 
             {/* ── Preview ─────────────────────────────────────────── */}
-            <div className={cx('px-2 py-6 md:px-4 md:py-10 print:p-0', isMobile && 'overflow-x-auto')}>
+            <div ref={previewWrapRef} className={cx('px-2 py-6 md:px-4 md:py-10 print:p-0', isMobile && 'overflow-x-auto')}>
               <div
                 style={
                   isMobile
-                    ? { '--preview-zoom': Math.min(1, Math.max(0.55, (window.innerWidth - 16) / 794)) } as React.CSSProperties
+                    ? { '--preview-zoom': Math.min(1, ((previewWrapWidth ?? window.innerWidth) - 16) / 794) } as React.CSSProperties
                     : { '--preview-scale': zoom / 100 } as React.CSSProperties
                 }
                 className={

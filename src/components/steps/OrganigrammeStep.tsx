@@ -205,21 +205,21 @@ export function OrganigrammeStep({ value, onChange, entreprise }: OrganigrammeSt
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => setShowDetails(!showDetails)}
-              className="text-[12px] text-faint hover:text-ink transition-colors"
-            >
-              {showDetails ? 'Masquer les précisions' : 'Ajouter des précisions…'}
-            </button>
             <Button
               size="sm"
               variant="secondary"
+              onClick={() => setShowDetails(!showDetails)}
+            >
+              {showDetails ? 'Masquer les précisions' : 'Ajouter des précisions…'}
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
               onClick={handleGenerateAI}
               disabled={isGenerating}
             >
               {isGenerating && <Loader2 size={13} className="animate-spin" />}
-              {isGenerating ? 'Génération...' : "Générer avec l'IA"}
+              {isGenerating ? 'Génération...' : "Avec l'IA"}
             </Button>
           </div>
         </div>
