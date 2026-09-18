@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Download, Eye, PencilLine, Undo2, Redo2, Menu, X, RotateCcw, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Download, Eye, PencilLine, Undo2, Redo2, Menu, X, RotateCcw, SlidersHorizontal, FileText, Archive } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { Stepper } from '../components/Stepper'
@@ -18,6 +18,11 @@ import { emptyCouverture } from '../types'
 import { Button, Eyebrow, SkeletonRow } from '../components/ui'
 import { cx } from '../lib/cx'
 import { exportToPdf } from '../lib/exportPdf'
+import { createBackup } from '../lib/storage'
+import { createBackupV3 } from '../lib/backupV3'
+import { Capacitor } from '@capacitor/core'
+import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
+import { Share } from '@capacitor/share'
 
 const PRESENTATION_FIELDS: EntFieldDef[] = [
   { key: 'organismeAccueil', label: "Organisme d'accueil", placeholder: "Nature de l'établissement, effectif…" },
@@ -43,6 +48,8 @@ export function WorkspacePage() {
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
   const previewWrapRef = useRef<HTMLDivElement>(null)
@@ -197,6 +204,51 @@ export function WorkspacePage() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
+
+  const handleExportPdf = () => {
+    setShowExportMenu(false)
+    void exportToPdf()
+  }
+
+  const handleExportBackup = async () => {
+    setShowExportMenu(false)
+    setExportError(null)
+    try {
+      let backupPayload: any = await createBackupV3()
+      if (backupPayload.reports.length === 0) {
+        backupPayload = await createBackup()
+      }
+      const json = JSON.stringify(backupPayload, null, 2)
+      const fileName = `rapport-stage-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`
+      if (Capacitor.isNativePlatform()) {
+        await Filesystem.writeFile({ path: fileName, data: json, directory: Directory.Cache, encoding: Encoding.UTF8 })
+        const { uri } = await Filesystem.getUri({ path: fileName, directory: Directory.Cache })
+        await Share.share({ title: 'Rapport de stage — sauvegarde', files: [uri], dialogTitle: 'Exporter la sauvegarde' })
+      } else {
+        const blob = new Blob([json], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(url)
+      }
+    } catch {
+      setExportError("L'export de la sauvegarde a échoué.")
+    }
+  }
+
+  useEffect(() => {
+    if (!showExportMenu) return
+    const close = () => setShowExportMenu(false)
+    const t = window.setTimeout(() => document.addEventListener('click', close), 0)
+    return () => {
+      window.clearTimeout(t)
+      document.removeEventListener('click', close)
+    }
+  }, [showExportMenu])
 
   useEffect(() => {
     if (!rapport || loadingRapport || saveStatus !== 'saving') return
@@ -802,10 +854,41 @@ export function WorkspacePage() {
                     <SlidersHorizontal size={15} />
                     <span className="hidden sm:inline">Style</span>
                   </button>
-                  <button onClick={() => void exportToPdf()} className="flex h-10 sm:h-auto items-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1 sm:py-1.5 text-[12px] sm:text-[13px] text-muted hover:text-ink active:text-ink active:bg-paper transition-colors" title="PDF">
-                    <Download size={15} />
-                    <span className="hidden sm:inline">PDF</span>
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowExportMenu(v => !v)}
+                      className={cx(
+                        'flex h-10 sm:h-auto items-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1 sm:py-1.5 text-[12px] sm:text-[13px] transition-colors active:bg-gold-soft/60',
+                        showExportMenu ? 'bg-gold-soft font-medium text-gold-deep' : 'text-muted hover:text-ink'
+                      )}
+                      title="Exporter"
+                      aria-label="Exporter"
+                    >
+                      <Download size={15} />
+                      <span className="hidden sm:inline">Exporter</span>
+                    </button>
+                    {showExportMenu && (
+                      <div className="absolute right-0 top-full z-40 mt-2 w-60 overflow-hidden rounded-xl border border-line bg-paper shadow-lg">
+                        <button
+                          onClick={handleExportPdf}
+                          className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-[13px] text-ink hover:bg-cream active:bg-gold-soft/60 transition-colors"
+                        >
+                          <FileText size={15} className="text-muted" />
+                          <span>PDF du rapport</span>
+                        </button>
+                        <button
+                          onClick={() => void handleExportBackup()}
+                          className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-[13px] text-ink hover:bg-cream active:bg-gold-soft/60 transition-colors"
+                        >
+                          <Archive size={15} className="text-muted" />
+                          <span>Sauvegarde JSON</span>
+                        </button>
+                        {exportError && (
+                          <p className="border-t border-line bg-danger/5 px-4 py-2 text-[11px] text-danger">{exportError}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
