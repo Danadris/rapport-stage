@@ -176,7 +176,7 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
           </div>
         </div>
 
-        <div className={`mt-auto mb-6 flex h-[270px] shrink-0 items-center justify-center bg-white ${c.photoActivite ? '' : 'border-[3px] border-[#4472c4] p-1.5'}`}>
+        <div className={`mt-auto mb-6 flex h-[330px] shrink-0 items-center justify-center bg-white ${c.photoActivite ? '' : 'border-[3px] border-[#4472c4] p-1.5'}`}>
           {c.photoActivite ? (
             <img
               src={c.photoActivite}
