@@ -90,7 +90,7 @@ export function Stepper({ rapport, steps, currentId, onSelect, onDeleteStep, onA
                 className={cx(
                   'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors duration-150',
                   current ? 'bg-gold-soft' : reachable ? 'hover:bg-paper' : 'cursor-not-allowed opacity-40',
-                  canDelete ? 'pr-8' : '',
+                  canDelete ? 'pr-9' : '',
                 )}
               >
                 <span
@@ -130,16 +130,16 @@ export function Stepper({ rapport, steps, currentId, onSelect, onDeleteStep, onA
               {canDelete && (
                 <div className="absolute right-1 top-1/2 -translate-y-1/2">
                   {confirming ? (
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={(e) => { e.stopPropagation(); onDeleteStep(step.id); setConfirmingId(null) }}
-                        className="rounded px-1.5 py-0.5 text-[11px] font-medium text-danger hover:bg-danger/10 transition-colors"
+                        className="flex h-8 items-center rounded px-2.5 text-[12px] font-medium text-danger hover:bg-danger/10 active:bg-danger/10 transition-colors"
                       >
                         Oui
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); setConfirmingId(null) }}
-                        className="rounded px-1.5 py-0.5 text-[11px] text-faint hover:text-ink transition-colors"
+                        className="flex h-8 items-center rounded px-2.5 text-[12px] text-faint hover:text-ink active:text-ink transition-colors"
                       >
                         Non
                       </button>
@@ -148,9 +148,9 @@ export function Stepper({ rapport, steps, currentId, onSelect, onDeleteStep, onA
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmingId(step.id) }}
                       aria-label={`Supprimer ${step.titre || 'cette section'}`}
-                      className="rounded p-1 text-faint opacity-50 hover:opacity-100 hover:bg-danger/10 hover:text-danger transition-colors"
+                      className="flex h-9 w-9 items-center justify-center rounded text-faint opacity-60 hover:opacity-100 hover:bg-danger/10 hover:text-danger active:bg-danger/10 active:text-danger transition-colors"
                     >
-                      <Trash2 size={12} />
+                      <Trash2 size={13} />
                     </button>
                   )}
                 </div>

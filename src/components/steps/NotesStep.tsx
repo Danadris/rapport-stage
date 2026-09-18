@@ -1,4 +1,4 @@
-import { ChevronDown, Lightbulb, Sparkles, AlertCircle, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, Lightbulb, AlertCircle, Plus, Trash2, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import type { NoteField, Organigramme, Entreprise, SectionImage } from '../../types'
 import { Field, Textarea, Button } from '../ui'
@@ -141,7 +141,7 @@ function FieldBox({
                 <button
                   onClick={onDelete}
                   title="Supprimer ce sous-titre"
-                  className="opacity-0 group-hover/field:opacity-100 p-1 text-faint hover:text-danger hover:bg-danger/10 rounded transition-all"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-faint opacity-60 transition-all hover:bg-danger/10 hover:text-danger hover:opacity-100 active:bg-danger/10 active:text-danger"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                 </button>
@@ -151,8 +151,7 @@ function FieldBox({
             {isOrg ? (
               <div className="mt-2 space-y-3 rounded-xl border border-line bg-paper p-4">
                 <div className="flex items-center justify-between pb-2 border-b border-line">
-                  <span className="text-[12px] font-semibold text-ink flex items-center gap-1.5">
-                    <Sparkles size={13} className="text-gold-deep" />
+                  <span className="text-[12px] font-semibold text-ink">
                     Structure hiérarchique
                   </span>
                   {onToggleMode && (
@@ -174,6 +173,7 @@ function FieldBox({
             ) : (
               <Textarea
                 id={`f-${f.id}`}
+                label={f.label}
                 rows={3}
                 counter
                 value={current}
@@ -186,6 +186,7 @@ function FieldBox({
           <Field label={f.label} hint={f.hint} optional={f.hint === 'Optionnel'} htmlFor={`f-${f.id}`}>
             <Textarea
               id={`f-${f.id}`}
+              label={f.label}
               rows={3}
               counter
               value={current}
@@ -212,7 +213,7 @@ function FieldBox({
               onClick={handleGenerate}
               disabled={loading || !current.trim()}
             >
-              <Sparkles size={14} className={loading ? "animate-pulse" : "text-gold-deep"} />
+              {loading && <Loader2 size={14} className="animate-spin" />}
               {loading ? 'Rédaction...' : 'Rédiger'}
             </Button>
           </div>
@@ -224,6 +225,7 @@ function FieldBox({
           )}
 
           <Textarea
+            label="Texte final A4"
             rows={generated ? 4 : 2}
             value={generated}
             onChange={(e) => onGenerate(f.id, e.target.value)}
@@ -310,7 +312,7 @@ function Level3Box({
           <button
             onClick={onDelete}
             title="Supprimer ce point"
-            className="opacity-0 group-hover/l3:opacity-100 p-1 text-faint hover:text-danger hover:bg-danger/10 rounded transition-all"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-faint opacity-60 transition-all hover:bg-danger/10 hover:text-danger hover:opacity-100 active:bg-danger/10 active:text-danger"
           >
             <Trash2 size={13} />
           </button>
@@ -320,8 +322,7 @@ function Level3Box({
       {isOrg ? (
         <div className="space-y-3 rounded-xl border border-line bg-paper p-3">
           <div className="flex items-center justify-between pb-2 border-b border-line">
-            <span className="text-[11px] font-semibold text-ink flex items-center gap-1.5">
-              <Sparkles size={12} className="text-gold-deep" />
+            <span className="text-[11px] font-semibold text-ink">
               Structure hiérarchique
             </span>
             {onToggleMode && (
@@ -344,6 +345,7 @@ function Level3Box({
         <>
           {/* Notes textarea */}
           <Textarea
+            label={f.label || f.prefix || 'Point'}
             rows={2}
             counter
             value={current}
@@ -356,7 +358,7 @@ function Level3Box({
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-ink">Texte final A4</span>
               <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={loading || !current.trim()}>
-                <Sparkles size={13} className={loading ? 'animate-pulse' : 'text-gold-deep'} />
+                {loading && <Loader2 size={13} className="animate-spin" />}
                 {loading ? 'Rédaction...' : 'Rédiger'}
               </Button>
             </div>
@@ -366,6 +368,7 @@ function Level3Box({
               </div>
             )}
             <Textarea
+              label="Texte final A4"
               rows={generated ? 3 : 2}
               value={generated}
               onChange={(e) => onGenerate(f.id, e.target.value)}

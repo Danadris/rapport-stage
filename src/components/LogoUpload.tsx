@@ -1,4 +1,4 @@
-import { ImagePlus, Trash2, Wand2, Loader2, RotateCcw } from 'lucide-react'
+import { ImagePlus, Trash2, Loader2, RotateCcw } from 'lucide-react'
 import { useRef, useState, useEffect } from 'react'
 import { cx } from '../lib/cx'
 import { useBackgroundRemoval } from '../hooks/useBackgroundRemoval'
@@ -156,11 +156,7 @@ export function LogoUpload({ value, onChange, label, aspect = 'wide' }: LogoUplo
                   : 'cursor-pointer text-muted hover:border-gold hover:bg-gold-soft/50 hover:text-gold-deep disabled:opacity-50',
               )}
             >
-              {isBusy ? (
-                <Loader2 size={13} className="animate-spin text-ink" />
-              ) : (
-                <Wand2 size={13} className={isCutout ? 'text-faint' : 'text-gold-deep'} />
-              )}
+              {isBusy && <Loader2 size={13} className="animate-spin text-ink" />}
               <span>Retirer le fond</span>
             </button>
 

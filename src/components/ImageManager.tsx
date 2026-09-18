@@ -1,4 +1,4 @@
-import { AlignCenter, AlignLeft, AlignRight, GripVertical, ImagePlus, Trash2, Wand2, Loader2 } from 'lucide-react'
+import { AlignCenter, AlignLeft, AlignRight, ChevronDown, ChevronUp, GripVertical, ImagePlus, Trash2, Scissors, Loader2 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import type { SectionImage } from '../types'
 import { cx } from '../lib/cx'
@@ -61,11 +61,21 @@ export function ImageManager({ images, onChange, max = 6 }: ImageManagerProps) {
     setOverIdx(null)
   }
 
+  // Button-based reorder — works on touch devices, where native HTML5
+  // drag-and-drop (used by the grip handle below) never fires.
+  const moveImage = (idx: number, dir: -1 | 1) => {
+    const target = idx + dir
+    if (target < 0 || target >= images.length) return
+    const reordered = [...images]
+    ;[reordered[idx], reordered[target]] = [reordered[target], reordered[idx]]
+    onChange(reordered)
+  }
+
   return (
     <div className="border-t border-line pt-5">
       <span className="text-[13px] font-medium text-ink">
         Images de la section{' '}
-        <span className="text-[11px] font-normal text-faint">Optionnel · glisser pour réordonner</span>
+        <span className="text-[11px] font-normal text-faint">Optionnel · flèches pour réordonner</span>
       </span>
       {bgError && (
         <p className="mt-2 text-[12px] text-danger" role="alert">
@@ -99,8 +109,26 @@ export function ImageManager({ images, onChange, max = 6 }: ImageManagerProps) {
               dragIdx === idx ? 'opacity-50' : '',
             )}
           >
-            <div className="flex flex-col items-center justify-center gap-1 cursor-grab active:cursor-grabbing text-faint hover:text-muted">
-              <GripVertical size={16} />
+            <div className="flex flex-col items-center justify-center gap-0.5 text-faint">
+              <button
+                type="button"
+                aria-label="Déplacer vers le haut"
+                onClick={() => moveImage(idx, -1)}
+                disabled={idx === 0}
+                className="flex h-7 w-7 items-center justify-center rounded hover:bg-cream hover:text-ink active:bg-cream active:text-ink disabled:opacity-30"
+              >
+                <ChevronUp size={14} />
+              </button>
+              <GripVertical size={14} className="hidden cursor-grab active:cursor-grabbing sm:block" />
+              <button
+                type="button"
+                aria-label="Déplacer vers le bas"
+                onClick={() => moveImage(idx, 1)}
+                disabled={idx === images.length - 1}
+                className="flex h-7 w-7 items-center justify-center rounded hover:bg-cream hover:text-ink active:bg-cream active:text-ink disabled:opacity-30"
+              >
+                <ChevronDown size={14} />
+              </button>
             </div>
             <img src={img.dataUrl} alt="" className="h-20 w-20 shrink-0 rounded-md border border-line object-cover" />
             <div className="min-w-0 flex-1 space-y-2">
@@ -153,7 +181,7 @@ export function ImageManager({ images, onChange, max = 6 }: ImageManagerProps) {
                     disabled={removingId !== null}
                     className="flex h-7 w-7 items-center justify-center rounded-md text-faint transition-colors duration-150 hover:bg-gold-soft hover:text-gold-deep disabled:opacity-50"
                   >
-                    {removingId === img.id ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                    {removingId === img.id ? <Loader2 size={14} className="animate-spin" /> : <Scissors size={14} />}
                   </button>
                   <button
                     type="button"

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Plus, Trash2, ChefHat, GripVertical, ImagePlus, Sparkles, AlertCircle, Wand2, Loader2 } from 'lucide-react'
+import { Plus, Trash2, ChefHat, GripVertical, ImagePlus, AlertCircle, Loader2 } from 'lucide-react'
 import type { FicheTechnique, FicheIngredient, SectionImage, Entreprise, MaterielItem } from '../../types'
 import { Field, Textarea, Button } from '../ui'
 import { genererFicheTechnique } from '../../lib/ai'
@@ -225,7 +225,7 @@ export function FicheTechniqueStep({ fiches, onChange, materiels = [], onMaterie
                     className="inline-flex items-center justify-center gap-1 rounded-md border border-line px-1.5 py-1 text-[10.5px] text-muted transition-colors hover:border-gold-deep/40 hover:text-ink disabled:opacity-40"
                     title="Supprimer le fond de la photo"
                   >
-                    {removingBgId === item.id ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />}
+                    {removingBgId === item.id && <Loader2 size={11} className="animate-spin" />}
                     Enlever le fond
                   </button>
                   <div className="flex items-center gap-1">
@@ -255,6 +255,7 @@ export function FicheTechniqueStep({ fiches, onChange, materiels = [], onMaterie
                     className={inputCls}
                   />
                   <Textarea
+                    label={item.nom || 'Matériel'}
                     value={item.utilisation}
                     onChange={(e) => patchMateriel(item.id, { utilisation: e.target.value })}
                     placeholder="Utilisation dans la production..."
@@ -264,7 +265,7 @@ export function FicheTechniqueStep({ fiches, onChange, materiels = [], onMaterie
                 <button
                   type="button"
                   onClick={() => deleteMateriel(item.id)}
-                  className="h-8 rounded p-1.5 text-faint transition-colors hover:bg-danger/10 hover:text-danger"
+                  className="inline-flex h-9 w-9 shrink-0 self-start justify-self-end items-center justify-center rounded-md text-faint transition-colors hover:bg-danger/10 hover:text-danger active:bg-danger/10 active:text-danger"
                   title="Supprimer ce matériel"
                 >
                   <Trash2 size={14} />
@@ -302,10 +303,10 @@ export function FicheTechniqueStep({ fiches, onChange, materiels = [], onMaterie
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); deleteFiche(f.id) }}
-                className="opacity-0 group-hover:opacity-100 rounded p-0.5 text-faint hover:text-danger transition-all"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-faint opacity-60 transition-all hover:bg-danger/10 hover:text-danger hover:opacity-100 active:bg-danger/10 active:text-danger"
                 title="Supprimer cette fiche"
               >
-                <Trash2 size={11} />
+                <Trash2 size={12} />
               </button>
             </div>
           ))}
@@ -332,8 +333,7 @@ export function FicheTechniqueStep({ fiches, onChange, materiels = [], onMaterie
             {/* AI generation */}
             <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-paper px-4 py-3">
               <div className="text-[12px] leading-snug text-muted">
-                <span className="font-semibold text-ink flex items-center gap-1.5">
-                  <Sparkles size={13} className="text-gold-deep" />
+                <span className="font-semibold text-ink">
                   Génération assistée par IA
                 </span>
                 <span className="text-faint">Remplit ingrédients, matériel, étapes et conseils à partir du nom du produit.</span>
@@ -344,7 +344,7 @@ export function FicheTechniqueStep({ fiches, onChange, materiels = [], onMaterie
                 onClick={handleAiGenerate}
                 disabled={aiLoading}
               >
-                <Sparkles size={14} className={aiLoading ? 'animate-pulse text-gold-deep' : 'text-gold-deep'} />
+                {aiLoading && <Loader2 size={14} className="animate-spin" />}
                 {aiLoading ? 'Génération...' : 'Générer la fiche'}
               </Button>
             </div>
@@ -449,7 +449,7 @@ export function FicheTechniqueStep({ fiches, onChange, materiels = [], onMaterie
                       disabled={removingBgId !== null}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-[12px] text-muted hover:border-gold-deep/40 hover:text-ink transition-colors disabled:opacity-50"
                     >
-                      {removingBgId === ficheImages[0].id ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />}
+                      {removingBgId === ficheImages[0].id && <Loader2 size={13} className="animate-spin" />}
                       Enlever le fond
                     </button>
                     <button
@@ -530,9 +530,9 @@ export function FicheTechniqueStep({ fiches, onChange, materiels = [], onMaterie
                             type="button"
                             onClick={() => deleteIngredient(ing.id)}
                             disabled={activeFiche.ingredients.length <= 1}
-                            className="rounded p-0.5 text-faint hover:text-danger disabled:opacity-20 transition-colors"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded text-faint hover:bg-danger/10 hover:text-danger active:bg-danger/10 active:text-danger disabled:opacity-20 transition-colors"
                           >
-                            <Trash2 size={11} />
+                            <Trash2 size={12} />
                           </button>
                         </td>
                       </tr>
@@ -555,6 +555,7 @@ export function FicheTechniqueStep({ fiches, onChange, materiels = [], onMaterie
             {/* Materiel */}
             <Field label="Matériel nécessaire">
               <Textarea
+                label="Matériel nécessaire"
                 value={activeFiche.materiel}
                 onChange={(e) => patchActive({ materiel: e.target.value })}
                 placeholder="Ex : Pétrin, batteur, moules à tarte Ø22cm, spatule coudée…"
@@ -565,6 +566,7 @@ export function FicheTechniqueStep({ fiches, onChange, materiels = [], onMaterie
             {/* Etapes */}
             <Field label="Étapes de réalisation">
               <Textarea
+                label="Étapes de réalisation"
                 value={activeFiche.etapes}
                 onChange={(e) => patchActive({ etapes: e.target.value })}
                 placeholder={"1. Peser tous les ingrédients.\n2. Mélanger la farine et le sel.\n3. Ajouter l'eau progressivement…"}
@@ -575,6 +577,7 @@ export function FicheTechniqueStep({ fiches, onChange, materiels = [], onMaterie
             {/* Conseils */}
             <Field label="Conseils & astuces" hint="Optionnel">
               <Textarea
+                label="Conseils & astuces"
                 value={activeFiche.conseils}
                 onChange={(e) => patchActive({ conseils: e.target.value })}
                 placeholder="Astuces de professionnel, points de vigilance, variations possibles…"

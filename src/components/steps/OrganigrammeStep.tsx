@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Trash2, Sparkles, AlertCircle, CheckCircle2, Eye } from 'lucide-react'
+import { Plus, Trash2, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import type { Entreprise, Organigramme, OrgNode } from '../../types'
 import { Button, Field, Input, SkeletonRow, Textarea } from '../ui'
 import { genererOrganigramme } from '../../lib/ai'
@@ -18,7 +18,6 @@ export function OrganigrammeStep({ value, onChange, entreprise }: OrganigrammeSt
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
   const [aiPreviewNodes, setAiPreviewNodes] = useState<OrgNode[] | null>(null)
-  const [showLivePreview, setShowLivePreview] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
 
   // Context summary from existing entreprise fields
@@ -32,12 +31,15 @@ export function OrganigrammeStep({ value, onChange, entreprise }: OrganigrammeSt
     .filter(Boolean)
     .join('\n')
 
+  // New positions start with no supervisor — the user links them deliberately
+  // via the dropdown below, rather than silently auto-nesting under the first
+  // position (which was the main source of "why did this happen?" confusion).
   const handleAddNode = () => {
     const newNode: OrgNode = {
       id: crypto.randomUUID(),
       title: '',
       name: '',
-      parentId: nodes.length > 0 ? nodes[0].id : undefined,
+      parentId: undefined,
     }
     onChange({ nodes: [...nodes, newNode] })
   }
@@ -86,14 +88,117 @@ export function OrganigrammeStep({ value, onChange, entreprise }: OrganigrammeSt
 
   return (
     <div className="space-y-6">
-      {/* ── Assistance IA Card (Clean artisanal style matching EntrepriseStep) ── */}
+      {/* ── Postes & hiérarchie — the core task, shown first ── */}
+      <div className="space-y-3">
+        <div>
+          <h4 className="text-[13px] font-semibold text-ink">Postes et hiérarchie</h4>
+          <p className="text-[12px] text-muted mt-0.5">
+            Ajoutez chaque poste, puis choisissez à qui il rapporte dans la liste « Supérieur direct ».
+            Le schéma ci-dessous se construit automatiquement à partir de vos choix.
+          </p>
+        </div>
+
+        {/* Live preview — always visible once there's something to show, so the
+            effect of each change below (adding a node, picking a supervisor)
+            is immediately obvious instead of hidden behind a toggle. */}
+        {nodes.length > 0 && (
+          <div className="rounded-xl border border-line bg-paper p-4">
+            <OrgChart nodes={nodes} />
+          </div>
+        )}
+
+        {nodes.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-line-strong bg-cream/40 p-8 text-center">
+            <p className="text-[13px] text-muted mb-3">Aucun poste pour le moment.</p>
+            <Button variant="secondary" size="sm" onClick={handleAddNode}>
+              <Plus size={13} className="mr-1" /> Ajouter un premier poste
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {nodes.map((node, index) => {
+              const candidateParents = nodes.filter((n) => n.id !== node.id)
+
+              return (
+                <div
+                  key={node.id}
+                  className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 rounded-lg border border-line bg-paper p-3 transition-colors hover:border-line-strong"
+                >
+                  <span className="hidden sm:inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cream text-[10px] font-mono font-bold text-faint">
+                    {index + 1}
+                  </span>
+
+                  {/* Title / Poste */}
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="sm:hidden text-[11px] font-medium text-faint mb-1 block">Poste</label>
+                    <Input
+                      value={node.title}
+                      onChange={(e) => handleUpdateNode(node.id, { title: e.target.value })}
+                      placeholder="Intitulé du poste (ex : Chef de fournil)"
+                    />
+                  </div>
+
+                  {/* Name */}
+                  <div className="flex-1 min-w-[120px]">
+                    <label className="sm:hidden text-[11px] font-medium text-faint mb-1 block">Nom</label>
+                    <Input
+                      value={node.name}
+                      onChange={(e) => handleUpdateNode(node.id, { name: e.target.value })}
+                      placeholder="Nom (ex : M. Benali ou —)"
+                    />
+                  </div>
+
+                  {/* Superior / Reports to */}
+                  <div className="flex-1 min-w-[180px]">
+                    <label className="sm:hidden text-[11px] font-medium text-faint mb-1 block">Supérieur direct</label>
+                    <select
+                      value={node.parentId ?? ''}
+                      onChange={(e) =>
+                        handleUpdateNode(node.id, { parentId: e.target.value || undefined })
+                      }
+                      className="h-9 w-full rounded-lg border border-line bg-cream/70 px-2.5 text-xs text-ink transition-colors focus:border-gold focus:outline-none"
+                    >
+                      <option value="">Aucun supérieur (niveau le plus haut)</option>
+                      {candidateParents.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          Rapporte à : {p.title || 'Sans titre'} {p.name ? `(${p.name})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Delete button */}
+                  <div className="flex justify-end sm:justify-center shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteNode(node.id)}
+                      title="Supprimer ce poste"
+                      className="flex h-9 w-9 items-center justify-center rounded-md text-faint transition-colors hover:bg-danger/10 hover:text-danger active:bg-danger/10 active:text-danger"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {nodes.length > 0 && (
+          <div className="flex justify-center pt-1">
+            <Button variant="secondary" size="sm" onClick={handleAddNode}>
+              <Plus size={13} className="mr-1.5" />
+              Ajouter un poste supplémentaire
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Génération automatique — optional shortcut ── */}
       <div className="rounded-xl border border-line bg-paper p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h4 className="text-[13px] font-semibold text-ink flex items-center gap-1.5">
-              <Sparkles size={14} className="text-gold-deep" />
-              Génération automatique
-            </h4>
+            <h4 className="text-[13px] font-semibold text-ink">Génération automatique</h4>
             <p className="text-[12px] text-muted mt-0.5">
               Proposer une structure hiérarchique à partir des informations de l'entreprise d'accueil.
             </p>
@@ -113,7 +218,7 @@ export function OrganigrammeStep({ value, onChange, entreprise }: OrganigrammeSt
               onClick={handleGenerateAI}
               disabled={isGenerating}
             >
-              <Sparkles size={13} className={isGenerating ? 'animate-spin text-gold-deep' : 'text-gold-deep'} />
+              {isGenerating && <Loader2 size={13} className="animate-spin" />}
               {isGenerating ? 'Génération...' : "Générer avec l'IA"}
             </Button>
           </div>
@@ -129,6 +234,7 @@ export function OrganigrammeStep({ value, onChange, entreprise }: OrganigrammeSt
             >
               <Textarea
                 id="org-freetext"
+                label="Précisions sur l'équipe ou les services"
                 rows={2}
                 value={freeText}
                 onChange={(e) => setFreeText(e.target.value)}
@@ -188,135 +294,6 @@ export function OrganigrammeStep({ value, onChange, entreprise }: OrganigrammeSt
                 )
               })}
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Node List & Form ── */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="text-[13px] font-semibold text-ink">Postes et hiérarchie</h4>
-            <p className="text-[12px] text-muted">
-              Renseignez les postes et désignez leur supérieur hiérarchique direct.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowLivePreview(!showLivePreview)}
-              className="text-xs text-muted hover:text-ink"
-            >
-              <Eye size={13} className="mr-1" />
-              {showLivePreview ? 'Masquer aperçu' : 'Voir aperçu'}
-            </Button>
-            <Button variant="secondary" size="sm" onClick={handleAddNode}>
-              <Plus size={13} className="mr-1 text-gold-deep" />
-              Ajouter un poste
-            </Button>
-          </div>
-        </div>
-
-        {/* Live preview */}
-        {showLivePreview && nodes.length > 0 && (
-          <div className="rounded-xl border border-line bg-paper p-4">
-            <span className="text-[11px] font-semibold text-faint block mb-2 text-center uppercase tracking-wider">
-              Aperçu du schéma
-            </span>
-            <OrgChart nodes={nodes} />
-          </div>
-        )}
-
-        {nodes.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-line-strong bg-cream/40 p-8 text-center">
-            <p className="text-[13px] text-muted mb-3">Aucun poste pour le moment.</p>
-            <div className="flex justify-center gap-2.5">
-              <Button variant="secondary" size="sm" onClick={handleAddNode}>
-                <Plus size={13} className="mr-1" /> Ajouter manuellement
-              </Button>
-              <Button variant="primary" size="sm" onClick={handleGenerateAI} disabled={isGenerating}>
-                <Sparkles size={13} className="mr-1" /> Générer avec l'IA
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            {nodes.map((node, index) => {
-              const candidateParents = nodes.filter((n) => n.id !== node.id)
-
-              return (
-                <div
-                  key={node.id}
-                  className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 rounded-lg border border-line bg-paper p-3 transition-colors hover:border-line-strong"
-                >
-                  <span className="hidden sm:inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cream text-[10px] font-mono font-bold text-faint">
-                    {index + 1}
-                  </span>
-
-                  {/* Title / Poste */}
-                  <div className="flex-1 min-w-[140px]">
-                    <label className="sm:hidden text-[11px] font-medium text-faint mb-1 block">Poste</label>
-                    <Input
-                      value={node.title}
-                      onChange={(e) => handleUpdateNode(node.id, { title: e.target.value })}
-                      placeholder="Intitulé du poste (ex : Chef de fournil)"
-                    />
-                  </div>
-
-                  {/* Name */}
-                  <div className="flex-1 min-w-[120px]">
-                    <label className="sm:hidden text-[11px] font-medium text-faint mb-1 block">Nom</label>
-                    <Input
-                      value={node.name}
-                      onChange={(e) => handleUpdateNode(node.id, { name: e.target.value })}
-                      placeholder="Nom (ex : M. Benali ou —)"
-                    />
-                  </div>
-
-                  {/* Superior / Reports to */}
-                  <div className="flex-1 min-w-[160px]">
-                    <label className="sm:hidden text-[11px] font-medium text-faint mb-1 block">Supérieur direct</label>
-                    <select
-                      value={node.parentId ?? ''}
-                      onChange={(e) =>
-                        handleUpdateNode(node.id, { parentId: e.target.value || undefined })
-                      }
-                      className="h-9 w-full rounded-lg border border-line bg-cream/70 px-2.5 text-xs text-ink transition-colors focus:border-gold focus:outline-none"
-                    >
-                      <option value="">★ Direction / Racine</option>
-                      {candidateParents.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          Rapporte à : {p.title || 'Sans titre'} {p.name ? `(${p.name})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Delete button */}
-                  <div className="flex justify-end sm:justify-center shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteNode(node.id)}
-                      title="Supprimer ce poste"
-                      className="rounded-md p-1.5 text-faint hover:text-danger hover:bg-danger/10 transition-colors"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {nodes.length > 0 && (
-          <div className="flex justify-center pt-2">
-            <Button variant="secondary" size="sm" onClick={handleAddNode}>
-              <Plus size={13} className="mr-1.5 text-gold-deep" />
-              Ajouter un poste supplémentaire
-            </Button>
           </div>
         )}
       </div>

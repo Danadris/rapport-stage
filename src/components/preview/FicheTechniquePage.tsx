@@ -1,5 +1,5 @@
 import { Fragment, useRef } from 'react'
-import { Eye, EyeOff, ImagePlus, Loader2, Trash2, Wand2 } from 'lucide-react'
+import { Eye, EyeOff, ImagePlus, Loader2, Trash2, Scissors } from 'lucide-react'
 import type { FicheIngredient, FicheTechnique } from '../../types'
 import logo from '../../assets/ifmbp-logo-official.png'
 
@@ -185,7 +185,7 @@ export function FicheTechniquePage({
                 )}
                 {photoDataUrl && onPhotoRemoveBg && (
                   <button type="button" title="Enlever le fond" onClick={onPhotoRemoveBg} disabled={bgRemoving} className="flex h-7 w-7 items-center justify-center rounded text-[#665744] hover:bg-[#efe3d1] disabled:opacity-50">
-                    {bgRemoving ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                    {bgRemoving ? <Loader2 size={14} className="animate-spin" /> : <Scissors size={14} />}
                   </button>
                 )}
                 {photoDataUrl && onPhotoRemove && (
@@ -452,7 +452,7 @@ function OptionalSectionTitle({
           type="button"
           onClick={() => onHide(titleKey)}
           title="Masquer ce titre"
-          className="print:hidden flex h-5 w-5 items-center justify-center rounded text-[#9b8971] opacity-70 hover:bg-[#efe3d1] hover:opacity-100"
+          className="print:hidden flex h-7 w-7 items-center justify-center rounded text-[#9b8971] opacity-70 hover:bg-[#efe3d1] hover:opacity-100 active:bg-[#efe3d1] active:opacity-100"
         >
           <EyeOff size={11} />
         </button>

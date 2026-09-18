@@ -701,13 +701,19 @@ export function WorkspacePage() {
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-black/20 md:hidden" onClick={() => setIsMobileMenuOpen(false)} />
       )}
-      <aside className={cx(
-        "fixed inset-y-0 left-0 z-50 w-[264px] shrink-0 flex-col border-r border-line bg-cream px-3 py-2 md:sticky md:top-14 md:z-auto md:h-[calc(100vh-3.5rem)] md:bg-transparent md:flex",
-        isMobileMenuOpen ? "flex" : "hidden"
-      )}>
+      <aside
+        className={cx(
+          "fixed inset-y-0 left-0 z-50 w-[264px] shrink-0 flex-col border-r border-line bg-cream px-3 md:sticky md:top-14 md:z-auto md:h-[calc(100vh-3.5rem)] md:bg-transparent md:flex md:py-2",
+          isMobileMenuOpen ? "flex" : "hidden"
+        )}
+        style={isMobileMenuOpen ? {
+          paddingTop: 'calc(0.5rem + env(safe-area-inset-top, 0px))',
+          paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))',
+        } : undefined}
+      >
         <div className="flex items-center justify-between px-3 pt-2 pb-3 md:hidden">
           <Eyebrow>Menu</Eyebrow>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 text-muted hover:text-ink"><X size={18} /></button>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="flex h-10 w-10 items-center justify-center -mr-1.5 text-muted hover:text-ink active:text-ink"><X size={18} /></button>
         </div>
         <div className="px-3 pt-2 pb-3">
           <div className="flex items-center justify-between">
@@ -739,7 +745,7 @@ export function WorkspacePage() {
           {/* Step nav bar */}
           <div className="flex items-center justify-between gap-2 border-b border-line bg-cream/85 px-4 md:px-6 py-3 backdrop-blur-sm">
             <div className="min-w-0 flex items-center gap-2">
-              <button className="md:hidden p-1 -ml-2 text-muted" onClick={() => setIsMobileMenuOpen(true)}>
+              <button className="flex h-10 w-10 shrink-0 items-center justify-center -ml-2 text-muted active:text-ink md:hidden" onClick={() => setIsMobileMenuOpen(true)}>
                 <Menu size={20} />
               </button>
               <div className="min-w-0 flex items-center gap-2">
@@ -771,7 +777,7 @@ export function WorkspacePage() {
                   <button
                     onClick={() => setShowSettings(v => !v)}
                     className={cx(
-                      'flex items-center gap-1.5 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-[12px] sm:text-[13px] transition-colors',
+                      'flex h-10 sm:h-auto items-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1 sm:py-1.5 text-[12px] sm:text-[13px] transition-colors active:bg-gold-soft/60',
                       showSettings ? 'bg-gold-soft font-medium text-gold-deep' : 'text-muted hover:text-ink'
                     )}
                     title="Style"
@@ -779,7 +785,7 @@ export function WorkspacePage() {
                     <SlidersHorizontal size={15} />
                     <span className="hidden sm:inline">Style</span>
                   </button>
-                  <button onClick={() => void exportToPdf()} className="flex items-center gap-1.5 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-[12px] sm:text-[13px] text-muted hover:text-ink transition-colors" title="PDF">
+                  <button onClick={() => void exportToPdf()} className="flex h-10 sm:h-auto items-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1 sm:py-1.5 text-[12px] sm:text-[13px] text-muted hover:text-ink active:text-ink active:bg-paper transition-colors" title="PDF">
                     <Download size={15} />
                     <span className="hidden sm:inline">PDF</span>
                   </button>
@@ -797,7 +803,7 @@ export function WorkspacePage() {
                     key={m}
                     onClick={() => setMode(m)}
                     className={cx(
-                      'flex items-center gap-1.5 rounded-md px-2 sm:px-3 py-1 sm:py-1.5 text-[12px] sm:text-[13px] transition-colors duration-150',
+                      'flex h-9 sm:h-auto items-center gap-1.5 rounded-md px-2.5 sm:px-3 py-1 sm:py-1.5 text-[12px] sm:text-[13px] transition-colors duration-150 active:bg-gold-soft/60',
                       mode === m ? 'bg-gold-soft font-medium text-gold-deep' : 'text-muted hover:text-ink',
                     )}
                   >
@@ -1000,7 +1006,10 @@ export function WorkspacePage() {
                 </div>
               )}
             </div>
-            <div className="sticky bottom-0 flex items-center justify-between border-t border-line bg-cream/90 px-4 md:px-10 py-3 backdrop-blur-sm">
+            <div
+              className="sticky bottom-0 flex items-center justify-between border-t border-line bg-cream/90 px-4 md:px-10 pt-3 backdrop-blur-sm"
+              style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+            >
               <Button size="sm" disabled={!prev} onClick={() => prev && setStepId(prev.id)}>
                 <ArrowLeft size={14} />
                 <span className="hidden sm:inline">{prev ? prev.titre : 'Début'}</span>
@@ -1020,11 +1029,11 @@ export function WorkspacePage() {
 
 
             {/* ── Preview ─────────────────────────────────────────── */}
-            <div className="px-2 py-6 md:px-4 md:py-10 print:p-0">
+            <div className={cx('px-2 py-6 md:px-4 md:py-10 print:p-0', isMobile && 'overflow-x-auto')}>
               <div
                 style={
                   isMobile
-                    ? { '--preview-zoom': Math.min(1, (window.innerWidth - 16) / 794) } as React.CSSProperties
+                    ? { '--preview-zoom': Math.min(1, Math.max(0.55, (window.innerWidth - 16) / 794)) } as React.CSSProperties
                     : { '--preview-scale': zoom / 100 } as React.CSSProperties
                 }
                 className={

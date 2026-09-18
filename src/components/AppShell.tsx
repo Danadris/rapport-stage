@@ -5,7 +5,10 @@ import logo from '../assets/ifmbp-logo.png'
 export function AppShell() {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-40 border-b border-line bg-cream/85 backdrop-blur-sm">
+      <header
+        className="sticky top-0 z-40 border-b border-line bg-cream/85 backdrop-blur-sm"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
         <div className="mx-auto flex h-14 w-full items-center justify-between px-5">
           <NavLink to="/" className="flex items-center gap-2.5">
             <img src={logo} alt="IFMBP" className="h-7 w-auto" />

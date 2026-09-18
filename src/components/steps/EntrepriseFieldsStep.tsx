@@ -29,6 +29,7 @@ export function EntrepriseFieldsStep({ fields, value, onChange, images, onImages
         <Field key={f.key} label={f.label}>
           {f.long ? (
             <Textarea
+              label={f.label}
               rows={3}
               counter
               value={(value[f.key] as string) ?? ''}

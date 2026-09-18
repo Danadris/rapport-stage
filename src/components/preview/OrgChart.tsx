@@ -110,6 +110,10 @@ export function OrgChart({ nodes, primaryColor = '#2f5496' }: OrgChartProps) {
   assignPositions(roots)
   const allNodes = collectNodes(roots)
   const edges = collectEdges(roots)
+  const rootIds = new Set(roots.map((r) => r.node.id))
+  // Only worth flagging "top of the hierarchy" once there's an actual hierarchy —
+  // a single lone box doesn't need the label.
+  const showRootBadge = allNodes.length > 1
 
   if (allNodes.length === 0) {
     return (
@@ -123,7 +127,7 @@ export function OrgChart({ nodes, primaryColor = '#2f5496' }: OrgChartProps) {
   const allX = allNodes.map((n) => n.x)
   const allY = allNodes.map((n) => n.y)
   const minX = Math.min(...allX) - 24
-  const minY = Math.min(...allY) - 16
+  const minY = Math.min(...allY) - (showRootBadge ? 30 : 16)
   const maxX = Math.max(...allX) + BOX_W + 24
   const maxY = Math.max(...allY) + BOX_H + 24
   const svgW = Math.max(300, maxX - minX)
@@ -166,6 +170,24 @@ export function OrgChart({ nodes, primaryColor = '#2f5496' }: OrgChartProps) {
 
           return (
             <g key={node.id} filter="url(#org-shadow)">
+              {/* "Top of the hierarchy" marker for root positions */}
+              {showRootBadge && rootIds.has(node.id) && (
+                <g>
+                  <rect x={x + BOX_W / 2 - 34} y={y - 19} width={68} height={15} rx={7.5} fill={primaryColor} />
+                  <text
+                    x={x + BOX_W / 2}
+                    y={y - 9}
+                    textAnchor="middle"
+                    fontSize="7.5"
+                    fontWeight="700"
+                    letterSpacing="0.4"
+                    fill="#ffffff"
+                  >
+                    NIVEAU SUPÉRIEUR
+                  </text>
+                </g>
+              )}
+
               {/* Card background */}
               <rect
                 x={x}
@@ -188,14 +210,14 @@ export function OrgChart({ nodes, primaryColor = '#2f5496' }: OrgChartProps) {
               {/* Job title */}
               <text
                 x={x + BOX_W / 2}
-                y={y + 26}
+                y={y + 27}
                 textAnchor="middle"
-                fontSize="10"
+                fontSize="11"
                 fontWeight="700"
                 fill={primaryColor}
                 fontFamily="var(--doc-title-font, sans-serif)"
               >
-                {title.length > 24 ? title.slice(0, 22) + '…' : title}
+                {title.length > 22 ? title.slice(0, 20) + '…' : title}
               </text>
 
               {/* Person's name */}
@@ -203,12 +225,12 @@ export function OrgChart({ nodes, primaryColor = '#2f5496' }: OrgChartProps) {
                 x={x + BOX_W / 2}
                 y={y + 44}
                 textAnchor="middle"
-                fontSize="9"
+                fontSize="10"
                 fontWeight="500"
                 fill="#4b5563"
                 fontFamily="var(--doc-body-font, sans-serif)"
               >
-                {name.length > 26 ? name.slice(0, 24) + '…' : name}
+                {name.length > 24 ? name.slice(0, 22) + '…' : name}
               </text>
             </g>
           )

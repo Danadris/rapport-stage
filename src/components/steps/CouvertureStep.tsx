@@ -59,6 +59,7 @@ export function CouvertureStep({ value, onChange }: Props) {
 
       <Field label="Objectif de stage" hint="Selon l'objectif officiel de la période">
         <Textarea
+          label="Objectif de stage"
           value={value.objectifStage}
           rows={3}
           counter

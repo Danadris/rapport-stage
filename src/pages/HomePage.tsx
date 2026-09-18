@@ -50,7 +50,7 @@ function DraftRow({ meta, onOpen, onDelete }: { meta: ReportMeta; onOpen: () => 
         </span>
       </button>
       {confirming ? (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <Button size="sm" variant="danger" onClick={onDelete}>
             Supprimer
           </Button>
@@ -62,7 +62,7 @@ function DraftRow({ meta, onOpen, onDelete }: { meta: ReportMeta; onOpen: () => 
         <button
           aria-label={`Supprimer ${titre}`}
           onClick={() => setConfirming(true)}
-          className="rounded-lg p-2 text-faint opacity-0 transition-all duration-150 group-hover:opacity-100 hover:bg-danger/10 hover:text-danger"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-faint opacity-60 transition-all duration-150 hover:bg-danger/10 hover:text-danger hover:opacity-100 active:bg-danger/10 active:text-danger"
         >
           <Trash2 size={15} />
         </button>

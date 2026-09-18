@@ -233,7 +233,32 @@ interface DragState {
   fromSection: string
 }
 
-function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragState, setDragState, onDragEnd, organigramme, organigrammes, primaryColor }: { 
+// A place an image can be moved to — used by the touch-friendly "Move to…" picker,
+// which is the fallback for the native drag-and-drop grip handle (that never fires on touch).
+interface MoveTarget {
+  sectionKey: string
+  blockIndex: number
+  label: string
+}
+
+function computeMoveTargets(parts: ReportPart[]): MoveTarget[] {
+  const targets: MoveTarget[] = []
+  for (const part of parts) {
+    if (part.key === 'organigramme' || part.isOrganigramme) continue
+    const blockTitles: (string | undefined)[] = []
+    if (part.paragraphes && part.paragraphes.length > 0) blockTitles.push(undefined)
+    for (const ss of part.sousSections ?? []) blockTitles.push(ss.titre)
+    if (blockTitles.length === 0) blockTitles.push(undefined)
+    const sectionLabel = part.titre && part.titre.trim() !== '' ? part.titre : part.key
+    blockTitles.forEach((t, bi) => {
+      const label = t && t.trim() !== '' ? `${sectionLabel} — ${t}` : sectionLabel
+      targets.push({ sectionKey: part.key, blockIndex: bi, label })
+    })
+  }
+  return targets
+}
+
+function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragState, setDragState, onDragEnd, organigramme, organigrammes, primaryColor, moveTargets, onMoveImage }: { 
   part: ReportPart
   images: SectionImage[]
   onEdit?: EditHandler
@@ -245,6 +270,8 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
   organigramme?: Organigramme
   organigrammes?: Record<string, Organigramme>
   primaryColor?: string
+  moveTargets?: MoveTarget[]
+  onMoveImage?: (imgId: string, fromSection: string, toSection: string, toBlockIndex: number) => void
 }) {
   const [dropOverBlock, setDropOverBlock] = useState<number | null>(null)
 
@@ -364,6 +391,8 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                       onDragStart={(e) => handleImgDragStart(e, img.id)}
                       onDragEnd={handleImgDragEnd}
                       isDragging={dragState?.imgId === img.id}
+                      moveTargets={moveTargets}
+                      onMoveImage={onMoveImage ? (toSection, toBlockIndex) => onMoveImage(img.id, part.key, toSection, toBlockIndex) : undefined}
                     />
                   ))}
                   {b.paragraphes ? (
@@ -448,6 +477,8 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
             onDragStart={(e) => handleImgDragStart(e, img.id)}
             onDragEnd={handleImgDragEnd}
             isDragging={dragState?.imgId === img.id}
+            moveTargets={moveTargets}
+            onMoveImage={onMoveImage ? (toSection, toBlockIndex) => onMoveImage(img.id, part.key, toSection, toBlockIndex) : undefined}
           />
         ))}
       </div>
@@ -543,6 +574,25 @@ export function PreviewA4({
     setDragState(null)
   }
 
+  // Touch-friendly equivalent of the drag above — the grip handle's native HTML5
+  // drag-and-drop never fires on touch devices, so this "Move to…" picker (a plain
+  // <select>) calls the same underlying move directly, without needing dragState.
+  const moveTargets = computeMoveTargets(parts)
+  const moveImageToTarget = (imgId: string, fromSection: string, toSection: string, toBlockIndex: number) => {
+    if (!onImagesChange) return
+    const fromImgs = imagesBySection[fromSection] ?? []
+    const movedImg = fromImgs.find((i) => i.id === imgId)
+    if (!movedImg) return
+    const updatedImg = { ...movedImg, blockIndex: toBlockIndex }
+    if (fromSection === toSection) {
+      onImagesChange(toSection, [...fromImgs.filter((i) => i.id !== imgId), updatedImg])
+    } else {
+      onImagesChange(fromSection, fromImgs.filter((i) => i.id !== imgId))
+      const toImgs = imagesBySection[toSection] ?? []
+      onImagesChange(toSection, [...toImgs, updatedImg])
+    }
+  }
+
   const makeImagesChange = (sectionId: string) =>
     onImagesChange ? (imgs: SectionImage[]) => onImagesChange(sectionId, imgs) : undefined
 
@@ -565,6 +615,8 @@ export function PreviewA4({
       organigramme={rapport.organigramme}
       organigrammes={rapport.organigrammes}
       primaryColor={rapport.style?.primaryColor}
+      moveTargets={moveTargets}
+      onMoveImage={moveImageToTarget}
     />
   )
 
