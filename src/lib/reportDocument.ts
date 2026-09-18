@@ -39,6 +39,27 @@ export function isOrganigrammeTitle(title?: string): boolean {
   return title.toLowerCase().includes('organigramme')
 }
 
+export function isFicheTechniqueKey(key: string): boolean {
+  return key.startsWith('fiche-technique-')
+}
+
+export const MATERIEL_PART_KEY = 'materiel-utilise'
+
+export function hasMaterielItems(rapport: Rapport): boolean {
+  return (rapport.materiels ?? []).some((item) => item.nom.trim() || item.utilisation.trim() || item.imageDataUrl)
+}
+
+/** One synthetic part per saved fiche technique — rendered standalone in the A4 preview. */
+export function ficheParts(rapport: Rapport): ReportPart[] {
+  return (rapport.ficheTechniques ?? [])
+    .filter((fiche) => fiche.nom.trim() !== '')
+    .map((fiche) => ({
+      key: `fiche-technique-${fiche.id}`,
+      numero: null,
+      titre: fiche.nom.trim(),
+    }))
+}
+
 
 export interface SommaireEntry {
   label: string
@@ -74,6 +95,107 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
           numero: null,
           titre: step.titre,
           isOrganigramme: true,
+        })
+        continue
+      }
+
+      if (step.kind === 'fiche-technique') {
+        if (hasMaterielItems(rapport)) {
+          parts.push({ key: MATERIEL_PART_KEY, numero: null, titre: 'Matériel utilisé' })
+        }
+        parts.push(...ficheParts(rapport))
+        continue
+      }
+
+      if (step.kind === 'presentation') {
+        parts.push({
+          key: step.id,
+          numero: null,
+          titre: step.titre,
+          sousSections: [
+            { titre: "Organisme d'accueil", numero: 1, texte: e.organismeAccueil, editPath: { source: 'entreprise', field: 'organismeAccueil' } },
+            { titre: "Historique de l'entreprise", numero: 2, texte: e.historique, editPath: { source: 'entreprise', field: 'historique' } },
+            { titre: "Secteur d'activité", numero: 3, texte: e.secteurActivite, editPath: { source: 'entreprise', field: 'secteurActivite' } },
+            { titre: 'Missions et valeurs', numero: 4, texte: e.missionsValeurs, editPath: { source: 'entreprise', field: 'missionsValeurs' } },
+          ],
+        })
+        continue
+      }
+
+      if (step.kind === 'activites') {
+        parts.push({
+          key: step.id,
+          numero: null,
+          titre: step.titre,
+          sousSections: [
+            { titre: 'Activités principales', numero: 1, texte: e.activitesPrincipales, editPath: { source: 'entreprise', field: 'activitesPrincipales' } },
+            { titre: 'Équipements utilisés', numero: 2, texte: e.equipements, editPath: { source: 'entreprise', field: 'equipements' } },
+            { titre: 'Technologies employées', numero: 3, texte: e.technologies, editPath: { source: 'entreprise', field: 'technologies' } },
+          ],
+        })
+        continue
+      }
+
+      // Standard explanatory sections render as merged paragraphs (identical to the official plan)
+      if (step.id === 'remerciements') {
+        const merged = [note(rapport, 'remerciements', 'personnes'), note(rapport, 'remerciements', 'raisons')]
+          .filter(Boolean)
+          .join(' ')
+        parts.push({
+          key: step.id,
+          numero: null,
+          titre: step.titre,
+          paragraphes: merged ? [merged] : [],
+          editPath: { stepId: 'remerciements', fieldIds: ['personnes', 'raisons'] },
+        })
+        continue
+      }
+      if (step.id === 'introduction') {
+        const merged = [note(rapport, 'introduction', 'presentationBreve'), note(rapport, 'introduction', 'objectifsIntro')]
+          .filter(Boolean)
+          .join('\n')
+        parts.push({
+          key: step.id,
+          numero: null,
+          titre: step.titre,
+          paragraphes: merged ? toParagraphs(merged) : [],
+          editPath: { stepId: 'introduction', fieldIds: ['presentationBreve', 'objectifsIntro'] },
+        })
+        continue
+      }
+      if (step.id === 'contexte') {
+        parts.push({
+          key: step.id,
+          numero: null,
+          titre: step.titre,
+          paragraphes: toParagraphs(note(rapport, 'contexte', 'rechercheStage')),
+          editPath: { stepId: 'contexte', fieldIds: ['rechercheStage'] },
+        })
+        continue
+      }
+      if (step.id === 'objectifs') {
+        parts.push({
+          key: step.id,
+          numero: null,
+          titre: step.titre,
+          paragraphes: toParagraphs(note(rapport, 'objectifs', 'objectifsFixes')),
+          editPath: { stepId: 'objectifs', fieldIds: ['objectifsFixes'] },
+        })
+        continue
+      }
+      if (step.id === 'conclusion') {
+        const paras = [note(rapport, 'conclusion', 'resumeExperiences'), note(rapport, 'conclusion', 'perspectives')]
+          .filter(Boolean)
+        parts.push({
+          key: step.id,
+          numero: null,
+          titre: step.titre,
+          paragraphes: paras,
+          editPath: { stepId: 'conclusion', fieldIds: ['resumeExperiences', 'perspectives'] },
+          sousSections: [
+            { titre: 'Annexes', numero: 1, texte: note(rapport, 'conclusion', 'annexes'), editPath: { source: 'section', field: 'conclusion:annexes' } },
+            { titre: 'Bibliographie', numero: 2, texte: note(rapport, 'conclusion', 'bibliographie'), editPath: { source: 'section', field: 'conclusion:bibliographie' } },
+          ],
         })
         continue
       }
@@ -204,6 +326,8 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
         { titre: 'Problématiques rencontrées', numero: 3, texte: note(rapport, 'taches', 'problematiquesRencontrees'), editPath: { source: 'section', field: 'taches:problematiquesRencontrees' } },
       ],
     },
+    ...(hasMaterielItems(rapport) ? [{ key: MATERIEL_PART_KEY, numero: null, titre: 'Matériel utilisé' }] : []),
+    ...ficheParts(rapport),
     {
       key: 'bilan',
       numero: null,
@@ -230,8 +354,21 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
 
 export function buildSommaireEntries(parts: ReportPart[], numbers: Record<string, number>): SommaireEntry[] {
   const entries: SommaireEntry[] = []
+  let ficheEntryAdded = false
 
   for (const part of parts) {
+    // Collapse all consecutive fiche technique pages into a single sommaire entry
+    if (isFicheTechniqueKey(part.key)) {
+      if (!ficheEntryAdded) {
+        entries.push({
+          label: 'Fiches techniques',
+          page: numbers[part.key] || undefined,
+        })
+        ficheEntryAdded = true
+      }
+      continue
+    }
+
     // Skip Level 1 entries with empty titles
     if (!part.titre || !part.titre.trim()) continue
 

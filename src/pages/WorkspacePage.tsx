@@ -7,12 +7,13 @@ import { EntrepriseFieldsStep, type EntFieldDef } from '../components/steps/Entr
 import { EntrepriseStep } from '../components/steps/EntrepriseStep'
 import { NotesStep } from '../components/steps/NotesStep'
 import { OrganigrammeStep } from '../components/steps/OrganigrammeStep'
+import { FicheTechniqueStep } from '../components/steps/FicheTechniqueStep'
 import { PreviewA4 } from '../components/PreviewA4'
 import { progressOf, stepById, WIZARD_STEPS } from '../data/sections'
 import { getRapport, persistRapport } from '../lib/storage'
 import { persistReport as persistReportV3, buildReportMeta, buildReportData } from '../lib/storageV3'
 import { revokeReportUrls } from '../lib/imageRuntime'
-import type { Couverture, Entreprise, Rapport, SectionImage, RapportStyle, Organigramme } from '../types'
+import type { Couverture, Entreprise, Rapport, SectionImage, RapportStyle, Organigramme, FicheTechnique, WizardStep, MaterielItem } from '../types'
 import { emptyCouverture } from '../types'
 import { Button, Eyebrow, SkeletonRow } from '../components/ui'
 import { cx } from '../lib/cx'
@@ -254,6 +255,32 @@ export function WorkspacePage() {
       },
     )
 
+  const patchFicheTechniques = (fiches: FicheTechnique[]) =>
+    setRapportWithHistory(
+      (r) => (r ? { ...r, ficheTechniques: fiches, updatedAt: Date.now() } : r),
+    )
+
+  const patchMateriels = (materiels: MaterielItem[]) =>
+    setRapportWithHistory(
+      (r) => (r ? { ...r, materiels, updatedAt: Date.now() } : r),
+    )
+
+  const patchFicheTechnique = (ficheId: string, patch: Partial<FicheTechnique>) =>
+    setRapportWithHistory((r) =>
+      r
+        ? {
+            ...r,
+            ficheTechniques: (r.ficheTechniques ?? []).map((fiche) =>
+              fiche.id === ficheId ? { ...fiche, ...patch } : fiche,
+            ),
+            updatedAt: Date.now(),
+          }
+        : r,
+    )
+
+  const setFicheImages = (ficheId: string, imgs: SectionImage[]) =>
+    setImages(`fiche-technique-${ficheId}`, imgs)
+
   const patchStyle = (patch: Partial<RapportStyle>) =>
     setRapportWithHistory((r) =>
       r
@@ -302,12 +329,16 @@ export function WorkspacePage() {
         : r,
     )
 
+  /** Copies the official plan into customSteps so the user can edit/add/delete sections. */
+  const materializeSteps = (): WizardStep[] =>
+    WIZARD_STEPS.map((s) => ({ ...s, fields: s.fields.map((f) => ({ ...f })) }))
+
   const handleAddStep = () => {
-    if (!rapport.customSteps) return
+    const working = rapport.customSteps ?? materializeSteps()
     const id = crypto.randomUUID()
     const newStep = {
       id: `custom-${id}`,
-      numero: String(rapport.customSteps.length + 1).padStart(2, '0'),
+      numero: String(working.length + 1).padStart(2, '0'),
       titre: `Nouvelle section`,
       sousTitre: 'Section personnalisée',
       consigne: 'Décrivez librement le contenu de cette section.',
@@ -321,25 +352,30 @@ export function WorkspacePage() {
         },
       ],
     }
-    setRapportWithHistory((r) => r ? { ...r, customSteps: [...r.customSteps!, newStep], updatedAt: Date.now() } : r)
+    setRapportWithHistory((r) => {
+      if (!r) return r
+      const steps = r.customSteps ? r.customSteps : materializeSteps()
+      return { ...r, customSteps: [...steps, newStep], updatedAt: Date.now() }
+    })
     setStepId(newStep.id)
   }
 
   const handleDeleteStep = (stepIdToDelete: string) => {
-    if (!rapport.customSteps) return
-    const stepIdx = rapport.customSteps.findIndex(s => s.id === stepIdToDelete)
+    const base = rapport.customSteps ?? materializeSteps()
+    const stepIdx = base.findIndex(s => s.id === stepIdToDelete)
     if (stepIdx === -1) return
     
     // Redirect if we are deleting the current step
     if (stepIdToDelete === step.id) {
-       const prevStep = rapport.customSteps[stepIdx - 1]
+       const prevStep = base[stepIdx - 1]
        if (prevStep) setStepId(prevStep.id)
     }
 
     setRapportWithHistory((r) => {
-      if (!r || !r.customSteps) return r
-      const updatedSteps = r.customSteps.filter(s => s.id !== stepIdToDelete)
-      // Renumber remaining custom steps (skipping first 2 fixed steps)
+      if (!r) return r
+      const steps = r.customSteps ? r.customSteps : materializeSteps()
+      const updatedSteps = steps.filter(s => s.id !== stepIdToDelete)
+      // Renumber remaining steps (skipping the 2 fixed steps)
       for (let i = 2; i < updatedSteps.length; i++) {
         updatedSteps[i].numero = String(i + 1).padStart(2, '0')
       }
@@ -349,9 +385,10 @@ export function WorkspacePage() {
 
   const handleRenameStep = (stepId: string, newTitle: string) => {
     setRapportWithHistory(r => {
-      if (!r || !r.customSteps) return r
+      if (!r) return r
+      const steps = r.customSteps ? r.customSteps : materializeSteps()
       const isOrg = newTitle.toLowerCase().includes('organigramme')
-      const updated = r.customSteps.map(s => s.id === stepId ? { 
+      const updated = steps.map(s => s.id === stepId ? { 
         ...s, 
         titre: newTitle,
         ...(isOrg ? { kind: 'organigramme' as const } : {}),
@@ -362,8 +399,9 @@ export function WorkspacePage() {
 
   const handleToggleStepKind = (stepId: string, kind: 'notes' | 'organigramme') => {
     setRapportWithHistory(r => {
-      if (!r || !r.customSteps) return r
-      const updated = r.customSteps.map(s => {
+      if (!r) return r
+      const steps = r.customSteps ? r.customSteps : materializeSteps()
+      const updated = steps.map(s => {
         if (s.id !== stepId) return s
         return {
           ...s,
@@ -394,8 +432,9 @@ export function WorkspacePage() {
 
   const handleToggleFieldMode = (stepId: string, fieldId: string, isOrg: boolean) => {
     setRapportWithHistory(r => {
-      if (!r || !r.customSteps) return r
-      const updated = r.customSteps.map(s => {
+      if (!r) return r
+      const steps = r.customSteps ? r.customSteps : materializeSteps()
+      const updated = steps.map(s => {
         if (s.id !== stepId) return s
         return {
           ...s,
@@ -408,8 +447,9 @@ export function WorkspacePage() {
 
   const handleAddSubSection = (stepId: string) => {
     setRapportWithHistory(r => {
-      if (!r || !r.customSteps) return r
-      const updated = r.customSteps.map(s => {
+      if (!r) return r
+      const steps = r.customSteps ? r.customSteps : materializeSteps()
+      const updated = steps.map(s => {
         if (s.id !== stepId) return s
         const newFieldId = crypto.randomUUID()
         return {
@@ -431,10 +471,11 @@ export function WorkspacePage() {
 
   const handleDeleteSubSection = (stepId: string, fieldId: string) => {
     setRapportWithHistory(r => {
-      if (!r || !r.customSteps) return r
-      const updated = r.customSteps.map(s => {
+      if (!r) return r
+      const steps = r.customSteps ? r.customSteps : materializeSteps()
+      const updated = steps.map(s => {
         if (s.id !== stepId) return s
-        return { ...s, fields: s.fields.filter(f => f.id !== fieldId) }
+        return { ...s, fields: s.fields.filter(f => f.id !== fieldId && f.parentId !== fieldId) }
       })
       return { ...r, customSteps: updated, updatedAt: Date.now() }
     })
@@ -442,9 +483,10 @@ export function WorkspacePage() {
 
   const handleRenameSubSection = (stepId: string, fieldId: string, newLabel: string) => {
     setRapportWithHistory(r => {
-      if (!r || !r.customSteps) return r
+      if (!r) return r
+      const steps = r.customSteps ? r.customSteps : materializeSteps()
       const isOrg = newLabel.toLowerCase().includes('organigramme')
-      const updated = r.customSteps.map(s => {
+      const updated = steps.map(s => {
         if (s.id !== stepId) return s
         return {
           ...s,
@@ -464,8 +506,9 @@ export function WorkspacePage() {
 
   const handleAddLevel3Item = (stepId: string, parentFieldId: string) => {
     setRapportWithHistory(r => {
-      if (!r || !r.customSteps) return r
-      const updated = r.customSteps.map(s => {
+      if (!r) return r
+      const steps = r.customSteps ? r.customSteps : materializeSteps()
+      const updated = steps.map(s => {
         if (s.id !== stepId) return s
         const children = s.fields.filter(f => f.parentId === parentFieldId)
         const letter = String.fromCharCode(97 + children.length) // a, b, c...
@@ -491,8 +534,9 @@ export function WorkspacePage() {
 
   const handleDeleteLevel3Item = (stepId: string, fieldId: string) => {
     setRapportWithHistory(r => {
-      if (!r || !r.customSteps) return r
-      const updated = r.customSteps.map(s => {
+      if (!r) return r
+      const steps = r.customSteps ? r.customSteps : materializeSteps()
+      const updated = steps.map(s => {
         if (s.id !== stepId) return s
         return { ...s, fields: s.fields.filter(f => f.id !== fieldId) }
       })
@@ -537,10 +581,17 @@ export function WorkspacePage() {
         if (newSectionsGenerated) delete newSectionsGenerated[step.id]
         const newImages = { ...r.images }
         delete newImages[step.id]
+        if (step.kind === 'fiche-technique') {
+          for (const key of Object.keys(newImages)) {
+            if (key.startsWith('fiche-technique-')) delete newImages[key]
+          }
+        }
 
         let newCouverture = r.couverture
         let newEntreprise = r.entreprise
         let newOrganigramme = r.organigramme
+        let newFiches = r.ficheTechniques
+        let newMateriels = r.materiels
 
         if (step.kind === 'couverture') {
           newCouverture = emptyCouverture()
@@ -554,6 +605,9 @@ export function WorkspacePage() {
           }
         } else if (step.kind === 'organigramme') {
           newOrganigramme = { nodes: [] }
+        } else if (step.kind === 'fiche-technique') {
+          newFiches = []
+          newMateriels = []
         } else if (step.kind === 'presentation') {
           newEntreprise = {
             ...newEntreprise,
@@ -576,6 +630,8 @@ export function WorkspacePage() {
           couverture: newCouverture,
           entreprise: newEntreprise,
           organigramme: newOrganigramme,
+          ficheTechniques: newFiches,
+          materiels: newMateriels,
           sections: newSections,
           sectionsGenerated: newSectionsGenerated,
           images: newImages,
@@ -595,6 +651,9 @@ export function WorkspacePage() {
         if (candidates.length === 0 && id === 'entreprise') {
           targetId = id
           candidates = Array.from(document.querySelectorAll<HTMLElement>(`[data-part="${targetId}"]`))
+        }
+        if (id === 'fiche-technique') {
+          candidates = Array.from(document.querySelectorAll<HTMLElement>(`[data-part^="fiche-technique-"]`))
         }
         const el = candidates.find((node) => node.offsetParent !== null) ?? candidates[0]
         if (el) {
@@ -668,8 +727,8 @@ export function WorkspacePage() {
             steps={activeSteps} 
             currentId={step.id} 
             onSelect={handleSelectStep}
-            onAddStep={rapport.customSteps ? handleAddStep : undefined}
-            onDeleteStep={rapport.customSteps ? handleDeleteStep : undefined}
+            onAddStep={handleAddStep}
+            onDeleteStep={handleDeleteStep}
           />
         </div>
       </aside>
@@ -686,7 +745,6 @@ export function WorkspacePage() {
               <div className="min-w-0 flex items-center gap-2">
                 <div>
                   <span className="block font-mono text-[10px] tracking-widest text-faint">{step.numero} / {activeSteps.length}</span>
-                  {step.id.startsWith('custom-') ? (
                     <input
                       type="text"
                       value={step.titre}
@@ -694,9 +752,6 @@ export function WorkspacePage() {
                       placeholder="Titre de la section (optionnel)"
                       className="truncate text-[14px] sm:text-[15px] font-semibold text-ink bg-transparent focus:outline-none focus:border-b focus:border-gold border-b border-transparent p-0 w-full placeholder:text-faint"
                     />
-                  ) : (
-                    <h1 className="truncate text-[14px] sm:text-[15px] font-semibold text-ink">{step.titre}</h1>
-                  )}
                 </div>
                 <span className={cx('mt-3 hidden text-[10px] sm:inline', saveStatus === 'error' ? 'text-danger' : 'text-faint')}>
                   {saveStatus === 'saving' ? 'Enregistrement...' : saveStatus === 'error' ? "Erreur d'enregistrement" : 'Enregistré'}
@@ -881,6 +936,17 @@ export function WorkspacePage() {
                   entreprise={rapport.entreprise}
                 />
               )}
+              {step.kind === 'fiche-technique' && (
+                <FicheTechniqueStep
+                  fiches={rapport.ficheTechniques ?? []}
+                  onChange={patchFicheTechniques}
+                  materiels={rapport.materiels ?? []}
+                  onMaterielsChange={patchMateriels}
+                  getImages={(ficheId) => rapport.images?.[`fiche-technique-${ficheId}`] ?? []}
+                  onImagesChange={setFicheImages}
+                  entreprise={rapport.entreprise}
+                />
+              )}
               {step.kind === 'activites' && (
                 <EntrepriseFieldsStep
                   fields={ACTIVITES_FIELDS}
@@ -901,7 +967,7 @@ export function WorkspacePage() {
                   onGenerate={setGeneratedNote}
                   images={rapport.images?.[step.id] ?? []}
                   onImagesChange={(imgs) => setImages(step.id, imgs)}
-                  isCustom={!!rapport.customSteps && step.id.startsWith('custom-')}
+                  isCustom
                   onAddSubSection={() => handleAddSubSection(step.id)}
                   onDeleteSubSection={(fieldId) => handleDeleteSubSection(step.id, fieldId)}
                   onRenameSubSection={(fieldId, newTitle) => handleRenameSubSection(step.id, fieldId, newTitle)}
@@ -967,7 +1033,12 @@ export function WorkspacePage() {
                     : "print:!block print:!transform-none [transform:scale(var(--preview-scale))] origin-top"
                 }
               >
-                <PreviewA4 rapport={rapport} onEdit={handlePreviewEdit} onImagesChange={setImages} />
+                <PreviewA4
+                  rapport={rapport}
+                  onEdit={handlePreviewEdit}
+                  onImagesChange={setImages}
+                  onFicheChange={patchFicheTechnique}
+                />
               </div>
             </div>
           </div>

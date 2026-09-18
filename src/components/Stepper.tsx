@@ -26,6 +26,7 @@ function stepComplete(rapport: Rapport, step: WizardStep): boolean {
   }
   if (step.kind === 'entreprise') return rapport.entreprise.nom.trim() !== ''
   if (step.kind === 'organigramme') return (rapport.organigramme?.nodes?.length ?? 0) > 0
+  if (step.kind === 'fiche-technique') return (rapport.ficheTechniques?.filter((f) => f.nom.trim() !== '').length ?? 0) > 0
   if (step.kind === 'presentation' || step.kind === 'activites') {
     const e = rapport.entreprise
     return step.kind === 'presentation'
@@ -48,6 +49,7 @@ function stepProgress(rapport: Rapport, step: WizardStep): number {
   }
   if (step.kind === 'entreprise') return rapport.entreprise.nom.trim() !== '' ? 100 : 0
   if (step.kind === 'organigramme') return (rapport.organigramme?.nodes?.length ?? 0) > 0 ? 100 : 0
+  if (step.kind === 'fiche-technique') return (rapport.ficheTechniques?.filter((f) => f.nom.trim() !== '').length ?? 0) > 0 ? 100 : 0
   if (step.kind === 'presentation') {
     const e = rapport.entreprise
     const filled = [e.organismeAccueil, e.historique, e.secteurActivite, e.missionsValeurs].filter(v => v.trim() !== '').length
@@ -146,7 +148,7 @@ export function Stepper({ rapport, steps, currentId, onSelect, onDeleteStep, onA
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmingId(step.id) }}
                       aria-label={`Supprimer ${step.titre || 'cette section'}`}
-                      className="rounded p-1 text-faint opacity-0 group-hover:opacity-100 hover:bg-danger/10 hover:text-danger transition-all duration-150"
+                      className="rounded p-1 text-faint opacity-50 hover:opacity-100 hover:bg-danger/10 hover:text-danger transition-colors"
                     >
                       <Trash2 size={12} />
                     </button>

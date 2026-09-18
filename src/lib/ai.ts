@@ -1,7 +1,163 @@
 import { GoogleGenAI, Type } from '@google/genai'
-import type { Entreprise, OrgNode } from '../types'
+import type { Entreprise, FicheIngredient, OrgNode } from '../types'
 import { loadSettings } from './storage'
 import { rechercheEntreprise as rechercheEntrepriseLocale, genererOrganigrammeOffline } from './ai-stub'
+
+export interface FicheGenerationResult {
+  famille: string
+  nbPieces: string
+  poidsUnitaire: string
+  duree: string
+  ingredients: FicheIngredient[]
+  materiel: string
+  etapes: string
+  conseils: string
+}
+
+const FICHE_FAMILLES = ['pain', 'viennoiserie', 'patisserie', 'traiteur', 'autre']
+
+function detectFamille(nom: string): string {
+  const n = nom.toLowerCase()
+  if (/(baguette|pain|miche|boule|ciabatta|focaccia|fougasse|tradition|levain)/.test(n)) return 'pain'
+  if (/(croissant|viennois|pain au chocolat|chausson|brioche|palmier|pain aux raisins|feuillet)/.test(n)) return 'viennoiserie'
+  if (/(tarte|entremet|éclair|eclair|macaron|millefeuille|religieuse|choux|chou|saint-honoré|gateau|gâteau|flan|tiramisu|mousse)/.test(n)) return 'patisserie'
+  if (/(sandwich|salade|quiche|pizza|plat|traiteur)/.test(n)) return 'traiteur'
+  return 'autre'
+}
+
+const OFFLINE_FICHES: Record<string, { ingredient: string; quantite: string }[]> = {
+  pain: [
+    { ingredient: 'Farine de blé T65', quantite: '500 g' },
+    { ingredient: 'Eau à 25°C', quantite: '320 g' },
+    { ingredient: 'Sel fin', quantite: '10 g' },
+    { ingredient: 'Levure boulangère fraîche', quantite: '8 g' },
+  ],
+  viennoiserie: [
+    { ingredient: 'Farine de blé T55', quantite: '500 g' },
+    { ingredient: 'Lait entier', quantite: '250 g' },
+    { ingredient: 'Beurre de tourage AOP', quantite: '250 g' },
+    { ingredient: 'Sucre semoule', quantite: '60 g' },
+    { ingredient: 'Levure boulangère fraîche', quantite: '20 g' },
+    { ingredient: 'Sel fin', quantite: '10 g' },
+  ],
+  patisserie: [
+    { ingredient: 'Farine de blé T55', quantite: '200 g' },
+    { ingredient: 'Œufs entiers', quantite: '4 unités' },
+    { ingredient: 'Sucre semoule', quantite: '150 g' },
+    { ingredient: 'Beurre doux', quantite: '150 g' },
+    { ingredient: 'Crème liquide entière', quantite: '250 g' },
+    { ingredient: 'Chocolat noir 64%', quantite: '200 g' },
+  ],
+  traiteur: [
+    { ingredient: 'Pâte à quiche (farine, beurre, eau)', quantite: '250 g' },
+    { ingredient: 'Œufs entiers', quantite: '3 unités' },
+    { ingredient: 'Crème fraîche épaisse', quantite: '200 g' },
+    { ingredient: 'Garniture du jour (fromage, légumes)', quantite: '150 g' },
+  ],
+  autre: [
+    { ingredient: 'Farine de blé T55', quantite: '500 g' },
+    { ingredient: 'Œufs entiers', quantite: '3 unités' },
+    { ingredient: 'Beurre doux', quantite: '200 g' },
+    { ingredient: 'Sucre semoule', quantite: '120 g' },
+    { ingredient: 'Lait entier', quantite: '200 g' },
+  ],
+}
+
+function genererFicheOffline(nom: string): FicheGenerationResult {
+  const famille = detectFamille(nom)
+  const base = OFFLINE_FICHES[famille] ?? OFFLINE_FICHES.autre
+  return {
+    famille,
+    nbPieces: '12',
+    poidsUnitaire: '80 g',
+    duree: '2h30',
+    ingredients: base.map((i) => ({ id: crypto.randomUUID(), ...i })),
+    materiel: 'Pétrin, batteur, plan de travail inox, balance de précision, thermomètre, moules adaptés, plaque de cuisson, spatule coudée.',
+    etapes: [
+      `Peser tous les ingrédients pour la réalisation du ${nom}.`,
+      "Mélanger les ingrédients secs, puis incorporer progressivement les liquides.",
+      "Travailler la pâte jusqu'à une texture homogène et souple.",
+      "Laisser reposer selon les indications du produit, dans un endroit tempéré.",
+      'Façonner, détailler et disposer sur les supports de cuisson.',
+      'Enfourner et surveiller la cuisson jusqu’à une coloration régulière.',
+      'Laisser refroidir sur grille avant dressage ou conditionnement.',
+    ].join('\n'),
+    conseils: "Respecter les temps de repos et la température ambiante pour une régularité parfaite. Ajuster l'hydratation selon la farine utilisée.",
+  }
+}
+
+export async function genererFicheTechnique(
+  productName: string,
+  entrepriseContext?: string,
+): Promise<FicheGenerationResult> {
+  const client = await getClient()
+
+  if (!client || !productName.trim()) {
+    return genererFicheOffline(productName)
+  }
+
+  const contextBlock = entrepriseContext?.trim()
+    ? `Informations sur l'entreprise d'accueil (pour le vocabulaire métier) :\n${entrepriseContext.trim()}\n\n`
+    : ''
+
+  const prompt = `Tu es un chef boulanger-pâtissier expérimenté. Rédige une fiche technique professionnelle et réaliste pour le produit "${productName.trim()}".
+${contextBlock}Respecte scrupuleusement le vocabulaire métier de la boulangerie-pâtisserie (temps de pousse, cuisson vapeur, hydratation, TH, etc.).
+Les ingrédients doivent être réalistes et exprimés en grammes pour des quantités adaptées à un laboratoire artisanal (10 à 30 pièces).
+Les étapes doivent être numérotées (1., 2., 3., ...) et précises.
+Réponds uniquement en JSON.`
+
+  const response = await client.ai.models.generateContent({
+    model: client.model,
+    contents: prompt,
+    config: {
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          famille: { type: Type.STRING, description: "Une de : pain, viennoiserie, patisserie, traiteur, autre" },
+          nbPieces: { type: Type.STRING, description: 'Nombre de pièces réalisées, ex : 12' },
+          poidsUnitaire: { type: Type.STRING, description: 'Poids unitaire en grammes, ex : 80 g' },
+          duree: { type: Type.STRING, description: 'Durée totale de réalisation, ex : 2h30' },
+          ingredients: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                ingredient: { type: Type.STRING },
+                quantite: { type: Type.STRING },
+              },
+              required: ['ingredient', 'quantite'],
+            },
+          },
+          materiel: { type: Type.STRING, description: 'Matériel nécessaire, séparé par des virgules' },
+          etapes: { type: Type.STRING, description: 'Étapes numérotées, séparées par des retours à la ligne' },
+          conseils: { type: Type.STRING, description: 'Conseils & astuces professionnels' },
+        },
+        required: ['famille', 'nbPieces', 'poidsUnitaire', 'duree', 'ingredients', 'materiel', 'etapes', 'conseils'],
+      },
+    },
+  })
+
+  if (!response.text) {
+    throw new Error('Réponse vide')
+  }
+
+  const data = JSON.parse(response.text)
+  const famille = FICHE_FAMILLES.includes(data.famille) ? data.famille : detectFamille(productName)
+
+  return {
+    famille,
+    nbPieces: String(data.nbPieces ?? ''),
+    poidsUnitaire: String(data.poidsUnitaire ?? ''),
+    duree: String(data.duree ?? ''),
+    ingredients: (Array.isArray(data.ingredients) ? data.ingredients : [])
+      .filter((i: any) => i && i.ingredient)
+      .map((i: any) => ({ id: crypto.randomUUID(), ingredient: String(i.ingredient), quantite: String(i.quantite ?? '') })),
+    materiel: String(data.materiel ?? ''),
+    etapes: String(data.etapes ?? ''),
+    conseils: String(data.conseils ?? ''),
+  }
+}
 
 export interface RechercheResultat {
   entreprise: Omit<Entreprise, 'nom' | 'ville' | 'logoDataUrl' | 'sourceRecherche'>

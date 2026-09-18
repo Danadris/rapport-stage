@@ -232,6 +232,16 @@ export const WIZARD_STEPS: WizardStep[] = [
     ],
   },
   {
+    id: 'fiche-technique',
+    numero: '11b',
+    titre: 'Fiches techniques',
+    sousTitre: 'Recettes & techniques',
+    consigne:
+      'Présentez une ou plusieurs fiches techniques de produits réalisés pendant votre stage : ingrédients, matériel, étapes de réalisation. Chaque fiche occupe une page dans votre rapport.',
+    kind: 'fiche-technique',
+    fields: [],
+  },
+  {
     id: 'bilan',
     numero: '12',
     titre: 'Bilan personnel',
@@ -317,6 +327,10 @@ export function progressOf(
     if (step.kind === 'organigramme') {
       total++
       if ((rapport.organigramme?.nodes?.length ?? 0) > 0) done++
+    }
+    if (step.kind === 'fiche-technique') {
+      total++
+      if ((rapport.ficheTechniques?.filter(f => f.nom.trim() !== '').length ?? 0) > 0) done++
     }
     if (step.kind === 'notes') {
       for (const field of step.fields) {

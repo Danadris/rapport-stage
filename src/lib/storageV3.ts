@@ -468,5 +468,9 @@ export function buildReportData(
     pageBreaks: rapport.pageBreaks,
     customSteps: rapport.customSteps,
     images,
+    organigramme: rapport.organigramme,
+    organigrammes: rapport.organigrammes,
+    ficheTechniques: rapport.ficheTechniques,
+    materiels: rapport.materiels,
   }
 }

@@ -18,6 +18,8 @@ export function createRapport(partial?: Partial<Rapport>): Rapport {
 }
 
 export function demoRapport(): Rapport {
+  const painId = 'demo-fiche-pain-levain'
+  const entremetsId = 'demo-fiche-entremets'
   return createRapport({
     couverture: {
       ...emptyCouverture(),
@@ -127,6 +129,76 @@ export function demoRapport(): Rapport {
           caption: 'Figure 3 : Entremets montés en fin de journée',
         },
       ],
+      [`fiche-technique-${painId}`]: [
+        {
+          id: 'img-demo-fiche-pain',
+          dataUrl: demoPain,
+          side: 'right',
+          size: 'M',
+        },
+      ],
+      [`fiche-technique-${entremetsId}`]: [
+        {
+          id: 'img-demo-fiche-entremets',
+          dataUrl: demoEntremets,
+          side: 'right',
+          size: 'M',
+        },
+      ],
     },
+    materiels: [
+      {
+        id: 'demo-materiel-petrin',
+        nom: 'Pétrin à spirale',
+        utilisation: 'Utilisé pour le pétrissage des pâtes levées et le développement du réseau glutineux.',
+        imageDataUrl: demoPain,
+      },
+      {
+        id: 'demo-materiel-batteur',
+        nom: 'Robot pâtissier',
+        utilisation: 'Utilisé pour monter les crèmes, réaliser les mousses et homogénéiser les appareils.',
+        imageDataUrl: demoEntremets,
+      },
+    ],
+    ficheTechniques: [
+      {
+        id: entremetsId,
+        nom: 'Entremets pistache-framboise',
+        famille: 'patisserie',
+        nbPieces: '10',
+        poidsUnitaire: '180 g',
+        duree: '3h30 + repos',
+        ingredients: [
+          { id: 'ing-ft2-1', ingredient: 'Biscuit cuillère', quantite: '1 plaque' },
+          { id: 'ing-ft2-2', ingredient: 'Insert framboise', quantite: '300 g' },
+          { id: 'ing-ft2-3', ingredient: 'Mousse pistache', quantite: '600 g' },
+          { id: 'ing-ft2-4', ingredient: 'Glaçage miroir', quantite: '350 g' },
+        ],
+        materiel: 'Cercle à entremets Ø18cm, flexipat, bâche plastique, pistolet, thermomètre, robot pâtissier.',
+        etapes:
+          '1. Étaler le biscuit cuillère sur 1 cm et le détailler aux dimensions du cercle.\n2. Coulé l\'insert framboise et le congeler.\n3. Réaliser la mousse pistache et la couler à moitié dans le cercle.\n4. Insérer l\'insert framboise puis finir de mouler.\n5. Démouler après congélation complète.\n6. Napper de glaçage miroir à 35°C puis décorer.',
+        conseils:
+          'Vérifier la température du glaçage avant le nappage : trop froid il fige, trop chaud il dégouline. Travailler la mousse rapidement pour qu\'elle ne tranche pas.',
+      },
+      {
+        id: painId,
+        nom: 'Pain au levain tradition',
+        famille: 'pain',
+        nbPieces: '8',
+        poidsUnitaire: '750 g',
+        duree: '6h + fermentation',
+        ingredients: [
+          { id: 'ing-ft1-1', ingredient: 'Farine T65', quantite: '1000 g' },
+          { id: 'ing-ft1-2', ingredient: 'Eau', quantite: '700 g' },
+          { id: 'ing-ft1-3', ingredient: 'Levain liquide', quantite: '400 g' },
+          { id: 'ing-ft1-4', ingredient: 'Sel', quantite: '20 g' },
+        ],
+        materiel: 'Pétrin à spirale, bannetons, couche, lame de scarification, four à sole avec pierre.',
+        etapes:
+          '1. Autolyse farine et eau pendant 30 minutes.\n2. Incorporer le levain, puis le sel en fin de pétrissage.\n3. Pointer à température ambiante pendant 3 heures avec un rabat.\n4. Diviser en pâtons de 750 g et bannetonner.\n5. Apprêt de 12 heures au froid.\n6. Scarifier et enfourner à 250°C avec buée.',
+        conseils:
+          'La température de la pâte doit rester autour de 22-24°C. Ne pas hésiter à prolonger l\'autolyse pour développer le réseau sans pétrir trop fort.',
+      },
+    ],
   })
 }

@@ -100,6 +100,32 @@ export function CouvertureStep({ value, onChange }: Props) {
         value={value.photoActivite}
         onChange={(photoActivite) => onChange({ photoActivite })}
       />
+      {value.photoActivite && (
+        <div className="rounded-lg border border-line bg-paper p-1">
+          <div className="grid grid-cols-2 gap-1">
+            {[
+              { value: 'contain', label: 'Voir toute la photo' },
+              { value: 'cover', label: 'Remplir le cadre' },
+            ].map((option) => {
+              const active = (value.photoActiviteFit ?? 'contain') === option.value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => onChange({ photoActiviteFit: option.value as 'contain' | 'cover' })}
+                  className={`rounded-md px-3 py-2 text-[12px] font-medium transition-colors ${
+                    active
+                      ? 'bg-gold-soft text-gold-deep'
+                      : 'text-muted hover:bg-cream hover:text-ink'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

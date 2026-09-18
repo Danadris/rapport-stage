@@ -51,6 +51,14 @@
     font: inherit;
     color: inherit;
   }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -83,6 +91,25 @@ html.dark {
   --color-gold-soft: oklch(0.25 0.02 88);
   --color-danger: oklch(0.60 0.19 27);
   color-scheme: dark;
+}
+
+/* Keep headings/figures with their content in print pagination. */
+.a4-page h2,
+.a4-page h3,
+.a4-page h4,
+.a4-page figure,
+.a4-page tr {
+  break-inside: avoid;
+}
+
+.a4-page h2,
+.a4-page h3 {
+  break-after: avoid;
+}
+
+.a4-page p {
+  orphans: 3;
+  widows: 3;
 }
 
 @media print {

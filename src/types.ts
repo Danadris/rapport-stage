@@ -8,6 +8,7 @@ export interface Couverture {
   tuteurIndustriel: string
   membresJury: string[]
   photoActivite?: string
+  photoActiviteFit?: 'contain' | 'cover'
 }
 
 export interface Entreprise {
@@ -65,7 +66,36 @@ export interface Organigramme {
   nodes: OrgNode[]
 }
 
-export type StepKind = 'couverture' | 'entreprise' | 'organigramme' | 'presentation' | 'activites' | 'notes'
+export type StepKind = 'couverture' | 'entreprise' | 'organigramme' | 'presentation' | 'activites' | 'notes' | 'fiche-technique'
+
+export interface FicheIngredient {
+  id: string
+  ingredient: string
+  quantite: string
+}
+
+export interface MaterielItem {
+  id: string
+  nom: string
+  utilisation: string
+  imageDataUrl?: string
+  /** Display size in the "Matériel utilisé" page. Defaults to 'M'. */
+  size?: 'S' | 'M' | 'L'
+}
+
+export interface FicheTechnique {
+  id: string
+  nom: string
+  famille: string        // 'pain' | 'viennoiserie' | 'patisserie' | 'traiteur' | 'autre'
+  nbPieces: string
+  poidsUnitaire: string
+  duree: string
+  ingredients: FicheIngredient[]
+  materiel: string
+  etapes: string         // numbered steps as free text
+  conseils: string       // optional
+  hiddenTitles?: Array<'ingredients' | 'materiel' | 'realisation' | 'conseils'>
+}
 
 export interface WizardStep {
   id: string
@@ -104,6 +134,8 @@ export interface Rapport {
   customSteps?: WizardStep[]
   organigramme?: Organigramme
   organigrammes?: Record<string, Organigramme>
+  ficheTechniques?: FicheTechnique[]
+  materiels?: MaterielItem[]
 }
 
 // --- V3.1 Architecture Types ---
@@ -144,6 +176,8 @@ export interface ReportData {
   images?: Record<string, ImageReference[]> // No Base64 data here!
   organigramme?: Organigramme
   organigrammes?: Record<string, Organigramme>
+  ficheTechniques?: FicheTechnique[]
+  materiels?: MaterielItem[]
 }
 
 export interface StoredImage {

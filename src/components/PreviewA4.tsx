@@ -1,6 +1,7 @@
 import { useRef, useState, useLayoutEffect, Fragment } from 'react'
-import type { Rapport, SectionImage } from '../types'
+import type { FicheTechnique, MaterielItem, Rapport, SectionImage } from '../types'
 import { usePageNumbers } from '../hooks/usePageNumbers'
+import { useBackgroundRemoval } from '../hooks/useBackgroundRemoval'
 import { EditableText } from './preview/EditableText'
 import { Figure } from './preview/Figure'
 import {
@@ -8,18 +9,67 @@ import {
   buildSommaireEntries,
   formatPeriodeLabel,
   groupReportParts,
+  isFicheTechniqueKey,
+  MATERIEL_PART_KEY,
   type ReportPart,
+  type ReportSubSection,
   type ReportSubSubSection,
   type SommaireEntry,
 } from '../lib/reportDocument'
 
 import logo from '../assets/ifmbp-logo-official.png'
 import { OrgChart } from './preview/OrgChart'
+import { FicheTechniquePage } from './preview/FicheTechniquePage'
 import type { Organigramme } from '../types'
 
 const INSTITUT_FR = 'Instituts de Formation aux Métiers de la Boulangerie et la Pâtisserie'
 const INSTITUT_AR = 'مـعـهـد الـتـكـويـن فـي مهن الخبازة والحلويات بالدار البيضاء'
 const BLEU = 'var(--doc-color)'
+
+function MaterielPage({
+  items,
+  startPageNum,
+  headerLogo,
+}: {
+  items: MaterielItem[]
+  startPageNum?: number
+  headerLogo?: string | null
+}) {
+  const visibleItems = items.filter((item) => item.nom.trim() || item.utilisation.trim() || item.imageDataUrl)
+  const photoSize = (size?: 'S' | 'M' | 'L') =>
+    ({ S: 'h-16 w-20', M: 'h-20 w-24', L: 'h-28 w-36' })[size ?? 'M']
+
+  return (
+    <Page data-part={MATERIEL_PART_KEY} startPageNum={startPageNum} headerLogo={headerLogo}>
+      <h2 className="text-center font-bold" style={{ color: BLEU, fontSize: 'var(--doc-title-size)' }}>
+        Matériel utilisé
+      </h2>
+      <div className="mt-8 border-t border-[#d8cdbc]">
+        {visibleItems.map((item, i) => (
+          <div key={item.id} className="flex items-center gap-5 border-b border-[#e5dac8] py-4">
+            {item.imageDataUrl ? (
+              <div className={`flex ${photoSize(item.size)} shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#d8cdbc] bg-[#fbf7ef]`}>
+                <img src={item.imageDataUrl} alt={item.nom} className="h-full w-full object-contain" />
+              </div>
+            ) : (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#c9bda8] bg-[#f6f0e5]">
+                <span className="text-[13px] font-semibold text-[#8a765d]">{i + 1}</span>
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold leading-snug text-[#2f2a24]">{item.nom || 'Matériel'}</p>
+              {item.utilisation.trim() && (
+                <p className="mt-1 whitespace-pre-wrap text-[11.5px] leading-relaxed text-[#5d4d3b]">
+                  {item.utilisation}
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Page>
+  )
+}
 
 interface PageProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode
@@ -59,9 +109,9 @@ function Page({ children, className, style, startPageNum, headerLogo, ...rest }:
               className="absolute left-0 right-0 flex items-center justify-between"
               style={{ top: `${i * 1123 + 40}px`, paddingLeft: 'var(--doc-margins)', paddingRight: 'var(--doc-margins)' }}
             >
-              <img src={logo} alt="IFMBP" className="h-12 w-auto object-contain opacity-80" />
+              <img src={logo} alt="IFMBP" className="h-12 max-w-[150px] object-contain opacity-80" />
               {headerLogo ? (
-                <img src={headerLogo} alt="Entreprise" className="h-12 w-auto object-contain opacity-80" />
+                <img src={headerLogo} alt="Entreprise" className="h-12 max-w-[150px] object-contain opacity-80" />
               ) : <div />}
             </div>
             <div
@@ -90,7 +140,7 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
       <div className="flex min-w-0 flex-1 flex-col px-10 pt-9">
         <div className="flex items-start justify-between gap-6">
           <img src={logo} alt="IFMBP" className="h-20 w-auto object-contain" />
-          <div className={`flex h-[88px] w-[128px] shrink-0 items-center justify-center bg-white p-1.5 ${e.logoDataUrl ? '' : 'border-[3px] border-[#4472c4]'}`}>
+          <div className={`flex h-[88px] w-[128px] shrink-0 items-center justify-center bg-white ${e.logoDataUrl ? '' : 'border-[3px] border-[#4472c4] p-1.5'}`}>
             {e.logoDataUrl ? (
               <img src={e.logoDataUrl} alt="Logo entreprise" className="max-h-full max-w-full object-contain" />
             ) : (
@@ -126,9 +176,17 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
           </div>
         </div>
 
-        <div className={`mt-auto mb-6 flex h-[270px] shrink-0 items-center justify-center bg-white ${c.photoActivite ? '' : 'border-[3px] border-[#4472c4]'}`}>
+        <div className={`mt-auto mb-6 flex h-[270px] shrink-0 items-center justify-center bg-white ${c.photoActivite ? '' : 'border-[3px] border-[#4472c4] p-1.5'}`}>
           {c.photoActivite ? (
-            <img src={c.photoActivite} alt="Photo de l'entreprise" className="h-full w-full object-cover" />
+            <img
+              src={c.photoActivite}
+              alt="Photo de l'entreprise"
+              className={
+                (c.photoActiviteFit ?? 'contain') === 'cover'
+                  ? 'h-full w-full object-cover'
+                  : 'max-h-full max-w-full object-contain'
+              }
+            />
           ) : (
             <span className="text-xs text-neutral-400">Photo de l'activité de l'entreprise</span>
           )}
@@ -199,7 +257,7 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
   if (part.key === 'organigramme' || part.isOrganigramme) {
     const orgData = getOrg(part.key)
     return (
-      <div data-part={part.key}>
+      <div data-part-content={part.key}>
         {part.titre && part.titre.trim() !== '' && (
           <h2 className="text-center font-bold" style={{ color: BLEU, fontSize: 'var(--doc-title-size)' }}>
             {part.titre}
@@ -212,12 +270,18 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
     )
   }
 
-  const blocks: { titre?: string; paragraphes?: string[]; texte?: string; editPath?: { source: 'entreprise' | 'section'; field: string } }[] = []
+  type RenderBlock = Partial<ReportSubSection> & { paragraphes?: string[] }
+
+  const blocks: RenderBlock[] = []
   if (part.paragraphes && part.paragraphes.length > 0) blocks.push({ paragraphes: part.paragraphes })
-  for (const ss of part.sousSections ?? []) blocks.push({ titre: ss.titre, texte: ss.texte, editPath: ss.editPath })
+  for (const ss of part.sousSections ?? []) blocks.push(ss)
 
   const hasContent = blocks.some(
-    (b) => (b.paragraphes !== undefined && b.paragraphes.length > 0) || (b.texte !== undefined && b.texte.trim() !== ''),
+    (b) =>
+      (b.paragraphes !== undefined && b.paragraphes.length > 0) ||
+      (b.texte !== undefined && b.texte.trim() !== '') ||
+      b.isOrganigramme ||
+      (b.items?.some((item) => item.texte.trim() !== '' || item.isOrganigramme) ?? false),
   )
 
   const handleParagraphsSave = (newText: string) => {
@@ -258,7 +322,7 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
   }
 
   return (
-    <div data-part={part.key}>
+    <div data-part-content={part.key}>
       {/* Level 1: unnumbered — omit entirely if empty */}
       {part.titre && part.titre.trim() !== '' && (
         <h2 className="text-center font-bold" style={{ color: BLEU, fontSize: 'var(--doc-title-size)' }}>
@@ -319,15 +383,15 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                       className={`${b.titre && b.titre.trim() !== '' ? 'mt-2.5' : ''} whitespace-pre-wrap`}
                       style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}
                     />
-                  ) : (
+                  ) : onEdit && b.editPath ? (
                     <EditableText
                       text=""
                       placeholder="Cliquez ici pour rédiger..."
-                      onSave={onEdit && b.editPath ? (v) => onEdit(b.editPath!.source, b.editPath!.field, v) : undefined}
-                      className="mt-2 italic text-neutral-400"
+                      onSave={(v) => onEdit(b.editPath!.source, b.editPath!.field, v)}
+                      className="mt-2"
                       style={{ fontSize: 'var(--doc-body-size)' }}
                     />
-                  )}
+                  ) : null}
                 </div>
               )}
 
@@ -359,15 +423,15 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                             className={`${item.titre && item.titre.trim() !== '' ? 'mt-1.5' : ''} whitespace-pre-wrap`}
                             style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}
                           />
-                        ) : (
+                        ) : onEdit && item.editPath ? (
                           <EditableText
                             text=""
                             placeholder="Cliquez ici pour rédiger..."
-                            onSave={onEdit && item.editPath ? (v) => onEdit(item.editPath!.source, item.editPath!.field, v) : undefined}
-                            className="mt-1 italic text-neutral-400"
+                            onSave={(v) => onEdit(item.editPath!.source, item.editPath!.field, v)}
+                            className="mt-1"
                             style={{ fontSize: 'var(--doc-body-size)' }}
                           />
-                        )
+                        ) : null
                       )}
                     </div>
                   ))}
@@ -394,9 +458,9 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
   )
 }
 
-function Sommaire({ entries, startPageNum, headerLogo }: { entries: SommaireEntry[]; startPageNum?: number; headerLogo?: string | null }) {
+function SommaireContent({ entries }: { entries: SommaireEntry[] }) {
   return (
-    <Page data-part="sommaire" startPageNum={startPageNum} headerLogo={headerLogo}>
+    <>
       <h2 className="text-center text-[20px] font-bold" style={{ color: BLEU }}>
         Sommaire
       </h2>
@@ -415,6 +479,14 @@ function Sommaire({ entries, startPageNum, headerLogo }: { entries: SommaireEntr
           </div>
         ))}
       </div>
+    </>
+  )
+}
+
+function Sommaire({ entries, startPageNum, headerLogo, ...rest }: { entries: SommaireEntry[]; startPageNum?: number; headerLogo?: string | null } & React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <Page data-part="sommaire" startPageNum={startPageNum} headerLogo={headerLogo} {...rest}>
+      <SommaireContent entries={entries} />
     </Page>
   )
 }
@@ -423,17 +495,20 @@ export function PreviewA4({
   rapport,
   onEdit,
   onImagesChange,
+  onFicheChange,
 }: {
   rapport: Rapport
   onEdit?: EditHandler
   onImagesChange?: (sectionId: string, imgs: SectionImage[]) => void
+  onFicheChange?: (ficheId: string, patch: Partial<FicheTechnique>) => void
 }) {
   const c = rapport.couverture
   const parts = buildReportParts(rapport)
   const imagesBySection = rapport.images ?? {}
-  const containerRef = useRef<HTMLDivElement>(null)
-  const numbers = usePageNumbers(containerRef)
+  const stackRef = useRef<HTMLDivElement>(null)
+  const numbers = usePageNumbers(stackRef)
   const [dragState, setDragState] = useState<DragState | null>(null)
+  const { activeId: bgRemovingId, error: bgError, removeBackground } = useBackgroundRemoval()
 
   const [remerciements, ...mainParts] = parts
   const entries = buildSommaireEntries(parts, numbers)
@@ -475,54 +550,116 @@ export function PreviewA4({
 
   const groupedParts = groupReportParts(mainParts, rapport.pageBreaks)
 
+  // Shared renderer used by every part, so editing (click-to-type, image drag, ...)
+  // behaves identically wherever the part is shown.
+  const partContent = (p: ReportPart) => (
+    <PartContent
+      part={p}
+      images={imagesBySection[p.key] ?? []}
+      onEdit={onEdit}
+      onImagesChange={makeImagesChange(p.key)}
+      onCrossMove={(bi) => handleCrossMove(p.key, bi)}
+      dragState={dragState}
+      setDragState={setDragState}
+      onDragEnd={makeOnDragEnd}
+      organigramme={rapport.organigramme}
+      organigrammes={rapport.organigrammes}
+      primaryColor={rapport.style?.primaryColor}
+    />
+  )
+
   return (
-    <div ref={containerRef} className="space-y-10 print:space-y-0 print:block" style={styleVars}>
+    // Continuous vertical document: page blocks stack top to bottom. Blocks grow
+    // (min-height 1123) so no content is ever hidden or cut off on screen, while
+    // print keeps exact A4 pagination. Page numbers come from the real block
+    // heights, so the sommaire stays accurate.
+    <div ref={stackRef} style={styleVars} className="space-y-10 print:space-y-0">
       <CoverPage rapport={rapport} periodeLabel={formatPeriodeLabel(c.periodeNumero)} />
-      <Page startPageNum={numbers['remerciements'] ? numbers['remerciements'] : undefined} headerLogo={rapport.entreprise.logoDataUrl}>
-        <PartContent
-          part={remerciements}
-          images={imagesBySection['remerciements'] ?? []}
-          onEdit={onEdit}
-          onImagesChange={makeImagesChange('remerciements')}
-          onCrossMove={(bi) => handleCrossMove('remerciements', bi)}
-          dragState={dragState}
-          setDragState={setDragState}
-          onDragEnd={makeOnDragEnd}
-          organigramme={rapport.organigramme}
-          organigrammes={rapport.organigrammes}
-          primaryColor={rapport.style?.primaryColor}
-        />
+      <Page
+        data-part="remerciements"
+        startPageNum={numbers['remerciements'] ? numbers['remerciements'] : undefined}
+        headerLogo={rapport.entreprise.logoDataUrl}
+      >
+        {partContent(remerciements)}
       </Page>
       <Sommaire
         entries={entries}
         startPageNum={numbers['sommaire'] ? numbers['sommaire'] : undefined}
         headerLogo={rapport.entreprise.logoDataUrl}
       />
-      {groupedParts.map((group, groupIdx) => (
-        <Page
-          key={groupIdx}
-          startPageNum={numbers[group[0].key] ? numbers[group[0].key] : undefined}
-          headerLogo={rapport.entreprise.logoDataUrl}
-        >
-          {group.map((p, pIdx) => (
-            <div key={p.key} className={pIdx > 0 ? 'mt-16 pt-8 border-t border-neutral-100' : ''}>
-              <PartContent
-                part={p}
-                images={imagesBySection[p.key] ?? []}
-                onEdit={onEdit}
-                onImagesChange={makeImagesChange(p.key)}
-                onCrossMove={(bi) => handleCrossMove(p.key, bi)}
-                dragState={dragState}
-                setDragState={setDragState}
-                onDragEnd={makeOnDragEnd}
-                organigramme={rapport.organigramme}
-                organigrammes={rapport.organigrammes}
-                primaryColor={rapport.style?.primaryColor}
+      {groupedParts.map((group, groupIdx) => {
+        // Fiches techniques always render standalone on their own page, even if
+        // a (legacy) page-break flag merged them into a shared group.
+        const materialParts = group.filter((p) => p.key === MATERIEL_PART_KEY)
+        const fiches = group.filter((p) => isFicheTechniqueKey(p.key))
+        const rest = group.filter((p) => !isFicheTechniqueKey(p.key) && p.key !== MATERIEL_PART_KEY)
+        return (
+          <Fragment key={groupIdx}>
+            {rest.length > 0 && (
+              <Page
+                data-part={rest[0].key}
+                startPageNum={numbers[rest[0].key] ? numbers[rest[0].key] : undefined}
+                headerLogo={rapport.entreprise.logoDataUrl}
+              >
+                {rest.map((p, pIdx) => (
+                  <div key={p.key} className={pIdx > 0 ? 'mt-16 pt-8 border-t border-neutral-100' : ''}>
+                    {partContent(p)}
+                  </div>
+                ))}
+              </Page>
+            )}
+            {materialParts.length > 0 && (
+              <MaterielPage
+                items={rapport.materiels ?? []}
+                startPageNum={numbers[MATERIEL_PART_KEY]}
+                headerLogo={rapport.entreprise.logoDataUrl}
               />
-            </div>
-          ))}
-        </Page>
-      ))}
+            )}
+            {fiches.map((p) => {
+              const fiche = (rapport.ficheTechniques ?? []).find((f) => `fiche-technique-${f.id}` === p.key)
+              if (!fiche) return null
+              const allFiches = (rapport.ficheTechniques ?? []).filter((f) => f.nom.trim() !== '')
+              const ficheImages = imagesBySection[p.key] ?? []
+              const currentPhoto = ficheImages[0]
+              const replacePhoto = onImagesChange
+                ? (dataUrl: string) => {
+                    const nextPhoto: SectionImage = currentPhoto
+                      ? { ...currentPhoto, dataUrl }
+                      : { id: crypto.randomUUID(), dataUrl, side: 'right', size: 'M' }
+                    onImagesChange(p.key, [nextPhoto])
+                  }
+                : undefined
+              const removePhoto = onImagesChange ? () => onImagesChange(p.key, []) : undefined
+              const removePhotoBg = currentPhoto && onImagesChange
+                ? () => {
+                    void removeBackground(currentPhoto.id, currentPhoto.dataUrl, (dataUrl) => {
+                      onImagesChange(p.key, [{ ...currentPhoto, dataUrl }])
+                    })
+                  }
+                : undefined
+              return (
+                <div key={p.key}>
+                  <FicheTechniquePage
+                    fiche={fiche}
+                    ficheIndex={allFiches.findIndex((f) => f.id === fiche.id)}
+                    startPageNum={numbers[p.key]}
+                    headerLogo={rapport.entreprise.logoDataUrl}
+                    primaryColor={rapport.style?.primaryColor}
+                    photoDataUrl={currentPhoto?.dataUrl}
+                    photoSize={currentPhoto?.size}
+                    onChange={onFicheChange ? (patch) => onFicheChange(fiche.id, patch) : undefined}
+                    onPhotoChange={replacePhoto}
+                    onPhotoRemove={removePhoto}
+                    onPhotoRemoveBg={removePhotoBg}
+                    bgRemoving={bgRemovingId === currentPhoto?.id}
+                    bgError={bgRemovingId === currentPhoto?.id ? null : bgError}
+                  />
+                </div>
+              )
+            })}
+          </Fragment>
+        )
+      })}
     </div>
   )
 }
