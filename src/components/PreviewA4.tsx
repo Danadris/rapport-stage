@@ -2,7 +2,7 @@ import { useRef, useState, useLayoutEffect, Fragment } from 'react'
 import type { FicheTechnique, MaterielItem, Rapport, SectionImage } from '../types'
 import { usePageNumbers } from '../hooks/usePageNumbers'
 import { useBackgroundRemoval } from '../hooks/useBackgroundRemoval'
-import { EditableText } from './preview/EditableText'
+import { EditableText, EditableTitle } from './preview/EditableText'
 import { Figure } from './preview/Figure'
 import {
   buildReportParts,
@@ -277,7 +277,7 @@ function computeMoveTargets(parts: ReportPart[]): MoveTarget[] {
   return targets
 }
 
-function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragState, setDragState, onDragEnd, organigramme, organigrammes, primaryColor, moveTargets, onMoveImage }: { 
+function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragState, setDragState, onDragEnd, organigramme, organigrammes, primaryColor, moveTargets, onMoveImage, onTitleEdit }: {
   part: ReportPart
   images: SectionImage[]
   onEdit?: EditHandler
@@ -291,6 +291,7 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
   primaryColor?: string
   moveTargets?: MoveTarget[]
   onMoveImage?: (imgId: string, fromSection: string, toSection: string, toBlockIndex: number) => void
+  onTitleEdit?: (field: string, value: string) => void
 }) {
   const [dropOverBlock, setDropOverBlock] = useState<number | null>(null)
 
@@ -305,9 +306,20 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
     return (
       <div data-part-content={part.key}>
         {part.titre && part.titre.trim() !== '' && (
-          <h2 className="text-center font-bold" style={{ color: BLEU, fontSize: 'var(--doc-title-size)' }}>
-            {part.titre}
-          </h2>
+          onTitleEdit ? (
+            <EditableTitle
+              tag="h2"
+              text={part.titre}
+              onSave={(v) => onTitleEdit(`stepTitle:${part.key}`, v)}
+              onRemove={() => onTitleEdit(`stepTitle:${part.key}`, '')}
+              className="text-center font-bold"
+              style={{ color: BLEU, fontSize: 'var(--doc-title-size)' }}
+            />
+          ) : (
+            <h2 className="text-center font-bold" style={{ color: BLEU, fontSize: 'var(--doc-title-size)' }}>
+              {part.titre}
+            </h2>
+          )
         )}
         <div className="mt-8">
           <OrgChart nodes={orgData?.nodes ?? []} primaryColor={primaryColor} />
@@ -371,9 +383,20 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
     <div data-part-content={part.key}>
       {/* Level 1: unnumbered — omit entirely if empty */}
       {part.titre && part.titre.trim() !== '' && (
-        <h2 className="text-center font-bold" style={{ color: BLEU, fontSize: 'var(--doc-title-size)' }}>
-          {part.titre}
-        </h2>
+        onTitleEdit ? (
+          <EditableTitle
+            tag="h2"
+            text={part.titre}
+            onSave={(v) => onTitleEdit(`stepTitle:${part.key}`, v)}
+            onRemove={() => onTitleEdit(`stepTitle:${part.key}`, '')}
+            className="text-center font-bold"
+            style={{ color: BLEU, fontSize: 'var(--doc-title-size)' }}
+          />
+        ) : (
+          <h2 className="text-center font-bold" style={{ color: BLEU, fontSize: 'var(--doc-title-size)' }}>
+            {part.titre}
+          </h2>
+        )
       )}
       <div className="mt-5">
         {blocks.map((b, bi) => {
@@ -392,9 +415,21 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
             >
               {/* Level 2: numbered (1., 2., ...) — omit entirely if empty */}
               {b.titre && b.titre.trim() !== '' && (
-                <h3 className="font-semibold" style={{ color: BLEU, fontSize: 'var(--doc-subtitle-size)' }}>
-                  {(b as any).numero !== undefined ? `${(b as any).numero}. ${b.titre}` : b.titre}
-                </h3>
+                onTitleEdit && b.id ? (
+                  <EditableTitle
+                    tag="h3"
+                    text={b.titre}
+                    prefixNode={(b as any).numero !== undefined ? `${(b as any).numero}.` : undefined}
+                    onSave={(v) => onTitleEdit(`fieldLabel:${part.key}:${b.id}`, v)}
+                    onRemove={() => onTitleEdit(`fieldLabel:${part.key}:${b.id}`, '')}
+                    className="font-semibold"
+                    style={{ color: BLEU, fontSize: 'var(--doc-subtitle-size)' }}
+                  />
+                ) : (
+                  <h3 className="font-semibold" style={{ color: BLEU, fontSize: 'var(--doc-subtitle-size)' }}>
+                    {(b as any).numero !== undefined ? `${(b as any).numero}. ${b.titre}` : b.titre}
+                  </h3>
+                )
               )}
               {(b as any).isOrganigramme ? (
                 <div className="mt-4">
@@ -450,13 +485,25 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                     <div key={item.id} className="pl-4 border-l-2 border-line/40">
                       {/* Level 3 heading: "a/ Titre" — omit if titre is empty */}
                       {item.titre && item.titre.trim() !== '' && (
-                        <h4
-                          className="font-semibold text-ink"
-                          style={{ fontSize: 'var(--doc-body-size)', fontFamily: 'var(--doc-title-font)' }}
-                        >
-                          <span style={{ color: BLEU, marginRight: '0.375rem' }}>{item.prefix || 'a/'}</span>
-                          {item.titre}
-                        </h4>
+                        onTitleEdit ? (
+                          <EditableTitle
+                            tag="h4"
+                            text={item.titre}
+                            prefixNode={<span style={{ color: BLEU }}>{item.prefix || 'a/'}</span>}
+                            onSave={(v) => onTitleEdit(`fieldLabel:${part.key}:${item.id}`, v)}
+                            onRemove={() => onTitleEdit(`fieldLabel:${part.key}:${item.id}`, '')}
+                            className="font-semibold text-ink"
+                            style={{ fontSize: 'var(--doc-body-size)', fontFamily: 'var(--doc-title-font)' }}
+                          />
+                        ) : (
+                          <h4
+                            className="font-semibold text-ink"
+                            style={{ fontSize: 'var(--doc-body-size)', fontFamily: 'var(--doc-title-font)' }}
+                          >
+                            <span style={{ color: BLEU, marginRight: '0.375rem' }}>{item.prefix || 'a/'}</span>
+                            {item.titre}
+                          </h4>
+                        )
                       )}
                       {item.isOrganigramme ? (
                         <div className="mt-2">
@@ -546,11 +593,13 @@ export function PreviewA4({
   onEdit,
   onImagesChange,
   onFicheChange,
+  onTitleEdit,
 }: {
   rapport: Rapport
   onEdit?: EditHandler
   onImagesChange?: (sectionId: string, imgs: SectionImage[]) => void
   onFicheChange?: (ficheId: string, patch: Partial<FicheTechnique>) => void
+  onTitleEdit?: (field: string, value: string) => void
 }) {
   const c = rapport.couverture
   const parts = buildReportParts(rapport)
@@ -636,6 +685,7 @@ export function PreviewA4({
       primaryColor={rapport.style?.primaryColor}
       moveTargets={moveTargets}
       onMoveImage={moveImageToTarget}
+      onTitleEdit={onTitleEdit}
     />
   )
 

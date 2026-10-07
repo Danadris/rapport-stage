@@ -640,6 +640,38 @@ export function WorkspacePage() {
     }
   }
 
+  const handlePreviewTitleEdit = (field: string, value: string) => {
+    if (field.startsWith('stepTitle:')) {
+      const stepId = field.slice('stepTitle:'.length)
+      setRapportWithHistory((r) =>
+        r
+          ? {
+              ...r,
+              customSteps: r.customSteps?.map((s) => (s.id === stepId ? { ...s, titre: value } : s)),
+              updatedAt: Date.now(),
+            }
+          : r,
+      )
+      return
+    }
+    if (field.startsWith('fieldLabel:')) {
+      const [stepId, fieldId] = field.slice('fieldLabel:'.length).split(':')
+      setRapportWithHistory((r) =>
+        r
+          ? {
+              ...r,
+              customSteps: r.customSteps?.map((s) =>
+                s.id === stepId && 'fields' in s && s.fields
+                  ? { ...s, fields: s.fields.map((f) => (f.id === fieldId ? { ...f, label: value } : f)) }
+                  : s,
+              ),
+              updatedAt: Date.now(),
+            }
+          : r,
+      )
+    }
+  }
+
   const clearSection = () => {
     if (window.confirm("Êtes-vous sûr de vouloir vider cette section ?")) {
       setRapportWithHistory((r) => {
@@ -1165,6 +1197,7 @@ export function WorkspacePage() {
                   onEdit={handlePreviewEdit}
                   onImagesChange={setImages}
                   onFicheChange={patchFicheTechnique}
+                  onTitleEdit={handlePreviewTitleEdit}
                 />
               </div>
             </div>
