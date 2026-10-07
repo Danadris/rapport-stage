@@ -37,6 +37,15 @@
   .page-window {
     @apply relative mx-auto h-[1123px] w-[794px] overflow-hidden bg-white py-[80px] text-[#1f1d1a] shadow-[0_2px_16px_rgba(61,56,50,0.14)] print:h-[297mm] print:w-[210mm] print:shadow-none;
   }
+
+  /* Empty preview text editors show their hint faintly instead of sitting as
+     an invisible box — the hint is CSS-only so :empty still matches in print. */
+  .a4-page [contenteditable="true"][data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: var(--color-faint);
+    font-style: italic;
+    pointer-events: none;
+  }
 }
 
 @layer base {
@@ -196,6 +205,11 @@ html.dark {
     background: transparent !important;
     box-shadow: none !important;
     outline: 0 !important;
+  }
+
+  /* Empty editors take no space in print/export — no stray blank lines. */
+  .a4-page [contenteditable="true"]:empty {
+    display: none !important;
   }
 
   * {

@@ -219,6 +219,26 @@ function computeMoveTargets(parts: ReportPart[]): MoveTarget[] {
   return targets
 }
 
+// One-click text removal, mirroring the title × — clears the block's text through
+// the same onSave path as manual deletion, so persistence behaves identically.
+function Removable({ onRemove, label, children }: { onRemove?: () => void; label: string; children: React.ReactNode }) {
+  if (!onRemove) return <>{children}</>
+  return (
+    <div className="group/text relative">
+      {children}
+      <button
+        type="button"
+        title={label}
+        aria-label={label}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove() }}
+        className="absolute -right-6 top-0 flex h-5 w-5 items-center justify-center rounded-full border border-neutral-300 bg-white/90 text-[10px] text-neutral-400 opacity-40 transition-opacity hover:text-red-500 print:hidden sm:opacity-0 sm:group-hover/text:opacity-100 sm:group-focus-within/text:opacity-100"
+      >
+        ×
+      </button>
+    </div>
+  )
+}
+
 function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragState, setDragState, onDragEnd, organigramme, organigrammes, primaryColor, moveTargets, onMoveImage, onTitleEdit }: {
   part: ReportPart
   images: SectionImage[]
@@ -399,6 +419,7 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                     />
                   ))}
                   {b.paragraphes ? (
+                    <Removable onRemove={onEdit ? () => handleParagraphsSave('') : undefined} label="Supprimer ce texte">
                     <div className="space-y-3.5" style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}>
                       <EditableText
                         text={b.paragraphes.join('\n\n')}
@@ -407,7 +428,9 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                         className="whitespace-pre-wrap"
                       />
                     </div>
+                    </Removable>
                   ) : b.texte && b.texte.trim() !== '' ? (
+                    <Removable onRemove={onEdit && b.editPath ? () => onEdit(b.editPath!.source, b.editPath!.field, '') : undefined} label="Supprimer ce texte">
                     <EditableText
                       text={b.texte}
                       placeholder="Cliquez ici pour rédiger..."
@@ -415,6 +438,7 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                       className={`${b.titre && b.titre.trim() !== '' ? 'mt-2.5' : ''} whitespace-pre-wrap`}
                       style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}
                     />
+                    </Removable>
                   ) : onEdit && b.editPath ? (
                     <EditableText
                       text=""
@@ -460,6 +484,7 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                         </div>
                       ) : (
                         item.texte && item.texte.trim() !== '' ? (
+                          <Removable onRemove={onEdit && item.editPath ? () => onEdit(item.editPath!.source, item.editPath!.field, '') : undefined} label="Supprimer ce texte">
                           <EditableText
                             text={item.texte}
                             placeholder="Cliquez ici pour rédiger..."
@@ -467,6 +492,7 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                             className={`${item.titre && item.titre.trim() !== '' ? 'mt-1.5' : ''} whitespace-pre-wrap`}
                             style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}
                           />
+                          </Removable>
                         ) : onEdit && item.editPath ? (
                           <EditableText
                             text=""
