@@ -132,11 +132,14 @@ export interface Rapport {
   pageBreaks?: Record<string, boolean>
   /** Custom plan defined by the user. undefined = use official WIZARD_STEPS */
   customSteps?: WizardStep[]
+  /** Titles of fixed sections (presentation, activités, annexes…) renamed/removed from the aperçu */
+  titleOverrides?: Record<string, string>
   organigramme?: Organigramme
   organigrammes?: Record<string, Organigramme>
   ficheTechniques?: FicheTechnique[]
   materiels?: MaterielItem[]
 }
+
 
 // --- V3.1 Architecture Types ---
 

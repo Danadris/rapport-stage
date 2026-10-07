@@ -654,6 +654,19 @@ export function WorkspacePage() {
       )
       return
     }
+    if (field.startsWith('titleOverride:')) {
+      const key = field.slice('titleOverride:'.length)
+      setRapportWithHistory((r) =>
+        r
+          ? {
+              ...r,
+              titleOverrides: { ...(r.titleOverrides ?? {}), [key]: value },
+              updatedAt: Date.now(),
+            }
+          : r,
+      )
+      return
+    }
     if (field.startsWith('fieldLabel:')) {
       const [stepId, fieldId] = field.slice('fieldLabel:'.length).split(':')
       setRapportWithHistory((r) =>

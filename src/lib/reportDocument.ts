@@ -45,6 +45,12 @@ export function isFicheTechniqueKey(key: string): boolean {
 
 export const MATERIEL_PART_KEY = 'materiel-utilise'
 
+/** Titles of fixed subsection cards can be renamed/removed from the aperçu via titleOverrides. */
+function titleO(rapport: Rapport, source: 'entreprise' | 'section', field: string, fallback: string): string {
+  const v = rapport.titleOverrides?.[`${source}:${field}`]
+  return v === undefined ? fallback : v
+}
+
 export function hasMaterielItems(rapport: Rapport): boolean {
   return (rapport.materiels ?? []).some((item) => item.nom.trim() || item.utilisation.trim() || item.imageDataUrl)
 }
@@ -113,10 +119,10 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
           numero: null,
           titre: step.titre,
           sousSections: [
-            { titre: "Organisme d'accueil", numero: 1, texte: e.organismeAccueil, editPath: { source: 'entreprise', field: 'organismeAccueil' } },
-            { titre: "Historique de l'entreprise", numero: 2, texte: e.historique, editPath: { source: 'entreprise', field: 'historique' } },
-            { titre: "Secteur d'activité", numero: 3, texte: e.secteurActivite, editPath: { source: 'entreprise', field: 'secteurActivite' } },
-            { titre: 'Missions et valeurs', numero: 4, texte: e.missionsValeurs, editPath: { source: 'entreprise', field: 'missionsValeurs' } },
+            { titre: titleO(rapport, 'entreprise', 'organismeAccueil', "Organisme d'accueil"), numero: 1, texte: e.organismeAccueil, editPath: { source: 'entreprise', field: 'organismeAccueil' } },
+            { titre: titleO(rapport, 'entreprise', 'historique', "Historique de l'entreprise"), numero: 2, texte: e.historique, editPath: { source: 'entreprise', field: 'historique' } },
+            { titre: titleO(rapport, 'entreprise', 'secteurActivite', "Secteur d'activité"), numero: 3, texte: e.secteurActivite, editPath: { source: 'entreprise', field: 'secteurActivite' } },
+            { titre: titleO(rapport, 'entreprise', 'missionsValeurs', 'Missions et valeurs'), numero: 4, texte: e.missionsValeurs, editPath: { source: 'entreprise', field: 'missionsValeurs' } },
           ],
         })
         continue
@@ -128,9 +134,9 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
           numero: null,
           titre: step.titre,
           sousSections: [
-            { titre: 'Activités principales', numero: 1, texte: e.activitesPrincipales, editPath: { source: 'entreprise', field: 'activitesPrincipales' } },
-            { titre: 'Équipements utilisés', numero: 2, texte: e.equipements, editPath: { source: 'entreprise', field: 'equipements' } },
-            { titre: 'Technologies employées', numero: 3, texte: e.technologies, editPath: { source: 'entreprise', field: 'technologies' } },
+            { titre: titleO(rapport, 'entreprise', 'activitesPrincipales', 'Activités principales'), numero: 1, texte: e.activitesPrincipales, editPath: { source: 'entreprise', field: 'activitesPrincipales' } },
+            { titre: titleO(rapport, 'entreprise', 'equipements', 'Équipements utilisés'), numero: 2, texte: e.equipements, editPath: { source: 'entreprise', field: 'equipements' } },
+            { titre: titleO(rapport, 'entreprise', 'technologies', 'Technologies employées'), numero: 3, texte: e.technologies, editPath: { source: 'entreprise', field: 'technologies' } },
           ],
         })
         continue
@@ -271,10 +277,10 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
       numero: null,
       titre: "Présentation de l'entreprise d'accueil",
       sousSections: [
-        { titre: "Organisme d'accueil", numero: 1, texte: e.organismeAccueil, editPath: { source: 'entreprise', field: 'organismeAccueil' } },
-        { titre: "Historique de l'entreprise", numero: 2, texte: e.historique, editPath: { source: 'entreprise', field: 'historique' } },
-        { titre: "Secteur d'activité", numero: 3, texte: e.secteurActivite, editPath: { source: 'entreprise', field: 'secteurActivite' } },
-        { titre: 'Missions et valeurs', numero: 4, texte: e.missionsValeurs, editPath: { source: 'entreprise', field: 'missionsValeurs' } },
+        { titre: titleO(rapport, 'entreprise', 'organismeAccueil', "Organisme d'accueil"), numero: 1, texte: e.organismeAccueil, editPath: { source: 'entreprise', field: 'organismeAccueil' } },
+        { titre: titleO(rapport, 'entreprise', 'historique', "Historique de l'entreprise"), numero: 2, texte: e.historique, editPath: { source: 'entreprise', field: 'historique' } },
+        { titre: titleO(rapport, 'entreprise', 'secteurActivite', "Secteur d'activité"), numero: 3, texte: e.secteurActivite, editPath: { source: 'entreprise', field: 'secteurActivite' } },
+        { titre: titleO(rapport, 'entreprise', 'missionsValeurs', 'Missions et valeurs'), numero: 4, texte: e.missionsValeurs, editPath: { source: 'entreprise', field: 'missionsValeurs' } },
       ],
     },
     {
@@ -288,9 +294,9 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
       numero: null,
       titre: "Les activités et équipements de l'entreprise",
       sousSections: [
-        { titre: 'Activités principales', numero: 1, texte: e.activitesPrincipales, editPath: { source: 'entreprise', field: 'activitesPrincipales' } },
-        { titre: 'Équipements utilisés', numero: 2, texte: e.equipements, editPath: { source: 'entreprise', field: 'equipements' } },
-        { titre: 'Technologies employées', numero: 3, texte: e.technologies, editPath: { source: 'entreprise', field: 'technologies' } },
+        { titre: titleO(rapport, 'entreprise', 'activitesPrincipales', 'Activités principales'), numero: 1, texte: e.activitesPrincipales, editPath: { source: 'entreprise', field: 'activitesPrincipales' } },
+        { titre: titleO(rapport, 'entreprise', 'equipements', 'Équipements utilisés'), numero: 2, texte: e.equipements, editPath: { source: 'entreprise', field: 'equipements' } },
+        { titre: titleO(rapport, 'entreprise', 'technologies', 'Technologies employées'), numero: 3, texte: e.technologies, editPath: { source: 'entreprise', field: 'technologies' } },
       ],
     },
     {

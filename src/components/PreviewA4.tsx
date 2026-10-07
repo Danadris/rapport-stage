@@ -415,13 +415,13 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
             >
               {/* Level 2: numbered (1., 2., ...) — omit entirely if empty */}
               {b.titre && b.titre.trim() !== '' && (
-                onTitleEdit && b.id ? (
+                onTitleEdit && (b.id || b.editPath) ? (
                   <EditableTitle
                     tag="h3"
                     text={b.titre}
                     prefixNode={(b as any).numero !== undefined ? `${(b as any).numero}.` : undefined}
-                    onSave={(v) => onTitleEdit(`fieldLabel:${part.key}:${b.id}`, v)}
-                    onRemove={() => onTitleEdit(`fieldLabel:${part.key}:${b.id}`, '')}
+                    onSave={(v) => onTitleEdit(b.id ? `fieldLabel:${part.key}:${b.id}` : `titleOverride:${b.editPath!.source}:${b.editPath!.field}`, v)}
+                    onRemove={() => onTitleEdit(b.id ? `fieldLabel:${part.key}:${b.id}` : `titleOverride:${b.editPath!.source}:${b.editPath!.field}`, '')}
                     className="font-semibold"
                     style={{ color: BLEU, fontSize: 'var(--doc-subtitle-size)' }}
                   />
@@ -485,13 +485,13 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                     <div key={item.id} className="pl-4 border-l-2 border-line/40">
                       {/* Level 3 heading: "a/ Titre" — omit if titre is empty */}
                       {item.titre && item.titre.trim() !== '' && (
-                        onTitleEdit ? (
+                        onTitleEdit && (item.id || item.editPath) ? (
                           <EditableTitle
                             tag="h4"
                             text={item.titre}
                             prefixNode={<span style={{ color: BLEU }}>{item.prefix || 'a/'}</span>}
-                            onSave={(v) => onTitleEdit(`fieldLabel:${part.key}:${item.id}`, v)}
-                            onRemove={() => onTitleEdit(`fieldLabel:${part.key}:${item.id}`, '')}
+                            onSave={(v) => onTitleEdit(item.id ? `fieldLabel:${part.key}:${item.id}` : `titleOverride:${item.editPath!.source}:${item.editPath!.field}`, v)}
+                            onRemove={() => onTitleEdit(item.id ? `fieldLabel:${part.key}:${item.id}` : `titleOverride:${item.editPath!.source}:${item.editPath!.field}`, '')}
                             className="font-semibold text-ink"
                             style={{ fontSize: 'var(--doc-body-size)', fontFamily: 'var(--doc-title-font)' }}
                           />
