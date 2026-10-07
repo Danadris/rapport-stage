@@ -50,7 +50,7 @@ export function MeasuredPages({
       {Array.from({ length: pageCount }, (_, i) => (
         <div
           key={i}
-          className="a4-page relative mx-auto h-[1123px] w-[794px] overflow-hidden bg-white py-[80px] text-[#1f1d1a] shadow-[0_2px_16px_rgba(61,56,50,0.14)] print:h-[297mm] print:w-[210mm] print:shadow-none"
+          className="a4-page page-window"
           style={{ fontFamily: 'var(--doc-body-font)', paddingLeft: 'var(--doc-margins)', paddingRight: 'var(--doc-margins)' }}
         >
           <div data-doc-copy className="relative" style={{ transform: `translateY(${-i * PAGE_CONTENT_HEIGHT}px)` }}>

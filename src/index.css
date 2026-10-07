@@ -25,6 +25,20 @@
   --radius-field: 0.5rem;
 }
 
+@layer components {
+  /* The bordered boxes used for every editable NotesStep field — keep every
+     field rendered in the same card style without re-listing Tailwind chain. */
+  .field-card {
+    @apply rounded-lg border border-line bg-cream p-4;
+  }
+  .field-card-sm {
+    @apply rounded-lg border border-line bg-cream p-3;
+  }
+  .page-window {
+    @apply relative mx-auto h-[1123px] w-[794px] overflow-hidden bg-white py-[80px] text-[#1f1d1a] shadow-[0_2px_16px_rgba(61,56,50,0.14)] print:h-[297mm] print:w-[210mm] print:shadow-none;
+  }
+}
+
 @layer base {
   html {
     background-color: var(--color-cream);

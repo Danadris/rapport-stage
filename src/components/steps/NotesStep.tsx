@@ -207,7 +207,7 @@ function FieldBox({
       </div>
 
       {!isOrg && (
-        <div className="rounded-lg border border-line bg-cream p-4">
+        <div className="field-card">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-ink">Texte final A4</span>
             <div className="flex items-center gap-2">
@@ -373,7 +373,7 @@ function Level3Box({
           />
 
           {/* AI drafting */}
-          <div className="rounded-lg border border-line bg-cream p-3">
+          <div className="field-card-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-ink">Texte final A4</span>
               <div className="flex items-center gap-2">
