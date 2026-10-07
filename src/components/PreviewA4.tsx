@@ -245,6 +245,7 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
 }
 
 type EditHandler = (source: 'entreprise' | 'section', field: string, value: string) => void
+export type { EditHandler }
 
 // Drag state shared across all sections — stored in a ref passed down
 interface DragState {
