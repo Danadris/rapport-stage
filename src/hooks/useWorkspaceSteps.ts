@@ -365,7 +365,12 @@ export function useWorkspaceSteps({
         r
           ? {
               ...r,
+              // Reports still on the default plan have no customSteps — persist
+              // the rename as an override so the edit is never silently lost.
               customSteps: r.customSteps?.map((s) => (s.id === stepId ? { ...s, titre: value } : s)),
+              titleOverrides: r.customSteps
+                ? r.titleOverrides
+                : { ...(r.titleOverrides ?? {}), [`step:${stepId}`]: value },
               updatedAt: Date.now(),
             }
           : r,

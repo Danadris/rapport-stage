@@ -46,7 +46,7 @@ export function isFicheTechniqueKey(key: string): boolean {
 export const MATERIEL_PART_KEY = 'materiel-utilise'
 
 /** Titles of fixed subsection cards can be renamed/removed from the aperçu via titleOverrides. */
-function titleO(rapport: Rapport, source: 'entreprise' | 'section', field: string, fallback: string): string {
+function titleO(rapport: Rapport, source: 'entreprise' | 'section' | 'step', field: string, fallback: string): string {
   const v = rapport.titleOverrides?.[`${source}:${field}`]
   return v === undefined ? fallback : v
 }
@@ -199,8 +199,8 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
           paragraphes: paras,
           editPath: { stepId: 'conclusion', fieldIds: ['resumeExperiences', 'perspectives'] },
           sousSections: [
-            { titre: 'Annexes', numero: 1, texte: note(rapport, 'conclusion', 'annexes'), editPath: { source: 'section', field: 'conclusion:annexes' } },
-            { titre: 'Bibliographie', numero: 2, texte: note(rapport, 'conclusion', 'bibliographie'), editPath: { source: 'section', field: 'conclusion:bibliographie' } },
+            { titre: titleO(rapport, 'section', 'conclusion:annexes', 'Annexes'), numero: 1, texte: note(rapport, 'conclusion', 'annexes'), editPath: { source: 'section', field: 'conclusion:annexes' } },
+            { titre: titleO(rapport, 'section', 'conclusion:bibliographie', 'Bibliographie'), numero: 2, texte: note(rapport, 'conclusion', 'bibliographie'), editPath: { source: 'section', field: 'conclusion:bibliographie' } },
           ],
         })
         continue
@@ -261,21 +261,21 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
     {
       key: 'remerciements',
       numero: null,
-      titre: 'Remerciements',
+      titre: titleO(rapport, 'step', 'remerciements', 'Remerciements'),
       paragraphes: remerciements ? [remerciements] : [],
       editPath: { stepId: 'remerciements', fieldIds: ['personnes', 'raisons'] },
     },
     {
       key: 'introduction',
       numero: null,
-      titre: 'Introduction',
+      titre: titleO(rapport, 'step', 'introduction', 'Introduction'),
       paragraphes: intro ? toParagraphs(intro) : [],
       editPath: { stepId: 'introduction', fieldIds: ['presentationBreve', 'objectifsIntro'] },
     },
     {
       key: 'presentation',
       numero: null,
-      titre: "Présentation de l'entreprise d'accueil",
+      titre: titleO(rapport, 'step', 'presentation', "Présentation de l'entreprise d'accueil"),
       sousSections: [
         { titre: titleO(rapport, 'entreprise', 'organismeAccueil', "Organisme d'accueil"), numero: 1, texte: e.organismeAccueil, editPath: { source: 'entreprise', field: 'organismeAccueil' } },
         { titre: titleO(rapport, 'entreprise', 'historique', "Historique de l'entreprise"), numero: 2, texte: e.historique, editPath: { source: 'entreprise', field: 'historique' } },
@@ -286,13 +286,13 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
     {
       key: 'organigramme',
       numero: null,
-      titre: "Organigramme de l'entreprise",
+      titre: titleO(rapport, 'step', 'organigramme', "Organigramme de l'entreprise"),
       isOrganigramme: true,
     },
     {
       key: 'activites',
       numero: null,
-      titre: "Les activités et équipements de l'entreprise",
+      titre: titleO(rapport, 'step', 'activites', "Les activités et équipements de l'entreprise"),
       sousSections: [
         { titre: titleO(rapport, 'entreprise', 'activitesPrincipales', 'Activités principales'), numero: 1, texte: e.activitesPrincipales, editPath: { source: 'entreprise', field: 'activitesPrincipales' } },
         { titre: titleO(rapport, 'entreprise', 'equipements', 'Équipements utilisés'), numero: 2, texte: e.equipements, editPath: { source: 'entreprise', field: 'equipements' } },
@@ -302,34 +302,34 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
     {
       key: 'contexte',
       numero: null,
-      titre: 'Contexte du stage',
+      titre: titleO(rapport, 'step', 'contexte', 'Contexte du stage'),
       paragraphes: toParagraphs(note(rapport, 'contexte', 'rechercheStage')),
       editPath: { stepId: 'contexte', fieldIds: ['rechercheStage'] },
     },
     {
       key: 'objectifs',
       numero: null,
-      titre: 'Objectifs du stage',
+      titre: titleO(rapport, 'step', 'objectifs', 'Objectifs du stage'),
       paragraphes: toParagraphs(note(rapport, 'objectifs', 'objectifsFixes')),
       editPath: { stepId: 'objectifs', fieldIds: ['objectifsFixes'] },
     },
     {
       key: 'deroulement',
       numero: null,
-      titre: 'Déroulement du stage',
+      titre: titleO(rapport, 'step', 'deroulement', 'Déroulement du stage'),
       sousSections: [
-        { titre: 'Départements ou services visités', numero: 1, texte: note(rapport, 'deroulement', 'departements'), editPath: { source: 'section', field: 'deroulement:departements' } },
-        { titre: 'Tâches confiées', numero: 2, texte: note(rapport, 'deroulement', 'tachesConfiees'), editPath: { source: 'section', field: 'deroulement:tachesConfiees' } },
+        { titre: titleO(rapport, 'section', 'deroulement:departements', 'Départements ou services visités'), numero: 1, texte: note(rapport, 'deroulement', 'departements'), editPath: { source: 'section', field: 'deroulement:departements' } },
+        { titre: titleO(rapport, 'section', 'deroulement:tachesConfiees', 'Tâches confiées'), numero: 2, texte: note(rapport, 'deroulement', 'tachesConfiees'), editPath: { source: 'section', field: 'deroulement:tachesConfiees' } },
       ],
     },
     {
       key: 'taches',
       numero: null,
-      titre: 'Tâches effectuées pendant le stage',
+      titre: titleO(rapport, 'step', 'taches', 'Tâches effectuées pendant le stage'),
       sousSections: [
-        { titre: 'Détail des missions confiées', numero: 1, texte: note(rapport, 'taches', 'missionsDetaillees'), editPath: { source: 'section', field: 'taches:missionsDetaillees' } },
-        { titre: 'Compétences développées', numero: 2, texte: note(rapport, 'taches', 'competencesDeveloppees'), editPath: { source: 'section', field: 'taches:competencesDeveloppees' } },
-        { titre: 'Problématiques rencontrées', numero: 3, texte: note(rapport, 'taches', 'problematiquesRencontrees'), editPath: { source: 'section', field: 'taches:problematiquesRencontrees' } },
+        { titre: titleO(rapport, 'section', 'taches:missionsDetaillees', 'Détail des missions confiées'), numero: 1, texte: note(rapport, 'taches', 'missionsDetaillees'), editPath: { source: 'section', field: 'taches:missionsDetaillees' } },
+        { titre: titleO(rapport, 'section', 'taches:competencesDeveloppees', 'Compétences développées'), numero: 2, texte: note(rapport, 'taches', 'competencesDeveloppees'), editPath: { source: 'section', field: 'taches:competencesDeveloppees' } },
+        { titre: titleO(rapport, 'section', 'taches:problematiquesRencontrees', 'Problématiques rencontrées'), numero: 3, texte: note(rapport, 'taches', 'problematiquesRencontrees'), editPath: { source: 'section', field: 'taches:problematiquesRencontrees' } },
       ],
     },
     ...(hasMaterielItems(rapport) ? [{ key: MATERIEL_PART_KEY, numero: null, titre: 'Matériel utilisé' }] : []),
@@ -337,22 +337,22 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
     {
       key: 'bilan',
       numero: null,
-      titre: 'Bilan personnel',
+      titre: titleO(rapport, 'step', 'bilan', 'Bilan personnel'),
       sousSections: [
-        { titre: 'Les compétences acquises', numero: 1, texte: note(rapport, 'bilan', 'competencesAcquises'), editPath: { source: 'section', field: 'bilan:competencesAcquises' } },
-        { titre: 'Les enseignements tirés', numero: 2, texte: note(rapport, 'bilan', 'enseignementsTires'), editPath: { source: 'section', field: 'bilan:enseignementsTires' } },
-        { titre: 'Les points à améliorer', numero: 3, texte: note(rapport, 'bilan', 'pointsAmeliorer'), editPath: { source: 'section', field: 'bilan:pointsAmeliorer' } },
+        { titre: titleO(rapport, 'section', 'bilan:competencesAcquises', 'Les compétences acquises'), numero: 1, texte: note(rapport, 'bilan', 'competencesAcquises'), editPath: { source: 'section', field: 'bilan:competencesAcquises' } },
+        { titre: titleO(rapport, 'section', 'bilan:enseignementsTires', 'Les enseignements tirés'), numero: 2, texte: note(rapport, 'bilan', 'enseignementsTires'), editPath: { source: 'section', field: 'bilan:enseignementsTires' } },
+        { titre: titleO(rapport, 'section', 'bilan:pointsAmeliorer', 'Les points à améliorer'), numero: 3, texte: note(rapport, 'bilan', 'pointsAmeliorer'), editPath: { source: 'section', field: 'bilan:pointsAmeliorer' } },
       ],
     },
     {
       key: 'conclusion',
       numero: null,
-      titre: 'Conclusion',
+      titre: titleO(rapport, 'step', 'conclusion', 'Conclusion'),
       paragraphes: conclusionParas,
       editPath: { stepId: 'conclusion', fieldIds: ['resumeExperiences', 'perspectives'] },
       sousSections: [
-        { titre: 'Annexes', numero: 1, texte: note(rapport, 'conclusion', 'annexes'), editPath: { source: 'section', field: 'conclusion:annexes' } },
-        { titre: 'Bibliographie', numero: 2, texte: note(rapport, 'conclusion', 'bibliographie'), editPath: { source: 'section', field: 'conclusion:bibliographie' } },
+        { titre: titleO(rapport, 'section', 'conclusion:annexes', 'Annexes'), numero: 1, texte: note(rapport, 'conclusion', 'annexes'), editPath: { source: 'section', field: 'conclusion:annexes' } },
+        { titre: titleO(rapport, 'section', 'conclusion:bibliographie', 'Bibliographie'), numero: 2, texte: note(rapport, 'conclusion', 'bibliographie'), editPath: { source: 'section', field: 'conclusion:bibliographie' } },
       ],
     },
   ]
