@@ -2,11 +2,10 @@ import { useLayoutEffect, useState, type RefObject } from 'react'
 
 export const PAGE_HEIGHT = 1123
 
-// The preview is a vertical stack of "page" blocks (CoverPage, remerciements,
-// sommaire, then each section group). Blocks can grow taller than one page —
-// content is never clipped. A block starting on page N spans ceil(its height /
-// PAGE_HEIGHT) pages, so the next block starts at N + that span. Walking the
-// blocks in document order gives every section its exact starting page number.
+// The preview is a vertical stack of fixed A4 page blocks (CoverPage,
+// remerciements, sommaire, then each section group). Split blocks carry a
+// data-pages attribute with the number of page windows they contain, which
+// gives every section its exact starting page number.
 export function usePageNumbers(ref: RefObject<HTMLDivElement | null>) {
   const [numbers, setNumbers] = useState<Record<string, number>>({})
 
@@ -29,8 +28,15 @@ export function usePageNumbers(ref: RefObject<HTMLDivElement | null>) {
           page = 2
           continue
         }
-        const h = n.getBoundingClientRect().height / scale
         next[key] = page
+        // Split-page blocks know how many page windows they contain — trust
+        // that. Legacy growing blocks fall back to measuring their height.
+        const declared = n.getAttribute('data-pages')
+        if (declared) {
+          page += Math.max(1, Number(declared) || 1)
+          continue
+        }
+        const h = n.getBoundingClientRect().height / scale
         page += Math.max(1, Math.ceil((h - 1) / PAGE_HEIGHT))
       }
       setNumbers((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next))

@@ -39,11 +39,11 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
     event.preventDefault()
     event.stopPropagation()
 
-    const page = figRef.current.closest('.bg-white') as HTMLElement | null
+    const page = (figRef.current.closest('[data-doc-copy]') ?? figRef.current.closest('.bg-white')) as HTMLElement | null
     if (!page) return
 
     const pageRect = page.getBoundingClientRect()
-    const scale = pageRect.width / 794
+    const scale = pageRect.width / Math.max(1, page.clientWidth)
     const currentX = localPos?.x ?? img.x ?? 100
     const currentY = localPos?.y ?? img.y ?? 200
 
@@ -60,12 +60,12 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
     const handleMove = (moveEvent: globalThis.PointerEvent) => {
       if (!dragActive.current) return
       const currentPageRect = page.getBoundingClientRect()
-      const currentScale = currentPageRect.width / 794
+      const currentScale = currentPageRect.width / Math.max(1, page.clientWidth)
       const x = (moveEvent.clientX - currentPageRect.left) / currentScale
       const y = (moveEvent.clientY - currentPageRect.top) / currentScale
 
       setLocalPos({
-        x: Math.round(Math.max(0, Math.min(794 - sizeW, x - dragOffset.current.dx))),
+        x: Math.round(Math.max(0, Math.min(page.clientWidth - sizeW, x - dragOffset.current.dx))),
         y: Math.round(Math.max(0, y - dragOffset.current.dy)),
       })
     }
@@ -77,12 +77,12 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
       targetEl.releasePointerCapture?.(pointerId)
 
       const currentPageRect = page.getBoundingClientRect()
-      const currentScale = currentPageRect.width / 794
+      const currentScale = currentPageRect.width / Math.max(1, page.clientWidth)
       const x = (upEvent.clientX - currentPageRect.left) / currentScale
       const y = (upEvent.clientY - currentPageRect.top) / currentScale
 
       onUpdate({
-        x: Math.round(Math.max(0, Math.min(794 - sizeW, x - dragOffset.current.dx))),
+        x: Math.round(Math.max(0, Math.min(page.clientWidth - sizeW, x - dragOffset.current.dx))),
         y: Math.round(Math.max(0, y - dragOffset.current.dy)),
       })
       setLocalPos(null)
@@ -103,7 +103,7 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
     let x = 100
     let y = 200
     if (figRef.current) {
-      const page = figRef.current.closest('.bg-white') as HTMLElement | null
+      const page = (figRef.current.closest('[data-doc-copy]') ?? figRef.current.closest('.bg-white')) as HTMLElement | null
       if (page) {
         const pageRect = page.getBoundingClientRect()
         const figureRect = figRef.current.getBoundingClientRect()
@@ -132,7 +132,7 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
       type="button"
       onClick={(e) => { e.stopPropagation(); e.preventDefault(); setToolbarOpen((v) => !v) }}
       title="Options de l'image"
-      className={`absolute z-50 flex h-7 w-7 items-center justify-center rounded-full border shadow-sm transition-colors print:hidden ${
+      className={`absolute z-50 flex h-8 w-8 items-center justify-center rounded-full border shadow-sm transition-colors print:hidden ${
         toolbarVisible
           ? 'border-blue-300 bg-blue-50 text-blue-600 opacity-100'
           : 'border-neutral-300 bg-white/85 text-neutral-500 opacity-70 hover:opacity-100'
@@ -207,7 +207,7 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
           value=""
           onChange={handleMoveSelect}
           title="Déplacer vers une autre section"
-          className="h-7 max-w-[112px] rounded border border-neutral-300 bg-white px-1 text-[10px] text-neutral-600"
+          className="h-8 w-32 max-w-none rounded border border-neutral-300 bg-white px-1 text-[11px] text-neutral-600 sm:h-7 sm:w-24"
         >
           <option value="">Déplacer…</option>
           {moveTargets.map((t) => (

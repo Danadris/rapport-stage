@@ -77,51 +77,70 @@ interface PageProps extends React.HTMLAttributes<HTMLDivElement> {
   headerLogo?: string | null
 }
 
-function Page({ children, className, style, startPageNum, headerLogo, ...rest }: PageProps) {
-  const [pages, setPages] = useState(1)
-  const ref = useRef<HTMLDivElement>(null)
+const PAGE_HEIGHT_PX = 1123
+const PAGE_PAD_Y = 80
+const PAGE_CONTENT_HEIGHT = PAGE_HEIGHT_PX - PAGE_PAD_Y * 2
 
+function Page({ children, className, style, startPageNum, headerLogo, ...rest }: PageProps) {
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [pageCount, setPageCount] = useState(1)
+  const [centerPad, setCenterPad] = useState(0)
+
+  // Measure the natural height of the content, then split it across that many
+  // fixed-height A4 page windows. Each window renders the same content shifted
+  // up by the height of the previous windows — the on-screen result matches the
+  // print pagination exactly, and a page never grows past one A4 sheet.
   useLayoutEffect(() => {
-    if (!ref.current) return
-    const ro = new ResizeObserver(() => {
-      if (ref.current) {
-        setPages(Math.max(1, Math.ceil((ref.current.offsetHeight || 1123) / 1123)))
-      }
-    })
-    ro.observe(ref.current)
+    const el = contentRef.current
+    if (!el) return
+    const measure = () => {
+      const h = el.offsetHeight
+      const pages = Math.max(1, Math.ceil(h / PAGE_CONTENT_HEIGHT))
+      setPageCount(pages)
+      setCenterPad(pages === 1 ? Math.max(0, (PAGE_CONTENT_HEIGHT - h) / 2) : 0)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
     return () => ro.disconnect()
   }, [])
 
   return (
-    <div
-      ref={ref}
-      {...rest}
-      style={{ ...style, fontFamily: 'var(--doc-body-font)', paddingLeft: 'var(--doc-margins)', paddingRight: 'var(--doc-margins)' }}
-      className={`a4-page relative mx-auto flex min-h-[1123px] w-[794px] flex-col bg-white py-[80px] text-[#1f1d1a] shadow-[0_2px_16px_rgba(61,56,50,0.14)] print:shadow-none [&_h1,&_h2,&_h3]:!font-[family-name:var(--doc-title-font)] ${className ?? ''}`}
-    >
-      <div className="my-auto w-full">
-        {children}
-      </div>
-      {startPageNum !== undefined &&
-        Array.from({ length: pages }).map((_, i) => (
-          <Fragment key={i}>
-            <div
-              className="absolute left-0 right-0 flex items-center justify-between"
-              style={{ top: `${i * 1123 + 40}px`, paddingLeft: 'var(--doc-margins)', paddingRight: 'var(--doc-margins)' }}
-            >
-              <img src={logo} alt="IFMBP" className="h-12 max-w-[150px] object-contain opacity-80" />
-              {headerLogo ? (
-                <img src={headerLogo} alt="Entreprise" className="h-12 max-w-[150px] object-contain opacity-80" />
-              ) : <div />}
+    <div {...rest} data-pages={pageCount} className={`w-full space-y-10 print:space-y-0 ${className ?? ''}`} style={style}>
+      {Array.from({ length: pageCount }, (_, i) => (
+        <div
+          key={i}
+          className="a4-page relative mx-auto h-[1123px] w-[794px] overflow-hidden bg-white py-[80px] text-[#1f1d1a] shadow-[0_2px_16px_rgba(61,56,50,0.14)] print:h-[297mm] print:w-[210mm] print:shadow-none"
+          style={{ fontFamily: 'var(--doc-body-font)', paddingLeft: 'var(--doc-margins)', paddingRight: 'var(--doc-margins)' }}
+        >
+          <div data-doc-copy className="relative" style={{ transform: `translateY(${-i * PAGE_CONTENT_HEIGHT}px)` }}>
+            <div style={{ paddingTop: centerPad }}>
+              <div ref={i === 0 ? contentRef : undefined} className="w-full">
+                {children}
+              </div>
             </div>
-            <div
-              className="absolute left-0 right-0 text-center text-[12px] text-neutral-500"
-              style={{ top: `${(i + 1) * 1123 - 40}px` }}
-            >
-              - {startPageNum + i} -
-            </div>
-          </Fragment>
-        ))}
+          </div>
+          {startPageNum !== undefined && (
+            <Fragment>
+              <div
+                className="absolute left-0 right-0 flex items-center justify-between"
+                style={{ top: '40px', paddingLeft: 'var(--doc-margins)', paddingRight: 'var(--doc-margins)' }}
+              >
+                <img src={logo} alt="IFMBP" className="h-12 max-w-[150px] object-contain opacity-80" />
+                {headerLogo ? (
+                  <img src={headerLogo} alt="Entreprise" className="h-12 max-w-[150px] object-contain opacity-80" />
+                ) : <div />}
+              </div>
+              <div
+                className="absolute left-0 right-0 text-center text-[12px] text-neutral-500"
+                style={{ top: `${PAGE_HEIGHT_PX - 40}px` }}
+              >
+                - {startPageNum + i} -
+              </div>
+            </Fragment>
+          )}
+        </div>
+      ))}
     </div>
   )
 }

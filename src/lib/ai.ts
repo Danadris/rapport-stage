@@ -292,15 +292,33 @@ Réponds uniquement en JSON.`
   return { entreprise: data, sources: ['Généré par Gemini AI'] }
 }
 
-export async function genererParagraphe(section: string, field: string, notes: string): Promise<string> {
+export type LongueurAI = 'court' | 'moyen' | 'long'
+
+function trimToLength(text: string, longueur: LongueurAI): string {
+  const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean)
+  if (sentences.length === 0) return text
+  if (longueur === 'court') return sentences[0]
+  if (longueur === 'long') return text
+  return sentences.slice(0, Math.max(2, Math.ceil(sentences.length / 2))).join(' ')
+}
+
+export async function genererParagraphe(section: string, field: string, notes: string, longueur: LongueurAI = 'moyen'): Promise<string> {
   const client = await getClient()
 
   if (!client) {
-    return generateOfflineParagraph(section, field, notes)
+    return trimToLength(generateOfflineParagraph(section, field, notes), longueur)
   }
 
+  const longueurRule =
+    longueur === 'court'
+      ? 'Rédige 3 à 5 lignes maximum (un court paragraphe).'
+      : longueur === 'long'
+        ? 'Rédige environ 12 à 18 lignes, en deux à trois paragraphes développés.'
+        : 'Rédige un ou deux paragraphes (environ 6 à 10 lignes).'
+
   const prompt = `Tu es un assistant qui aide un apprenti boulanger/pâtissier à rédiger son rapport de stage.
-À partir des notes de l'apprenti concernant la partie "${section}" (champ: "${field}"), rédige un ou deux paragraphes professionnels, clairs et bien formulés.
+À partir des notes de l'apprenti concernant la partie "${section}" (champ: "${field}"), rédige un texte professionnel, clair et bien formulé.
+${longueurRule}
 Le ton doit être celui d'un artisan compétent, sérieux mais sans être excessivement administratif. Utilise un vocabulaire métier précis si pertinent. Ne réponds que par le texte généré final, sans introduction ni conclusion de ta part.
 Notes de l'apprenti :
 "${notes}"`

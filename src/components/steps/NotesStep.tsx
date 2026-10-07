@@ -3,7 +3,7 @@ import { useState } from 'react'
 import type { NoteField, Organigramme, Entreprise, SectionImage } from '../../types'
 import { Field, Textarea, Button } from '../ui'
 import { ImageManager } from '../ImageManager'
-import { genererParagraphe } from '../../lib/ai'
+import { genererParagraphe, type LongueurAI } from '../../lib/ai'
 import { OrganigrammeStep } from './OrganigrammeStep'
 
 interface Props {
@@ -97,6 +97,7 @@ function FieldBox({
 }: FieldBoxProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [longueur, setLongueur] = useState<LongueurAI>('moyen')
 
   // An organigramme must only live in the section (or subtitle) titled
   // "organigramme" — never auto-detected from random labels.
@@ -107,7 +108,7 @@ function FieldBox({
     setLoading(true)
     setError(null)
     try {
-      const res = await genererParagraphe(stepTitle, f.label, current)
+      const res = await genererParagraphe(stepTitle, f.label, current, longueur)
       onGenerate(f.id, res)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de génération')
@@ -209,15 +210,28 @@ function FieldBox({
         <div className="rounded-lg border border-line bg-cream p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-ink">Texte final A4</span>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleGenerate}
-              disabled={loading || !current.trim()}
-            >
-              {loading && <Loader2 size={14} className="animate-spin" />}
-              {loading ? 'Rédaction...' : 'Rédiger'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <select
+                value={longueur}
+                onChange={(e) => setLongueur(e.target.value as LongueurAI)}
+                aria-label="Longueur du texte généré"
+                title="Longueur du texte généré"
+                className="h-8 rounded border border-line bg-paper px-1.5 text-[11px] text-ink"
+              >
+                <option value="court">Court</option>
+                <option value="moyen">Moyen</option>
+                <option value="long">Long</option>
+              </select>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleGenerate}
+                disabled={loading || !current.trim()}
+              >
+                {loading && <Loader2 size={14} className="animate-spin" />}
+                {loading ? 'Rédaction...' : 'Rédiger'}
+              </Button>
+            </div>
           </div>
 
           {error && (
@@ -271,6 +285,7 @@ function Level3Box({
 }: Level3BoxProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [longueur, setLongueur] = useState<LongueurAI>('moyen')
 
   // An organigramme must only live in the section (or subtitle) titled
   // "organigramme" — never auto-detected from random labels.
@@ -281,7 +296,7 @@ function Level3Box({
     setLoading(true)
     setError(null)
     try {
-      const res = await genererParagraphe(stepTitle, f.prefix ? `${f.prefix} ${f.label}` : f.label, current)
+      const res = await genererParagraphe(stepTitle, f.prefix ? `${f.prefix} ${f.label}` : f.label, current, longueur)
       onGenerate(f.id, res)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de génération')
@@ -361,10 +376,23 @@ function Level3Box({
           <div className="rounded-lg border border-line bg-cream p-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-ink">Texte final A4</span>
-              <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={loading || !current.trim()}>
-                {loading && <Loader2 size={13} className="animate-spin" />}
-                {loading ? 'Rédaction...' : 'Rédiger'}
-              </Button>
+              <div className="flex items-center gap-2">
+                <select
+                  value={longueur}
+                  onChange={(e) => setLongueur(e.target.value as LongueurAI)}
+                  aria-label="Longueur du texte généré"
+                  title="Longueur du texte généré"
+                  className="h-8 rounded border border-line bg-paper px-1.5 text-[11px] text-ink"
+                >
+                  <option value="court">Court</option>
+                  <option value="moyen">Moyen</option>
+                  <option value="long">Long</option>
+                </select>
+                <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={loading || !current.trim()}>
+                  {loading && <Loader2 size={13} className="animate-spin" />}
+                  {loading ? 'Rédaction...' : 'Rédiger'}
+                </Button>
+              </div>
             </div>
             {error && (
               <div className="mb-2 flex items-center gap-1.5 text-xs text-danger">

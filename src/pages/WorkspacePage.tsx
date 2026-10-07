@@ -983,7 +983,18 @@ export function WorkspacePage() {
                   </div>
                   <div className="flex-col gap-1 hidden md:flex">
                     <label className="text-[10px] font-semibold uppercase tracking-wider text-muted">Zoom : {zoom}%</label>
-                    <input type="range" min="50" max="150" step="10" value={zoom} onChange={(e) => setZoom(Number(e.target.value))} className="h-8 w-full" />
+                    <div className="flex items-center gap-2">
+                      <input type="range" min="50" max="150" step="10" value={zoom} onChange={(e) => setZoom(Number(e.target.value))} aria-label="Zoom de l’aperçu" className="h-8 w-full" />
+                      <button
+                        type="button"
+                        onClick={() => setZoom(100)}
+                        disabled={zoom === 100}
+                        title="Revenir à 100%"
+                        className="shrink-0 rounded border border-line bg-paper px-1.5 text-[10px] text-muted hover:text-ink disabled:opacity-30"
+                      >
+                        100%
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1140,7 +1151,7 @@ export function WorkspacePage() {
               <div
                 style={
                   isMobile
-                    ? { '--preview-zoom': Math.min(1, ((previewWrapWidth ?? window.innerWidth) - 16) / 794) } as React.CSSProperties
+                    ? { '--preview-zoom': Math.min(1, ((previewWrapWidth ?? window.innerWidth) - 16) / 794) * (zoom / 100) } as React.CSSProperties
                     : { '--preview-scale': zoom / 100 } as React.CSSProperties
                 }
                 className={
