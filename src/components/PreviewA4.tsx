@@ -287,6 +287,12 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
   const handleParagraphsSave = (newText: string) => {
     if (!onEdit || !part.editPath) return
     const { stepId, fieldIds } = part.editPath
+    if (!newText.trim()) {
+      // Clearing merged text (e.g. Remerciements = personnes + raisons) must
+      // clear every contributing field, otherwise the surviving fields resurrect.
+      for (const fid of fieldIds) onEdit('section', `${stepId}:${fid}`, '')
+      return
+    }
     onEdit('section', `${stepId}:${fieldIds[0]}`, newText)
   }
 

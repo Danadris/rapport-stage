@@ -81,9 +81,12 @@ export function toParagraphs(text: string): string[] {
 }
 
 function note(rapport: Rapport, stepId: string, fieldId: string): string {
-  const generated = rapport.sectionsGenerated?.[stepId]?.[fieldId]?.trim()
-  const manual = rapport.sections[stepId]?.[fieldId]?.trim()
-  return generated || manual || ''
+  const generated = rapport.sectionsGenerated?.[stepId]?.[fieldId]
+  // An explicitly saved value — even an empty string from clearing the text in
+  // the aperçu — wins over the manual notes. Only fall back to manual when no
+  // generated value exists at all, otherwise cleared text would resurrect.
+  if (generated !== undefined) return generated.trim()
+  return rapport.sections[stepId]?.[fieldId]?.trim() || ''
 }
 
 export function buildReportParts(rapport: Rapport): ReportPart[] {
