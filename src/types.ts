@@ -31,6 +31,12 @@ export interface SectionImage {
   side: 'left' | 'right' | 'center'
   size: 'S' | 'M' | 'L'
   caption?: string
+  /** Exact width in px; overrides the S/M/L preset when set */
+  width?: number
+  /** Clockwise rotation in degrees (0/90/180/270) */
+  rotate?: number
+  /** Mirror the image horizontally */
+  flip?: boolean
   /** 'flow' = inline float (default), 'free' = absolute positioning like Word floating image */
   positioning?: 'flow' | 'free'
   /** Pixel offset from left of page content area (only used when positioning === 'free') */

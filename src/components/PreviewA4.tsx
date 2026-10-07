@@ -442,6 +442,7 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
                       key={img.id}
                       img={img}
                       onUpdate={onImagesChange ? (patch) => handleUpdate(img.id, patch) : undefined}
+                      onRemove={onImagesChange ? () => onImagesChange(images.filter((i) => i.id !== img.id)) : undefined}
                       onDragStart={(e) => handleImgDragStart(e, img.id)}
                       onDragEnd={handleImgDragEnd}
                       isDragging={dragState?.imgId === img.id}
@@ -540,6 +541,7 @@ function PartContent({ part, images, onEdit, onImagesChange, onCrossMove, dragSt
             key={img.id}
             img={{ ...img, side: img.side ?? 'center' }}
             onUpdate={onImagesChange ? (patch) => handleUpdate(img.id, patch) : undefined}
+            onRemove={onImagesChange ? () => onImagesChange(images.filter((i) => i.id !== img.id)) : undefined}
             onDragStart={(e) => handleImgDragStart(e, img.id)}
             onDragEnd={handleImgDragEnd}
             isDragging={dragState?.imgId === img.id}

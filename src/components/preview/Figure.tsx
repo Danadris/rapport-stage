@@ -1,4 +1,4 @@
-import { AlignCenter, AlignLeft, AlignRight, GripVertical, Layers, MoreHorizontal } from 'lucide-react'
+import { AlignCenter, AlignLeft, AlignRight, GripVertical, Layers, MoreHorizontal, RotateCw, FlipHorizontal, Trash2, ImagePlus, Type } from 'lucide-react'
 import { useCallback, useRef, useState, type ChangeEvent, type DragEvent, type PointerEvent as ReactPointerEvent, type RefObject } from 'react'
 import type { SectionImage } from '../../types'
 
@@ -16,18 +16,26 @@ interface FigureProps {
   isDragging?: boolean
   moveTargets?: MoveTarget[]
   onMoveImage?: (toSection: string, toBlockIndex: number) => void
+  onRemove?: () => void
 }
 
-export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, moveTargets, onMoveImage }: FigureProps) {
-  const sizeW = img.size === 'S' ? 190 : img.size === 'M' ? 280 : 420
-  const sizeClass = img.size === 'S' ? 'w-[190px]' : img.size === 'M' ? 'w-[280px]' : 'w-[420px]'
+export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, moveTargets, onMoveImage, onRemove }: FigureProps) {
+  const sizeW = img.width ?? (img.size === 'S' ? 190 : img.size === 'M' ? 280 : 420)
   const [hovered, setHovered] = useState(false)
   // Explicit toggle so the toolbar is reachable by tap, not just mouse hover —
   // hover alone never fires reliably on touch devices.
   const [toolbarOpen, setToolbarOpen] = useState(false)
   const figRef = useRef<HTMLElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const isFree = img.positioning === 'free'
   const toolbarVisible = hovered || toolbarOpen
+  const [widthText, setWidthText] = useState<string | null>(null)
+  const [captionOpen, setCaptionOpen] = useState(false)
+
+  const imgTransform = [
+    img.rotate ? `rotate(${img.rotate}deg)` : '',
+    img.flip ? 'scaleX(-1)' : '',
+  ].filter(Boolean).join(' ') || undefined
 
   const dragActive = useRef(false)
   const dragOffset = useRef({ dx: 0, dy: 0 })
@@ -184,9 +192,9 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
           key={size}
           type="button"
           title={size === 'S' ? 'Petite' : size === 'M' ? 'Moyenne' : 'Grande'}
-          onClick={() => onUpdate({ size })}
+          onClick={() => onUpdate({ size, width: undefined })}
           className={`h-7 rounded px-1.5 font-mono text-[11px] font-medium transition-colors ${
-            img.size === size ? 'bg-blue-100 text-blue-700' : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+            img.size === size && img.width === undefined ? 'bg-blue-100 text-blue-700' : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
           }`}
         >
           {size}
@@ -217,6 +225,90 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
           ))}
         </select>
       )}
+      <span className="mx-1 h-4 w-px bg-neutral-300" />
+      <button
+        type="button"
+        title="Pivoter à 90°"
+        onClick={() => onUpdate?.({ rotate: ((img.rotate ?? 0) + 90) % 360 })}
+        className="flex h-7 w-7 items-center justify-center rounded text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+      >
+        <RotateCw size={13} />
+      </button>
+      <button
+        type="button"
+        title="Miroir horizontal"
+        onClick={() => onUpdate?.({ flip: !img.flip })}
+        className={`flex h-7 w-7 items-center justify-center rounded ${img.flip ? 'bg-blue-100 text-blue-700' : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'}`}
+      >
+        <FlipHorizontal size={13} />
+      </button>
+      <button
+        type="button"
+        title="Remplacer l'image"
+        onClick={() => fileRef.current?.click()}
+        className="flex h-7 w-7 items-center justify-center rounded text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+      >
+        <ImagePlus size={13} />
+      </button>
+      <button
+        type="button"
+        title="Légende"
+        onClick={() => setCaptionOpen((v) => !v)}
+        className={`flex h-7 w-7 items-center justify-center rounded ${img.caption || captionOpen ? 'bg-blue-100 text-blue-700' : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'}`}
+      >
+        <Type size={12} />
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          e.target.value = ''
+          if (!f || !onUpdate) return
+          const reader = new FileReader()
+          reader.onload = () => {
+            if (typeof reader.result === 'string') onUpdate({ dataUrl: reader.result })
+          }
+          reader.readAsDataURL(f)
+        }}
+      />
+      <span className="mx-1 h-4 w-px bg-neutral-300" />
+      <input
+        type="number"
+        min={80}
+        max={794}
+        title="Largeur exacte (px), Entrée pour valider"
+        value={widthText ?? sizeW}
+        onChange={(e) => setWidthText(e.target.value)}
+        onBlur={() => {
+          if (widthText !== null) {
+            const n = parseInt(widthText, 10)
+            if (!Number.isNaN(n) && n >= 80 && n <= 794) onUpdate?.({ width: n })
+          }
+          setWidthText(null)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            const n = parseInt(widthText ?? String(sizeW), 10)
+            if (!Number.isNaN(n) && n >= 80 && n <= 794) onUpdate?.({ width: n })
+            setWidthText(null)
+            ;(e.target as HTMLInputElement).blur()
+          }
+        }}
+        className="h-7 w-14 rounded border border-neutral-300 bg-white px-1 font-mono text-[11px] text-neutral-600"
+      />
+      {onRemove && (
+        <button
+          type="button"
+          title="Supprimer l'image"
+          onClick={onRemove}
+          className="flex h-7 w-7 items-center justify-center rounded text-neutral-400 hover:bg-red-50 hover:text-red-500"
+        >
+          <Trash2 size={13} />
+        </button>
+      )}
     </div>
   )
 
@@ -246,12 +338,24 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
             alt={img.caption ?? ''}
             className="w-full rounded-sm shadow-md ring-2 ring-violet-400/60"
             draggable={false}
+            style={imgTransform ? { transform: imgTransform } : undefined}
           />
         </div>
-        {img.caption && (
-          <figcaption className="mt-1.5 bg-white/80 text-center text-[11px] leading-snug text-neutral-500 italic">
-            {img.caption}
-          </figcaption>
+        {(img.caption || captionOpen) && (
+          <p className="mt-1.5 bg-white/80 text-center text-[11px] leading-snug text-neutral-500 italic">
+            {onUpdate ? (
+              <input
+                type="text"
+                defaultValue={img.caption ?? ''}
+                placeholder="Ajouter une légende…"
+                onBlur={(e) => onUpdate({ caption: e.target.value.trim() })}
+                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                className="w-full bg-transparent text-center text-[11px] leading-snug text-neutral-500 italic outline-none placeholder:text-neutral-300"
+              />
+            ) : (
+              img.caption
+            )}
+          </p>
         )}
       </figure>
     )
@@ -267,8 +371,8 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
   return (
     <figure
       ref={figRef as RefObject<HTMLElement>}
-      className={`${floatClass} ${sizeClass} relative print:static`}
-      style={{ opacity: isDragging ? 0.4 : 1 }}
+      className={`${floatClass} relative print:static`}
+      style={{ width: sizeW, opacity: isDragging ? 0.4 : 1 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -277,12 +381,24 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
       <img
         src={img.dataUrl}
         alt={img.caption ?? ''}
-        className={`w-full rounded-sm ${onUpdate ? 'ring-transparent transition-all hover:ring-2 hover:ring-blue-400/60' : ''}`}
+        className={`h-auto w-full rounded-sm ${onUpdate ? 'ring-transparent transition-all hover:ring-2 hover:ring-blue-400/60' : ''}`}
+        style={imgTransform ? { transform: imgTransform } : undefined}
       />
-      {img.caption && (
-        <figcaption className="mt-1.5 text-center text-[11px] leading-snug text-neutral-500 italic">
-          {img.caption}
-        </figcaption>
+      {(img.caption || captionOpen) && (
+        <p className="mt-1.5 text-center text-[11px] leading-snug text-neutral-500 italic">
+          {onUpdate ? (
+            <input
+              type="text"
+              defaultValue={img.caption ?? ''}
+              placeholder="Ajouter une légende…"
+              onBlur={(e) => onUpdate({ caption: e.target.value.trim() })}
+              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+              className="w-full bg-transparent text-center text-[11px] leading-snug text-neutral-500 italic outline-none placeholder:text-neutral-300"
+            />
+          ) : (
+            img.caption
+          )}
+        </p>
       )}
     </figure>
   )
