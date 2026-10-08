@@ -154,6 +154,7 @@ export function WorkspacePage() {
           <PreviewPane
             rapport={rapport}
             onEdit={handlePreviewEdit}
+            onCoverChange={patchCouverture}
             onImagesChange={setImages}
             onFicheChange={patchFicheTechnique}
             onTitleEdit={handlePreviewTitleEdit}

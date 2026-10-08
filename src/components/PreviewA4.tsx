@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, Fragment } from 'react'
-import type { FicheTechnique, MaterielItem, Rapport, SectionImage } from '../types'
+import type { Couverture, FicheTechnique, MaterielItem, Rapport, SectionImage } from '../types'
 import { usePageNumbers } from '../hooks/usePageNumbers'
 import { useBackgroundRemoval } from '../hooks/useBackgroundRemoval'
 import { EditableText, EditableTitle } from './preview/EditableText'
@@ -86,11 +86,27 @@ function Page({ children, className, style, startPageNum, headerLogo, ...rest }:
   )
 }
 
-function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: string }) {
+function CoverPage({
+  rapport,
+  periodeLabel,
+  onEdit,
+  onCoverChange,
+}: {
+  rapport: Rapport
+  periodeLabel: string
+  onEdit?: EditHandler
+  onCoverChange?: (patch: Partial<Couverture>) => void
+}) {
   const c = rapport.couverture
   const e = rapport.entreprise
   const contentRef = useRef<HTMLDivElement>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
+  const [editingPeriod, setEditingPeriod] = useState(false)
   const [fit, setFit] = useState(1)
+
+  const ribbonWidth = rapport.style?.coverRibbonWidth ?? 104
+  const bannerPadding = rapport.style?.coverBannerPadding ?? 16
 
   // Scale-to-fit guarantee: screen clips overflow (looks fine) while print
   // fragments it onto page 2 (the orange strip bug) — same DOM, different
@@ -113,11 +129,34 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
   }, [])
 
   return (
-    <div data-part="couverture" className="a4-page mx-auto flex h-[1123px] w-[794px] overflow-hidden bg-white text-[#1f1d1a] shadow-[0_2px_16px_rgba(61,56,50,0.14)] print:h-[297mm] print:w-[210mm] print:shadow-none [&_span]:!font-[family-name:var(--doc-title-font)] [&_p.text-\[16px\]]:!font-[family-name:var(--doc-title-font)]" style={{ fontFamily: 'var(--doc-body-font)' }}>
-      <div className="flex w-[104px] shrink-0 items-center justify-center bg-[#4472c4]">
+    <div
+      data-part="couverture"
+      className="a4-page mx-auto flex h-[1123px] w-[794px] overflow-hidden bg-white text-[#1f1d1a] shadow-[0_2px_16px_rgba(61,56,50,0.14)] print:h-[297mm] print:w-[210mm] print:shadow-none [&_span]:!font-[family-name:var(--doc-title-font)] [&_p.text-\[16px\]]:!font-[family-name:var(--doc-title-font)]"
+      style={{ fontFamily: 'var(--doc-body-font)' }}
+    >
+      <div
+        className="group/ribbon relative flex shrink-0 items-center justify-center bg-[#4472c4]"
+        style={{ width: `${ribbonWidth}px` }}
+      >
         <span className="block rotate-180 whitespace-nowrap text-[48px] font-bold tracking-wide text-white [writing-mode:vertical-rl]">
           Rapport de stage : {periodeLabel}
         </span>
+        {onCoverChange && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 opacity-0 group-hover/ribbon:opacity-100 transition-opacity print:hidden">
+            <select
+              value={c.periodeNumero || '1'}
+              onChange={(ev) => onCoverChange({ periodeNumero: ev.target.value })}
+              className="rounded bg-white/90 px-1 py-0.5 text-[11px] font-semibold text-neutral-800 shadow cursor-pointer"
+              title="Changer la période"
+            >
+              {['1', '2', '3', '4', '5', '6'].map((n) => (
+                <option key={n} value={n}>
+                  {n}{n === '1' ? 're' : 'e'}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div
@@ -127,11 +166,57 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
       >
         <div className="flex items-start justify-between gap-6">
           <img src={logo} alt="IFMBP" className="h-20 w-auto object-contain" />
-          <div className={`flex h-[88px] w-[128px] shrink-0 items-center justify-center bg-white ${e.logoDataUrl ? '' : 'border-[3px] border-[#4472c4] p-1.5'}`}>
+          <div
+            className={`group/logo relative flex h-[88px] w-[128px] shrink-0 items-center justify-center bg-white ${
+              e.logoDataUrl ? '' : 'border-[3px] border-[#4472c4] p-1.5'
+            }`}
+          >
             {e.logoDataUrl ? (
               <img src={e.logoDataUrl} alt="Logo entreprise" className="max-h-full max-w-full object-contain" />
             ) : (
               <span className="text-[10px] text-neutral-400">Logo entreprise</span>
+            )}
+            {onEdit && (
+              <>
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(ev) => {
+                    const file = ev.target.files?.[0]
+                    if (!file) return
+                    const reader = new FileReader()
+                    reader.onload = () => {
+                      if (typeof reader.result === 'string') {
+                        onEdit('entreprise', 'logoDataUrl', reader.result)
+                      }
+                    }
+                    reader.readAsDataURL(file)
+                    ev.target.value = ''
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/40 opacity-0 transition-opacity group-hover/logo:opacity-100 print:hidden rounded">
+                  <button
+                    type="button"
+                    onClick={() => logoInputRef.current?.click()}
+                    title={e.logoDataUrl ? 'Changer le logo' : 'Ajouter un logo'}
+                    className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-800 shadow hover:bg-white cursor-pointer"
+                  >
+                    {e.logoDataUrl ? 'Changer' : 'Ajouter'}
+                  </button>
+                  {e.logoDataUrl && (
+                    <button
+                      type="button"
+                      onClick={() => onEdit('entreprise', 'logoDataUrl', '')}
+                      title="Supprimer le logo"
+                      className="rounded bg-red-600/90 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow hover:bg-red-600 cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -146,24 +231,88 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
         <div className="mt-auto flex flex-col gap-5">
           <div className="text-center">
             <p className="text-[13.5px]">Objectif de stage :</p>
-            <p className="mt-1 text-[13.5px] font-semibold">{c.objectifStage || '…'}</p>
+            <EditableText
+              text={c.objectifStage || (!onEdit ? '…' : '')}
+              placeholder="Objectif du stage…"
+              showPlaceholder={false}
+              className="mt-1 text-[13.5px] font-semibold"
+              onSave={onEdit ? (v) => onEdit('couverture', 'objectifStage', v) : undefined}
+            />
           </div>
 
-          <div className="text-center">
+          <div className="group/period relative text-center">
             <p className="text-[13.5px]">Période de stage :</p>
-            <p className="mt-1 text-[13.5px] font-semibold">
-              {c.periodeDebut ? `du ${new Date(c.periodeDebut).toLocaleDateString('fr-FR')}` : 'du …'} au{' '}
-              {c.periodeFin ? new Date(c.periodeFin).toLocaleDateString('fr-FR') : '…'}
-            </p>
+            {editingPeriod && onCoverChange ? (
+              <div className="mt-1 flex flex-wrap items-center justify-center gap-2 print:hidden">
+                <select
+                  value={c.periodeNumero || '1'}
+                  onChange={(ev) => onCoverChange({ periodeNumero: ev.target.value })}
+                  className="rounded border border-line bg-paper px-2 py-0.5 text-xs text-ink shadow-xs"
+                >
+                  {['1', '2', '3', '4', '5', '6'].map((n) => (
+                    <option key={n} value={n}>
+                      {n}{n === '1' ? 're' : 'e'} période
+                    </option>
+                  ))}
+                </select>
+                <span className="text-xs text-muted">du</span>
+                <input
+                  type="date"
+                  value={c.periodeDebut || ''}
+                  onChange={(ev) => onCoverChange({ periodeDebut: ev.target.value })}
+                  className="rounded border border-line bg-paper px-1.5 py-0.5 text-xs text-ink shadow-xs"
+                />
+                <span className="text-xs text-muted">au</span>
+                <input
+                  type="date"
+                  value={c.periodeFin || ''}
+                  onChange={(ev) => onCoverChange({ periodeFin: ev.target.value })}
+                  className="rounded border border-line bg-paper px-1.5 py-0.5 text-xs text-ink shadow-xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => setEditingPeriod(false)}
+                  className="rounded bg-gold/20 px-2 py-0.5 text-xs font-semibold text-gold-deep hover:bg-gold/30 cursor-pointer"
+                >
+                  OK
+                </button>
+              </div>
+            ) : (
+              <div
+                onClick={onCoverChange ? () => setEditingPeriod(true) : undefined}
+                className={`mt-1 text-[13.5px] font-semibold ${
+                  onCoverChange ? 'cursor-pointer rounded-sm hover:ring-1 hover:ring-gold/40' : ''
+                }`}
+                title={onCoverChange ? 'Cliquer pour modifier la période et les dates' : undefined}
+              >
+                {c.periodeDebut ? `du ${new Date(c.periodeDebut).toLocaleDateString('fr-FR')}` : 'du …'} au{' '}
+                {c.periodeFin ? new Date(c.periodeFin).toLocaleDateString('fr-FR') : '…'}
+                {onCoverChange && (
+                  <span className="ml-1.5 inline-block text-[11px] text-muted opacity-0 group-hover/period:opacity-100 print:hidden">
+                    ✏️
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="text-center">
             <p className="text-[13.5px]">Entreprise d'accueil :</p>
-            <p className="mt-1 text-[13.5px] font-semibold">{e.nom || 'Nom de lentreprise'}</p>
+            <EditableText
+              text={e.nom || (!onEdit ? "Nom de l'entreprise" : '')}
+              placeholder="Nom de l'entreprise"
+              showPlaceholder={false}
+              className="mt-1 text-[13.5px] font-semibold"
+              onSave={onEdit ? (v) => onEdit('entreprise', 'nom', v) : undefined}
+            />
           </div>
         </div>
 
-        <div className={`mt-auto mb-6 flex h-[300px] min-h-[140px] shrink items-center justify-center overflow-hidden bg-white ${c.photoActivite ? '' : 'border-[3px] border-[#4472c4] p-1.5'}`}>
+        <div
+          className={`group/photo mt-auto mb-6 relative flex h-[300px] min-h-[140px] shrink items-center justify-center overflow-hidden bg-white ${
+            c.photoActivite ? '' : 'border-[3px] border-[#4472c4] p-1.5'
+          }`}
+        >
           {c.photoActivite ? (
             <img
               src={c.photoActivite}
@@ -175,32 +324,117 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
               }
             />
           ) : (
-            <span className="text-xs text-neutral-400">Photo de l'activité de l'entreprise</span>
+            <span
+              onClick={() => onCoverChange && photoInputRef.current?.click()}
+              className={`text-xs text-neutral-400 ${onCoverChange ? 'cursor-pointer hover:text-neutral-600' : ''}`}
+            >
+              Photo de l'activité de l'entreprise {onCoverChange && '(cliquer pour ajouter)'}
+            </span>
+          )}
+
+          {onCoverChange && (
+            <>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(ev) => {
+                  const file = ev.target.files?.[0]
+                  if (!file) return
+                  const reader = new FileReader()
+                  reader.onload = () => {
+                    if (typeof reader.result === 'string') {
+                      onCoverChange({ photoActivite: reader.result })
+                    }
+                  }
+                  reader.readAsDataURL(file)
+                  ev.target.value = ''
+                }}
+              />
+              <div className="absolute top-2 right-2 flex items-center gap-1.5 rounded-md bg-black/60 p-1 opacity-0 backdrop-blur-xs transition-opacity group-hover/photo:opacity-100 print:hidden">
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  title="Changer l'image"
+                  className="rounded bg-white/90 px-2 py-0.5 text-xs font-medium text-neutral-900 shadow hover:bg-white cursor-pointer"
+                >
+                  {c.photoActivite ? 'Changer' : 'Ajouter'}
+                </button>
+                {c.photoActivite && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onCoverChange({
+                          photoActiviteFit: (c.photoActiviteFit ?? 'contain') === 'cover' ? 'contain' : 'cover',
+                        })
+                      }
+                      title="Basculer entre ajuster et remplir"
+                      className="rounded bg-white/90 px-2 py-0.5 text-xs font-medium text-neutral-900 shadow hover:bg-white cursor-pointer"
+                    >
+                      {(c.photoActiviteFit ?? 'contain') === 'cover' ? 'Ajuster' : 'Remplir'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onCoverChange({ photoActivite: undefined })}
+                      title="Supprimer la photo"
+                      className="rounded bg-red-600/90 px-2 py-0.5 text-xs font-medium text-white shadow hover:bg-red-600 cursor-pointer"
+                    >
+                      Supprimer
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
           )}
         </div>
 
-        <div className="-mx-10 bg-[#ed7d31] px-10 py-4 text-white">
+        <div
+          className="-mx-10 bg-[#ed7d31] px-10 text-white"
+          style={{ paddingTop: `${bannerPadding}px`, paddingBottom: `${bannerPadding}px` }}
+        >
           <p className="text-center text-[14px] font-semibold">Rapport réalisé par :</p>
-          <p className="mt-1.5 text-center text-[14px] font-bold">{c.nomStagiaire || 'Nom et prénom'}</p>
+          <EditableText
+            text={c.nomStagiaire || (!onEdit ? 'Nom et prénom' : '')}
+            placeholder="Nom et prénom"
+            showPlaceholder={false}
+            className="mt-1.5 text-center text-[14px] font-bold !text-white hover:!ring-white/60 focus:!ring-white focus:!bg-white/20"
+            onSave={onEdit ? (v) => onEdit('couverture', 'nomStagiaire', v) : undefined}
+          />
           <div className="mt-3 grid grid-cols-2 gap-x-8">
             <div>
               <p className="text-[13.5px] font-semibold">Tuteur pédagogique :</p>
-              <p className="mt-1 text-[13.5px] font-bold">{c.tuteurPedagogique || 'Nom et prénom'}</p>
+              <EditableText
+                text={c.tuteurPedagogique || (!onEdit ? 'Nom et prénom' : '')}
+                placeholder="Nom et prénom"
+                showPlaceholder={false}
+                className="mt-1 text-[13.5px] font-bold !text-white hover:!ring-white/60 focus:!ring-white focus:!bg-white/20"
+                onSave={onEdit ? (v) => onEdit('couverture', 'tuteurPedagogique', v) : undefined}
+              />
             </div>
             <div>
               <p className="text-[13.5px] font-semibold">Tuteur industriel :</p>
-              <p className="mt-1 text-[13.5px] font-bold">{c.tuteurIndustriel || 'Nom et prénom'}</p>
+              <EditableText
+                text={c.tuteurIndustriel || (!onEdit ? 'Nom et prénom' : '')}
+                placeholder="Nom et prénom"
+                showPlaceholder={false}
+                className="mt-1 text-[13.5px] font-bold !text-white hover:!ring-white/60 focus:!ring-white focus:!bg-white/20"
+                onSave={onEdit ? (v) => onEdit('couverture', 'tuteurIndustriel', v) : undefined}
+              />
             </div>
           </div>
           <div className="mt-3">
             <p className="text-[13.5px] font-semibold">
               Membre de jury{c.membresJury.length > 0 ? ` : ${c.membresJury.length}` : ' :'}
             </p>
-            {c.membresJury.length > 0 ? (
-              <p className="mt-1 text-[13.5px]">{c.membresJury.join(', ')}</p>
-            ) : (
-              <p className="mt-1 text-[13.5px]">M. XXXXXXX / Mme XXXXXXX</p>
-            )}
+            <EditableText
+              text={c.membresJury.length > 0 ? c.membresJury.join(', ') : (!onEdit ? 'M. XXXXXXX / Mme XXXXXXX' : '')}
+              placeholder="M. XXXXXXX / Mme XXXXXXX"
+              showPlaceholder={false}
+              className="mt-1 text-[13.5px] !text-white hover:!ring-white/60 focus:!ring-white focus:!bg-white/20"
+              onSave={onEdit ? (v) => onEdit('couverture', 'membresJury', v) : undefined}
+            />
           </div>
         </div>
       </div>
@@ -208,7 +442,7 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
   )
 }
 
-type EditHandler = (source: 'entreprise' | 'section', field: string, value: string) => void
+type EditHandler = (source: 'entreprise' | 'section' | 'couverture', field: string, value: string) => void
 export type { EditHandler }
 
 // Drag state shared across all sections — stored in a ref passed down
@@ -590,12 +824,14 @@ function Sommaire({ entries, startPageNum, headerLogo, ...rest }: { entries: Som
 export function PreviewA4({
   rapport,
   onEdit,
+  onCoverChange,
   onImagesChange,
   onFicheChange,
   onTitleEdit,
 }: {
   rapport: Rapport
   onEdit?: EditHandler
+  onCoverChange?: (patch: Partial<Couverture>) => void
   onImagesChange?: (sectionId: string, imgs: SectionImage[]) => void
   onFicheChange?: (ficheId: string, patch: Partial<FicheTechnique>) => void
   onTitleEdit?: (field: string, value: string) => void
@@ -694,7 +930,12 @@ export function PreviewA4({
     // print keeps exact A4 pagination. Page numbers come from the real block
     // heights, so the sommaire stays accurate.
     <div ref={stackRef} style={styleVars} className="space-y-10 print:space-y-0">
-      <CoverPage rapport={rapport} periodeLabel={formatPeriodeLabel(c.periodeNumero)} />
+      <CoverPage
+        rapport={rapport}
+        periodeLabel={formatPeriodeLabel(c.periodeNumero)}
+        onEdit={onEdit}
+        onCoverChange={onCoverChange}
+      />
       <Page
         data-part="remerciements"
         startPageNum={numbers['remerciements'] ? numbers['remerciements'] : undefined}

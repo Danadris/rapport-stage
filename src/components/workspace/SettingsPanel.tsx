@@ -68,13 +68,65 @@ export function SettingsPanel({
                       <option value={2}>Double</option>
                     </select>
                   </div>
-                  <div className="flex flex-col gap-1 col-span-2">
+                  <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-semibold uppercase tracking-wider text-muted">Marges</label>
                     <select value={style?.margins || 'normal'} onChange={(e) => patchStyle({ margins: e.target.value as 'narrow' | 'normal' | 'wide' })} className="h-8 w-full rounded border border-line bg-paper px-2 text-xs text-ink">
                       <option value="narrow">Étroites</option>
                       <option value="normal">Normales</option>
                       <option value="wide">Larges</option>
                     </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                        Ruban bleu : {style?.coverRibbonWidth ?? 104}px
+                      </label>
+                      {(style?.coverRibbonWidth ?? 104) !== 104 && (
+                        <button
+                          type="button"
+                          onClick={() => patchStyle({ coverRibbonWidth: 104 })}
+                          title="Réinitialiser à 104px"
+                          className="text-[9px] text-muted hover:text-ink underline cursor-pointer"
+                        >
+                          Défaut
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="range"
+                      min="70"
+                      max="140"
+                      step="2"
+                      value={style?.coverRibbonWidth ?? 104}
+                      onChange={(e) => patchStyle({ coverRibbonWidth: Number(e.target.value) })}
+                      className="h-8 w-full cursor-pointer"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                        Bandeau orange : {style?.coverBannerPadding ?? 16}px
+                      </label>
+                      {(style?.coverBannerPadding ?? 16) !== 16 && (
+                        <button
+                          type="button"
+                          onClick={() => patchStyle({ coverBannerPadding: 16 })}
+                          title="Réinitialiser à 16px"
+                          className="text-[9px] text-muted hover:text-ink underline cursor-pointer"
+                        >
+                          Défaut
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="range"
+                      min="8"
+                      max="28"
+                      step="2"
+                      value={style?.coverBannerPadding ?? 16}
+                      onChange={(e) => patchStyle({ coverBannerPadding: Number(e.target.value) })}
+                      className="h-8 w-full cursor-pointer"
+                    />
                   </div>
                   <div className="flex-col gap-1 hidden md:flex">
                     <label className="text-[10px] font-semibold uppercase tracking-wider text-muted">Zoom : {zoom}%</label>

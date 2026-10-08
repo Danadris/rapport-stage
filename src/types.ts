@@ -123,6 +123,8 @@ export interface RapportStyle {
   lineSpacing?: number
   margins?: 'narrow' | 'normal' | 'wide'
   textAlign?: 'left' | 'center' | 'justify'
+  coverRibbonWidth?: number
+  coverBannerPadding?: number
 }
 
 export interface Rapport {

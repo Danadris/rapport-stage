@@ -337,8 +337,15 @@ export function useWorkspaceSteps({
       r ? { ...r, images: { ...(r.images ?? {}), [sectionId]: imgs }, updatedAt: Date.now() } : r,
     )
 
-  const handlePreviewEdit = (source: 'entreprise' | 'section', field: string, value: string) => {
-    if (source === 'entreprise') {
+  const handlePreviewEdit = (source: 'entreprise' | 'section' | 'couverture', field: string, value: string) => {
+    if (source === 'couverture') {
+      if (field === 'membresJury') {
+        const list = value.split(',').map((s) => s.trim()).filter(Boolean)
+        patchCouverture({ membresJury: list })
+      } else {
+        patchCouverture({ [field]: value } as Partial<Couverture>)
+      }
+    } else if (source === 'entreprise') {
       patchEntreprise({ [field]: value } as Partial<Entreprise>)
     } else {
       // field format is "stepId:fieldId"

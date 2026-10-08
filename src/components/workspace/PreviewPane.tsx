@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { PreviewA4 } from '../PreviewA4'
-import type { Rapport, SectionImage, FicheTechnique } from '../../types'
+import type { Rapport, SectionImage, FicheTechnique, Couverture } from '../../types'
 import type { EditHandler } from '../PreviewA4'
 
 export function PreviewPane({
   rapport,
   onEdit,
+  onCoverChange,
   onImagesChange,
   onFicheChange,
   onTitleEdit,
@@ -13,6 +14,7 @@ export function PreviewPane({
 }: {
   rapport: Rapport
   onEdit?: EditHandler
+  onCoverChange?: (patch: Partial<Couverture>) => void
   onImagesChange?: (sectionId: string, imgs: SectionImage[]) => void
   onFicheChange?: (ficheId: string, patch: Partial<FicheTechnique>) => void
   onTitleEdit?: (field: string, value: string) => void
@@ -45,7 +47,7 @@ export function PreviewPane({
 
   return (
     <div className="flex-1 bg-line-strong/60 print:bg-transparent min-w-0 relative">
-      <div ref={previewWrapRef} className={`px-2 py-6 md:px-4 md:py-10 print:p-0${isMobile ? ' overflow-x-auto' : ''}`}>
+      <div ref={previewWrapRef} className={`px-2 py-6 md:px-4 md:py-10 print:!p-0 print:!m-0${isMobile ? ' overflow-x-auto' : ''}`}>
         <div
           style={
             isMobile
@@ -61,6 +63,7 @@ export function PreviewPane({
           <PreviewA4
             rapport={rapport}
             onEdit={onEdit}
+            onCoverChange={onCoverChange}
             onImagesChange={onImagesChange}
             onFicheChange={onFicheChange}
             onTitleEdit={onTitleEdit}
