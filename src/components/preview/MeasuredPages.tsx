@@ -37,7 +37,7 @@ export function MeasuredPages({
       const h = el.offsetHeight
       const pages = Math.max(1, Math.ceil(h / PAGE_CONTENT_HEIGHT))
       setPageCount(pages)
-      setCenterPad(pages === 1 ? Math.max(0, (PAGE_CONTENT_HEIGHT - h) / 2) : 0)
+      setCenterPad(0)
     }
     measure()
     const ro = new ResizeObserver(measure)
