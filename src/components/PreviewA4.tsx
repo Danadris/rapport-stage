@@ -1,4 +1,4 @@
-import { useRef, useState, Fragment } from 'react'
+import { useLayoutEffect, useRef, useState, Fragment } from 'react'
 import type { FicheTechnique, MaterielItem, Rapport, SectionImage } from '../types'
 import { usePageNumbers } from '../hooks/usePageNumbers'
 import { useBackgroundRemoval } from '../hooks/useBackgroundRemoval'
@@ -89,6 +89,29 @@ function Page({ children, className, style, startPageNum, headerLogo, ...rest }:
 function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: string }) {
   const c = rapport.couverture
   const e = rapport.entreprise
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [fit, setFit] = useState(1)
+
+  // Scale-to-fit guarantee: screen clips overflow (looks fine) while print
+  // fragments it onto page 2 (the orange strip bug) — same DOM, different
+  // result. Measuring the real content height and zooming the content column
+  // to fit makes screen and print identical for ANY data, fonts or version.
+  useLayoutEffect(() => {
+    const el = contentRef.current
+    if (!el) return
+    const measure = () => {
+      setFit((prev) => {
+        const trueH = el.scrollHeight / (prev || 1)
+        const next = trueH > 1123 ? Math.max(0.5, Math.floor((1123 / trueH) * 1000) / 1000) : 1
+        return Math.abs(prev - next) > 0.001 ? next : prev
+      })
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   return (
     <div data-part="couverture" className="a4-page mx-auto flex h-[1123px] w-[794px] overflow-hidden bg-white text-[#1f1d1a] shadow-[0_2px_16px_rgba(61,56,50,0.14)] print:h-[297mm] print:w-[210mm] print:shadow-none [&_span]:!font-[family-name:var(--doc-title-font)] [&_p.text-\[16px\]]:!font-[family-name:var(--doc-title-font)]" style={{ fontFamily: 'var(--doc-body-font)' }}>
       <div className="flex w-[104px] shrink-0 items-center justify-center bg-[#4472c4]">
@@ -97,7 +120,11 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
         </span>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col px-10 pt-4">
+      <div
+        ref={contentRef}
+        className="flex min-w-0 flex-1 flex-col px-10 pt-4 [zoom:var(--cover-fit,1)]"
+        style={{ '--cover-fit': fit } as React.CSSProperties}
+      >
         <div className="flex items-start justify-between gap-6">
           <img src={logo} alt="IFMBP" className="h-20 w-auto object-contain" />
           <div className={`flex h-[88px] w-[128px] shrink-0 items-center justify-center bg-white ${e.logoDataUrl ? '' : 'border-[3px] border-[#4472c4] p-1.5'}`}>
