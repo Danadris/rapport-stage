@@ -34,10 +34,9 @@ function stepComplete(rapport: Rapport, step: WizardStep): boolean {
       : e.activitesPrincipales.trim() !== ''
   }
   const notes = rapport.sections[step.id]
-  if (!notes) return false
-  return step.fields
-    .filter((f) => f.hint !== 'Optionnel')
-    .every((f) => (notes[f.id] ?? '').trim() !== '')
+  const required = step.fields.filter((f) => f.hint !== 'Optionnel')
+  if (!notes || required.length === 0) return false
+  return required.every((f) => (notes[f.id] ?? '').trim() !== '')
 }
 
 function stepProgress(rapport: Rapport, step: WizardStep): number {
@@ -62,8 +61,9 @@ function stepProgress(rapport: Rapport, step: WizardStep): number {
   }
   const notes = rapport.sections[step.id]
   if (!notes) return 0
-  const required = step.fields.filter(f => f.hint !== 'Optionnel')
-  if (required.length === 0) return 0
+  const required = step.fields.filter((f) => f.hint !== 'Optionnel')
+  const effectiveRequired = required.length > 0 ? required : step.fields
+  if (effectiveRequired.length === 0) return 0
   const filled = required.filter(f => (notes[f.id] ?? '').trim() !== '').length
   return Math.round((filled / required.length) * 100)
 }

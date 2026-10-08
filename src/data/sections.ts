@@ -33,7 +33,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     id: 'remerciements',
     numero: '03',
     titre: 'Remerciements',
-    sousTitre: 'Section obligatoire',
+    sousTitre: 'À remplir vous-même',
     consigne:
       'Exprimez votre gratitude envers les personnes qui vous ont soutenu pendant le stage. Notez qui vous voulez remercier et pourquoi, le rapport sera rédigé à partir de vos notes.',
     kind: 'notes',
@@ -60,7 +60,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     id: 'introduction',
     numero: '04',
     titre: 'Introduction',
-    sousTitre: 'Section obligatoire',
+    sousTitre: 'À remplir vous-même',
     consigne:
       'Le lecteur découvre ici le contexte : qui vous êtes, où le stage a eu lieu et ce que vous cherchiez à apprendre.',
     kind: 'notes',
@@ -91,7 +91,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     id: 'presentation',
     numero: '05',
     titre: 'Présentation de l\'entreprise',
-    sousTitre: 'Rempli par la recherche',
+    sousTitre: 'Auto-rempli depuis la recherche',
     consigne:
       'Historique, secteur d\'activité et valeurs de l\'organisme d\'accueil. Si vous avez lancé la recherche automatique, ces champs sont déjà remplis : relisez-les et corrigez ce qui doit l\'être.',
     kind: 'presentation',
@@ -111,7 +111,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     id: 'activites',
     numero: '07',
     titre: 'Activités et équipements',
-    sousTitre: 'Section obligatoire',
+    sousTitre: 'À remplir vous-même',
     consigne:
       'Ce que fait l\'entreprise au quotidien et avec quoi elle travaille : fours, pétrins, chambres de fermentation, matériel spécifique.',
     kind: 'activites',
@@ -121,7 +121,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     id: 'contexte',
     numero: '08',
     titre: 'Contexte du stage',
-    sousTitre: 'Section obligatoire',
+    sousTitre: 'À remplir vous-même',
     consigne:
       'Comment ce stage a été trouvé et organisé : démarche, contacts, choix de l\'entreprise.',
     kind: 'notes',
@@ -142,7 +142,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     id: 'objectifs',
     numero: '09',
     titre: 'Objectifs du stage',
-    sousTitre: 'Section obligatoire',
+    sousTitre: 'À remplir vous-même',
     consigne:
       'Les objectifs que vous vous étiez fixés avant de commencer, en termes de compétences et de découverte du métier.',
     kind: 'notes',
@@ -163,7 +163,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     id: 'deroulement',
     numero: '10',
     titre: 'Déroulement du stage',
-    sousTitre: 'Section obligatoire',
+    sousTitre: 'À remplir vous-même',
     consigne:
       'Le fil chronologique : services traversés, tâches confiées semaine après semaine.',
     kind: 'notes',
@@ -195,7 +195,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     id: 'taches',
     numero: '11',
     titre: 'Tâches effectuées',
-    sousTitre: 'Section obligatoire',
+    sousTitre: 'À remplir vous-même',
     consigne:
       'Le cœur technique du rapport : missions détaillées, compétences développées et difficultés rencontrées avec leurs solutions.',
     kind: 'notes',
@@ -245,7 +245,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     id: 'bilan',
     numero: '12',
     titre: 'Bilan personnel',
-    sousTitre: 'Section obligatoire',
+    sousTitre: 'À remplir vous-même',
     consigne:
       'Votre regard rétrospectif : ce que ce stage vous a apporté et ce que vous ferez différemment.',
     kind: 'notes',
