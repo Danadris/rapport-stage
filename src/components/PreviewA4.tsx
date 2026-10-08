@@ -170,11 +170,7 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
               Membre de jury{c.membresJury.length > 0 ? ` : ${c.membresJury.length}` : ' :'}
             </p>
             {c.membresJury.length > 0 ? (
-              c.membresJury.map((m) => (
-                <p key={m} className="mt-1 text-[13.5px]">
-                  {m}
-                </p>
-              ))
+              <p className="mt-1 text-[13.5px]">{c.membresJury.join(', ')}</p>
             ) : (
               <p className="mt-1 text-[13.5px]">M. XXXXXXX / Mme XXXXXXX</p>
             )}
