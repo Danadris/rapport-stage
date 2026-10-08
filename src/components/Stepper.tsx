@@ -148,7 +148,7 @@ export function Stepper({ rapport, steps, currentId, onSelect, onDeleteStep, onA
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmingId(step.id) }}
                       aria-label={`Supprimer ${step.titre || 'cette section'}`}
-                      className="flex h-9 w-9 items-center justify-center rounded text-faint opacity-60 hover:opacity-100 hover:bg-danger/10 hover:text-danger active:bg-danger/10 active:text-danger transition-colors"
+                      className="flex h-9 w-9 items-center justify-center rounded text-faint opacity-0 group-hover:opacity-60 hover:opacity-100 hover:bg-danger/10 hover:text-danger active:bg-danger/10 active:text-danger transition-colors"
                     >
                       <Trash2 size={13} />
                     </button>

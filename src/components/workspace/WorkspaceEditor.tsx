@@ -7,6 +7,7 @@ import { OrganigrammeStep } from '../steps/OrganigrammeStep'
 import { FicheTechniqueStep } from '../steps/FicheTechniqueStep'
 import { NotesStep } from '../steps/NotesStep'
 import { cx } from '../../lib/cx'
+import { EditionGuide } from './EditionGuide'
 import type { Entreprise, FicheTechnique, MaterielItem, Organigramme, Rapport, SectionImage, WizardStep } from '../../types'
 
 const PRESENTATION_FIELDS: EntFieldDef[] = [
@@ -75,6 +76,7 @@ export function WorkspaceEditor({
   return (
     <>
             <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 md:px-10 md:py-8">
+              <EditionGuide />
               <p className="mb-7 text-sm leading-relaxed text-muted">{step.consigne}</p>
               {/* The organigramme format switch makes sense only for the section
                   that IS the organigramme — showing it on every custom step made

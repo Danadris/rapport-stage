@@ -209,7 +209,7 @@ function FieldBox({
       {!isOrg && (
         <div className="field-card">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-ink">Texte final A4</span>
+            <span className="text-xs font-semibold text-ink">Texte final du rapport <span className="font-normal text-faint">— rédigé à partir de vos notes</span></span>
             <div className="flex items-center gap-2">
               <select
                 value={longueur}
@@ -229,7 +229,7 @@ function FieldBox({
                 disabled={loading || !current.trim()}
               >
                 {loading && <Loader2 size={14} className="animate-spin" />}
-                {loading ? 'Rédaction...' : 'Rédiger'}
+                {loading ? 'Rédaction...' : 'Rédiger (IA)'}
               </Button>
             </div>
           </div>
@@ -241,11 +241,11 @@ function FieldBox({
           )}
 
           <Textarea
-            label="Texte final A4"
+            label="Texte final du rapport"
             rows={generated ? 4 : 2}
             value={generated}
             onChange={(e) => onGenerate(f.id, e.target.value)}
-            placeholder="Texte final..."
+            placeholder="Optionnel — vos notes sont déjà utilisées. Utilisez « Rédiger (IA) » pour générer un texte depuis elles."
             className="bg-paper"
           />
         </div>
@@ -375,7 +375,7 @@ function Level3Box({
           {/* AI drafting */}
           <div className="field-card-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-ink">Texte final A4</span>
+              <span className="text-xs font-semibold text-ink">Texte final du rapport <span className="font-normal text-faint">— rédigé à partir de vos notes</span></span>
               <div className="flex items-center gap-2">
                 <select
                   value={longueur}
@@ -390,7 +390,7 @@ function Level3Box({
                 </select>
                 <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={loading || !current.trim()}>
                   {loading && <Loader2 size={13} className="animate-spin" />}
-                  {loading ? 'Rédaction...' : 'Rédiger'}
+                  {loading ? 'Rédaction...' : 'Rédiger (IA)'}
                 </Button>
               </div>
             </div>
@@ -400,11 +400,11 @@ function Level3Box({
               </div>
             )}
             <Textarea
-              label="Texte final A4"
+              label="Texte final du rapport"
               rows={generated ? 3 : 2}
               value={generated}
               onChange={(e) => onGenerate(f.id, e.target.value)}
-              placeholder="Texte final..."
+              placeholder="Optionnel — vos notes sont déjà utilisées. Utilisez « Rédiger (IA) » pour générer un texte depuis elles."
               className="bg-paper"
             />
           </div>

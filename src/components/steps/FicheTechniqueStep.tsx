@@ -334,7 +334,7 @@ export function FicheTechniqueStep({ fiches, onChange, materiels = [], onMaterie
             <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-paper px-4 py-3">
               <div className="text-[12px] leading-snug text-muted">
                 <span className="font-semibold text-ink">
-                  Génération assistée par IA
+                  Génération assistée par IA <span className="font-normal text-faint">— non obligatoire</span>
                 </span>
                 <span className="text-faint">Remplit ingrédients, matériel, étapes et conseils à partir du nom du produit.</span>
               </div>
