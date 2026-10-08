@@ -97,7 +97,7 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
         </span>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col px-10 pt-7">
+      <div className="flex min-w-0 flex-1 flex-col px-10 pt-4">
         <div className="flex items-start justify-between gap-6">
           <img src={logo} alt="IFMBP" className="h-20 w-auto object-contain" />
           <div className={`flex h-[88px] w-[128px] shrink-0 items-center justify-center bg-white ${e.logoDataUrl ? '' : 'border-[3px] border-[#4472c4] p-1.5'}`}>
