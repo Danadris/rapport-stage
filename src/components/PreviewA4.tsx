@@ -97,7 +97,7 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
         </span>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col px-10 pt-9">
+      <div className="flex min-w-0 flex-1 flex-col px-10 pt-7">
         <div className="flex items-start justify-between gap-6">
           <img src={logo} alt="IFMBP" className="h-20 w-auto object-contain" />
           <div className={`flex h-[88px] w-[128px] shrink-0 items-center justify-center bg-white ${e.logoDataUrl ? '' : 'border-[3px] border-[#4472c4] p-1.5'}`}>
@@ -136,7 +136,7 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
           </div>
         </div>
 
-        <div className={`mt-auto mb-6 flex h-[330px] shrink-0 items-center justify-center bg-white ${c.photoActivite ? '' : 'border-[3px] border-[#4472c4] p-1.5'}`}>
+        <div className={`mt-auto mb-6 flex h-[300px] shrink-0 items-center justify-center bg-white ${c.photoActivite ? '' : 'border-[3px] border-[#4472c4] p-1.5'}`}>
           {c.photoActivite ? (
             <img
               src={c.photoActivite}
@@ -152,10 +152,10 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
           )}
         </div>
 
-        <div className="-mx-10 bg-[#ed7d31] px-10 py-6 text-white">
+        <div className="-mx-10 bg-[#ed7d31] px-10 py-4 text-white">
           <p className="text-center text-[14px] font-semibold">Rapport réalisé par :</p>
           <p className="mt-1.5 text-center text-[14px] font-bold">{c.nomStagiaire || 'Nom et prénom'}</p>
-          <div className="mt-4 grid grid-cols-2 gap-x-8">
+          <div className="mt-3 grid grid-cols-2 gap-x-8">
             <div>
               <p className="text-[13.5px] font-semibold">Tuteur pédagogique :</p>
               <p className="mt-1 text-[13.5px] font-bold">{c.tuteurPedagogique || 'Nom et prénom'}</p>
@@ -165,7 +165,7 @@ function CoverPage({ rapport, periodeLabel }: { rapport: Rapport; periodeLabel: 
               <p className="mt-1 text-[13.5px] font-bold">{c.tuteurIndustriel || 'Nom et prénom'}</p>
             </div>
           </div>
-          <div className="mt-4">
+          <div className="mt-3">
             <p className="text-[13.5px] font-semibold">
               Membre de jury{c.membresJury.length > 0 ? ` : ${c.membresJury.length}` : ' :'}
             </p>
