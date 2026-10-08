@@ -37,7 +37,9 @@ export function MeasuredPages({
       const h = el.offsetHeight
       const pages = Math.max(1, Math.ceil(h / PAGE_CONTENT_HEIGHT))
       setPageCount(pages)
-      setCenterPad(0)
+      // Keep a single-page block vertically centered, like before; multipage
+      // blocks still use the real pagination offsets.
+      setCenterPad(pages === 1 ? Math.max(0, (PAGE_CONTENT_HEIGHT - h) / 2) : 0)
     }
     measure()
     const ro = new ResizeObserver(measure)
