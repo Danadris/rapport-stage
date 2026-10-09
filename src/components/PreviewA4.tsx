@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState, Fragment } from 'react'
 import type { Couverture, FicheTechnique, MaterielItem, Rapport, SectionImage } from '../types'
 import { usePageNumbers } from '../hooks/usePageNumbers'
 import { useBackgroundRemoval } from '../hooks/useBackgroundRemoval'
+import { useFloatingPortal } from '../hooks/useFloatingPortal'
 import { EditableText, EditableTitle } from './preview/EditableText'
 import { Figure } from './preview/Figure'
 import { MeasuredPages } from './preview/MeasuredPages'
@@ -103,7 +104,30 @@ function CoverPage({
   const photoInputRef = useRef<HTMLInputElement>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [editingPeriod, setEditingPeriod] = useState(false)
+  const [photoHovered, setPhotoHovered] = useState(false)
+  const [logoHovered, setLogoHovered] = useState(false)
   const [fit, setFit] = useState(1)
+
+  const { anchorRef: photoAnchorRef, portal: photoPortal } = useFloatingPortal<HTMLDivElement>()
+  const { anchorRef: logoAnchorRef, portal: logoPortal } = useFloatingPortal<HTMLDivElement>()
+
+  const photoHoverTimer = useRef<number | null>(null)
+  const handlePhotoEnter = () => {
+    if (photoHoverTimer.current) clearTimeout(photoHoverTimer.current)
+    setPhotoHovered(true)
+  }
+  const handlePhotoLeave = () => {
+    photoHoverTimer.current = window.setTimeout(() => setPhotoHovered(false), 250)
+  }
+
+  const logoHoverTimer = useRef<number | null>(null)
+  const handleLogoEnter = () => {
+    if (logoHoverTimer.current) clearTimeout(logoHoverTimer.current)
+    setLogoHovered(true)
+  }
+  const handleLogoLeave = () => {
+    logoHoverTimer.current = window.setTimeout(() => setLogoHovered(false), 250)
+  }
 
   const ribbonWidth = rapport.style?.coverRibbonWidth ?? 104
   const bannerPadding = rapport.style?.coverBannerPadding ?? 16
@@ -167,9 +191,12 @@ function CoverPage({
         <div className="flex items-start justify-between gap-6">
           <img src={logo} alt="IFMBP" className="h-20 w-auto object-contain" />
           <div
-            className={`group/logo relative flex h-[88px] w-[128px] shrink-0 items-center justify-center bg-white ${
+            ref={logoAnchorRef}
+            className={`relative flex h-[88px] w-[128px] shrink-0 items-center justify-center bg-white ${
               e.logoDataUrl ? '' : 'border-[3px] border-[#4472c4] p-1.5'
             }`}
+            onMouseEnter={handleLogoEnter}
+            onMouseLeave={handleLogoLeave}
           >
             {e.logoDataUrl ? (
               <img src={e.logoDataUrl} alt="Logo entreprise" className="max-h-full max-w-full object-contain" />
@@ -196,26 +223,34 @@ function CoverPage({
                     ev.target.value = ''
                   }}
                 />
-                <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/40 opacity-0 transition-opacity group-hover/logo:opacity-100 print:hidden rounded">
-                  <button
-                    type="button"
-                    onClick={() => logoInputRef.current?.click()}
-                    title={e.logoDataUrl ? 'Changer le logo' : 'Ajouter un logo'}
-                    className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-800 shadow hover:bg-white cursor-pointer"
+                {logoPortal(
+                  logoHovered,
+                  <div
+                    className="flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-1 shadow-lg print:hidden"
+                    onMouseEnter={handleLogoEnter}
+                    onMouseLeave={handleLogoLeave}
                   >
-                    {e.logoDataUrl ? 'Changer' : 'Ajouter'}
-                  </button>
-                  {e.logoDataUrl && (
                     <button
                       type="button"
-                      onClick={() => onEdit('entreprise', 'logoDataUrl', '')}
-                      title="Supprimer le logo"
-                      className="rounded bg-red-600/90 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow hover:bg-red-600 cursor-pointer"
+                      onClick={() => logoInputRef.current?.click()}
+                      title={e.logoDataUrl ? 'Changer le logo' : 'Ajouter un logo'}
+                      className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-800 shadow hover:bg-white cursor-pointer"
                     >
-                      ×
+                      {e.logoDataUrl ? 'Changer' : 'Ajouter'}
                     </button>
-                  )}
-                </div>
+                    {e.logoDataUrl && (
+                      <button
+                        type="button"
+                        onClick={() => onEdit('entreprise', 'logoDataUrl', '')}
+                        title="Supprimer le logo"
+                        className="rounded bg-red-600/90 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow hover:bg-red-600 cursor-pointer"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>,
+                  'bottom-center',
+                )}
               </>
             )}
           </div>
@@ -309,9 +344,12 @@ function CoverPage({
         </div>
 
         <div
-          className={`group/photo mt-auto mb-6 relative flex h-[300px] min-h-[140px] shrink items-center justify-center overflow-hidden bg-white ${
+          ref={photoAnchorRef}
+          className={`mt-auto mb-6 relative flex h-[300px] min-h-[140px] shrink items-center justify-center overflow-hidden bg-white ${
             c.photoActivite ? '' : 'border-[3px] border-[#4472c4] p-1.5'
           }`}
+          onMouseEnter={handlePhotoEnter}
+          onMouseLeave={handlePhotoLeave}
         >
           {c.photoActivite ? (
             <img
@@ -352,40 +390,48 @@ function CoverPage({
                   ev.target.value = ''
                 }}
               />
-              <div className="absolute top-2 right-2 flex items-center gap-1.5 rounded-md bg-black/60 p-1 opacity-0 backdrop-blur-xs transition-opacity group-hover/photo:opacity-100 print:hidden">
-                <button
-                  type="button"
-                  onClick={() => photoInputRef.current?.click()}
-                  title="Changer l'image"
-                  className="rounded bg-white/90 px-2 py-0.5 text-xs font-medium text-neutral-900 shadow hover:bg-white cursor-pointer"
+              {photoPortal(
+                photoHovered,
+                <div
+                  className="flex items-center gap-1.5 rounded-md bg-black/60 p-1 print:hidden"
+                  onMouseEnter={handlePhotoEnter}
+                  onMouseLeave={handlePhotoLeave}
                 >
-                  {c.photoActivite ? 'Changer' : 'Ajouter'}
-                </button>
-                {c.photoActivite && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onCoverChange({
-                          photoActiviteFit: (c.photoActiviteFit ?? 'contain') === 'cover' ? 'contain' : 'cover',
-                        })
-                      }
-                      title="Basculer entre ajuster et remplir"
-                      className="rounded bg-white/90 px-2 py-0.5 text-xs font-medium text-neutral-900 shadow hover:bg-white cursor-pointer"
-                    >
-                      {(c.photoActiviteFit ?? 'contain') === 'cover' ? 'Ajuster' : 'Remplir'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onCoverChange({ photoActivite: undefined })}
-                      title="Supprimer la photo"
-                      className="rounded bg-red-600/90 px-2 py-0.5 text-xs font-medium text-white shadow hover:bg-red-600 cursor-pointer"
-                    >
-                      Supprimer
-                    </button>
-                  </>
-                )}
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    title="Changer l'image"
+                    className="rounded bg-white/90 px-2 py-0.5 text-xs font-medium text-neutral-900 shadow hover:bg-white cursor-pointer"
+                  >
+                    {c.photoActivite ? 'Changer' : 'Ajouter'}
+                  </button>
+                  {c.photoActivite && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onCoverChange({
+                            photoActiviteFit: (c.photoActiviteFit ?? 'contain') === 'cover' ? 'contain' : 'cover',
+                          })
+                        }
+                        title="Basculer entre ajuster et remplir"
+                        className="rounded bg-white/90 px-2 py-0.5 text-xs font-medium text-neutral-900 shadow hover:bg-white cursor-pointer"
+                      >
+                        {(c.photoActiviteFit ?? 'contain') === 'cover' ? 'Ajuster' : 'Remplir'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onCoverChange({ photoActivite: undefined })}
+                        title="Supprimer la photo"
+                        className="rounded bg-red-600/90 px-2 py-0.5 text-xs font-medium text-white shadow hover:bg-red-600 cursor-pointer"
+                      >
+                        Supprimer
+                      </button>
+                    </>
+                  )}
+                </div>,
+                'top-right',
+              )}
             </>
           )}
         </div>

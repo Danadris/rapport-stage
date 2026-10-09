@@ -1,6 +1,7 @@
 import { AlignCenter, AlignLeft, AlignRight, GripVertical, Layers, MoreHorizontal, RotateCw, FlipHorizontal, Trash2, ImagePlus, Type } from 'lucide-react'
 import { useCallback, useRef, useState, type ChangeEvent, type DragEvent, type PointerEvent as ReactPointerEvent, type RefObject } from 'react'
 import type { SectionImage } from '../../types'
+import { useFloatingPortal } from '../../hooks/useFloatingPortal'
 
 interface MoveTarget {
   sectionKey: string
@@ -25,21 +26,45 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
   // Explicit toggle so the toolbar is reachable by tap, not just mouse hover —
   // hover alone never fires reliably on touch devices.
   const [toolbarOpen, setToolbarOpen] = useState(false)
-  const figRef = useRef<HTMLElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const isFree = img.positioning === 'free'
   const toolbarVisible = hovered || toolbarOpen
   const [widthText, setWidthText] = useState<string | null>(null)
   const [captionOpen, setCaptionOpen] = useState(false)
 
+  // Portal-based floating toolbar — escapes any overflow:hidden ancestor (A4 pages)
+  const { anchorRef: figRef, portal: toolbarPortal } = useFloatingPortal<HTMLElement>()
+
+  const hoverTimer = useRef<number | null>(null)
+  const handleMouseEnter = () => {
+    if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current)
+      hoverTimer.current = null
+    }
+    setHovered(true)
+  }
+  const handleMouseLeave = () => {
+    hoverTimer.current = window.setTimeout(() => {
+      setHovered(false)
+    }, 250)
+  }
+
+  const [localPos, setLocalPos] = useState<{ x: number; y: number } | null>(null)
+  const dragActive = useRef(false)
+  const dragOffset = useRef({ dx: 0, dy: 0 })
+
+  const placement = isFree
+    ? (localPos?.x ?? img.x ?? 100) < 300
+      ? 'top-left'
+      : 'top-right'
+    : img.side === 'left'
+      ? 'top-left'
+      : 'top-right'
+
   const imgTransform = [
     img.rotate ? `rotate(${img.rotate}deg)` : '',
     img.flip ? 'scaleX(-1)' : '',
   ].filter(Boolean).join(' ') || undefined
-
-  const dragActive = useRef(false)
-  const dragOffset = useRef({ dx: 0, dy: 0 })
-  const [localPos, setLocalPos] = useState<{ x: number; y: number } | null>(null)
 
   // Pointer Events (not mouse events) so free-positioning drag also works with touch.
   const handleFreePointerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
@@ -151,11 +176,11 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
     </button>
   )
 
-  const toolbar = onUpdate && toolbarVisible && (
+  const toolbarContent = onUpdate && (
     <div
-      className="absolute z-50 flex items-center gap-0.5 rounded-md border border-neutral-300 bg-white/95 px-1 py-1 shadow-md backdrop-blur-sm print:hidden"
-      style={{ top: 8, right: 8 }}
-      onMouseEnter={() => setHovered(true)}
+      className="flex items-center gap-0.5 rounded-md border border-neutral-300 bg-white/95 px-1 py-1 shadow-md backdrop-blur-sm print:hidden"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <button
         type="button"
@@ -169,11 +194,11 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
       </button>
       <span className="mx-1 h-4 w-px bg-neutral-300" />
       {!isFree &&
-        ([
+        (([
           ['left', AlignLeft, 'Gauche'] as const,
           ['center', AlignCenter, 'Centre'] as const,
           ['right', AlignRight, 'Droite'] as const,
-        ]).map(([side, Icon, label]) => (
+        ])).map(([side, Icon, label]) => (
           <button
             key={side}
             type="button"
@@ -323,11 +348,11 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
           width: sizeW,
           opacity: isDragging ? 0.4 : 1,
         }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         {toggleButton}
-        {toolbar}
+        {toolbarPortal(toolbarVisible, toolbarContent, placement)}
         <div
           onPointerDown={handleFreePointerDown}
           className="cursor-move touch-none select-none"
@@ -373,11 +398,11 @@ export function Figure({ img, onUpdate, onDragStart, onDragEnd, isDragging, move
       ref={figRef as RefObject<HTMLElement>}
       className={`${floatClass} relative print:static`}
       style={{ width: sizeW, opacity: isDragging ? 0.4 : 1 }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {toggleButton}
-      {toolbar}
+      {toolbarPortal(toolbarVisible, toolbarContent, placement)}
       <img
         src={img.dataUrl}
         alt={img.caption ?? ''}
