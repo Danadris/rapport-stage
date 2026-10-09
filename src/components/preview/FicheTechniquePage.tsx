@@ -1,8 +1,7 @@
-import { Fragment, useRef, useState } from 'react'
+import { Fragment, useRef } from 'react'
 import { Eye, EyeOff, ImagePlus, Loader2, Trash2, Scissors } from 'lucide-react'
 import type { FicheIngredient, FicheTechnique } from '../../types'
 import logo from '../../assets/ifmbp-logo-official.png'
-import { useFloatingPortal } from '../../hooks/useFloatingPortal'
 
 const FAMILLE_LABELS: Record<string, string> = {
   pain: 'Pain',
@@ -52,17 +51,6 @@ export function FicheTechniquePage({
   const fileRef = useRef<HTMLInputElement>(null)
   const canEdit = !!onChange
   const hiddenTitles = fiche.hiddenTitles ?? []
-  const [photoHovered, setPhotoHovered] = useState(false)
-  const { anchorRef: photoAnchorRef, portal: photoPortal } = useFloatingPortal<HTMLDivElement>()
-
-  const photoHoverTimer = useRef<number | null>(null)
-  const handlePhotoEnter = () => {
-    if (photoHoverTimer.current) clearTimeout(photoHoverTimer.current)
-    setPhotoHovered(true)
-  }
-  const handlePhotoLeave = () => {
-    photoHoverTimer.current = window.setTimeout(() => setPhotoHovered(false), 250)
-  }
 
   const etapesLines = fiche.etapes
     .split('\n')
@@ -174,12 +162,7 @@ export function FicheTechniquePage({
         </div>
 
         <div className="mb-6 flex items-start gap-5">
-          <div
-            ref={photoAnchorRef}
-            className={`relative flex ${({ S: 'h-[110px] w-[150px]', M: 'h-[150px] w-[212px]', L: 'h-[190px] w-[272px]' })[photoSize ?? 'M']} shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#d8cdbc] bg-[#f7f1e7]`}
-            onMouseEnter={handlePhotoEnter}
-            onMouseLeave={handlePhotoLeave}
-          >
+          <div className={`group relative flex ${({ S: 'h-[110px] w-[150px]', M: 'h-[150px] w-[212px]', L: 'h-[190px] w-[272px]' })[photoSize ?? 'M']} shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#d8cdbc] bg-[#f7f1e7]`}>
             {photoDataUrl ? (
               <img src={photoDataUrl} alt={fiche.nom} className="h-full w-full object-contain" />
             ) : (
@@ -193,13 +176,8 @@ export function FicheTechniquePage({
                 Ajouter une photo
               </button>
             )}
-            {(photoDataUrl || onPhotoChange) && photoPortal(
-              photoHovered,
-              <div
-                className="flex justify-center gap-1 rounded-md border border-[#d8cdbc] bg-[#fffaf1]/95 px-1.5 py-1 shadow-sm print:hidden"
-                onMouseEnter={handlePhotoEnter}
-                onMouseLeave={handlePhotoLeave}
-              >
+            {(photoDataUrl || onPhotoChange) && (
+              <div className="absolute inset-x-2 bottom-2 flex justify-center gap-1 rounded-md border border-[#d8cdbc] bg-[#fffaf1]/95 px-1.5 py-1 shadow-sm print:hidden">
                 {onPhotoChange && (
                   <button type="button" title="Remplacer la photo" onClick={() => fileRef.current?.click()} className="flex h-7 w-7 items-center justify-center rounded text-[#665744] hover:bg-[#efe3d1]">
                     <ImagePlus size={14} />
@@ -215,8 +193,7 @@ export function FicheTechniquePage({
                     <Trash2 size={14} />
                   </button>
                 )}
-              </div>,
-              'bottom-center',
+              </div>
             )}
           </div>
 
