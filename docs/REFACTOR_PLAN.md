@@ -3,6 +3,8 @@
 > Goal: Take the audit from **7/10 → 9/10** without rewriting the stack.
 > Stack stays React/TS/Vite/Capacitor. No Rust/Go.
 > Order matters: each phase is committable alone, never breaks build.
+>
+> **Status 2026-11-07:** Phase 0 ✅ + Phase 1 ✅ done on branch `refactor/adr0002-0003-integration` (5 commits: 9f4f28e, c842b2d, d46f129, cee1a5c). Tree clean, `tsc -b` + `oxlint` + `vite build` green. Next: Phase 2 (types).
 
 ## Principles
 
