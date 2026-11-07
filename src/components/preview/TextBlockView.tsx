@@ -194,6 +194,11 @@ function FreeTextBox({
   const boxRef = useRef<HTMLDivElement>(null)
   // Live position while held. The stored one only changes on release.
   const [freePos, setFreePos] = useState<{ x: number; y: number } | null>(null)
+  // Live width while resizing the border. Font size is untouched — the text
+  // reflows inside the new width (more/fewer lines), same 13px letters.
+  const [liveWidth, setLiveWidth] = useState<number | null>(null)
+  const dispWidth = liveWidth ?? widthVal
+  const resizeStart = useRef<{ x: number; width: number } | null>(null)
   // Reflow can strand the stored offset past the end of the document (text
   // below the box deleted): the box would render on no page at all, invisible,
   // so it is pulled back for display. Display only — the stored position is
@@ -205,7 +210,7 @@ function FreeTextBox({
       const unit = box.closest('[data-unit]') as HTMLElement | null
       const copy = box.closest('[data-doc-copy]') as HTMLElement | null
       if (!unit || !copy) return null
-      const bounds = sectionBounds(unit, copy, widthVal, box.offsetHeight)
+      const bounds = sectionBounds(unit, copy, dispWidth, box.offsetHeight)
       const y = block.y ?? 200
       return y < bounds.minY ? bounds.minY : y > bounds.maxY ? Math.max(bounds.minY, bounds.maxY) : null
     })
@@ -256,7 +261,7 @@ function FreeTextBox({
     drag.move(event.clientX, event.clientY)
     const r = unit.getBoundingClientRect()
     const s = r.width / Math.max(1, unit.clientWidth)
-    const bounds = sectionBounds(unit, copy, widthVal, boxRef.current?.offsetHeight ?? 0)
+    const bounds = sectionBounds(unit, copy, dispWidth, boxRef.current?.offsetHeight ?? 0)
     setFreePos(
       clampToSection(
         (event.clientX - r.left) / s - grabOffset.current.dx,
@@ -284,7 +289,7 @@ function FreeTextBox({
     const { unit, copy } = found
     const r = unit.getBoundingClientRect()
     const s = r.width / Math.max(1, unit.clientWidth)
-    const bounds = sectionBounds(unit, copy, widthVal, boxRef.current?.offsetHeight ?? 0)
+    const bounds = sectionBounds(unit, copy, dispWidth, boxRef.current?.offsetHeight ?? 0)
     const raw = {
       x: (event.clientX - r.left) / s - grabOffset.current.dx,
       y: (event.clientY - r.top) / s - grabOffset.current.dy,
@@ -336,6 +341,42 @@ function FreeTextBox({
     onFreeDrop(drop, pos)
   }
 
+  // Border resize: drag the bottom-right corner to change the box width.
+  // Font size never changes — the text reflows (more/fewer lines).
+  const startResize = (event: ReactPointerEvent<HTMLElement>) => {
+    if (!onPatch) return
+    event.preventDefault()
+    event.stopPropagation()
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    resizeStart.current = { x: event.clientX, width: dispWidth }
+  }
+
+  const moveResize = (event: ReactPointerEvent<HTMLElement>) => {
+    const start = resizeStart.current
+    if (!start) return
+    const found = unitOf()
+    if (!found) return
+    const { unit, copy } = found
+    const r = unit.getBoundingClientRect()
+    const s = r.width / Math.max(1, unit.clientWidth)
+    const dx = (event.clientX - start.x) / s
+    // Right edge limit: bounds.maxX was computed for the current width, so
+    // shift it by the width delta to get the absolute right edge.
+    const bounds = sectionBounds(unit, copy, dispWidth, boxRef.current?.offsetHeight ?? 0)
+    const maxWidth = Math.max(80, bounds.maxX + dispWidth - dispX)
+    setLiveWidth(Math.round(Math.min(794, Math.max(80, Math.min(maxWidth, start.width + dx)))))
+  }
+
+  const endResize = (event: ReactPointerEvent<HTMLElement>) => {
+    const start = resizeStart.current
+    resizeStart.current = null
+    const next = liveWidth
+    setLiveWidth(null)
+    if (!start || !onPatch || !next) return
+    if (Math.abs(event.clientX - start.x) < 2) return
+    if (next !== widthVal) onPatch({ width: next })
+  }
+
   return (
     <div
       ref={boxRef}
@@ -343,7 +384,7 @@ function FreeTextBox({
       className="group/box absolute z-20 print:static"
       // A hidden unit hides its children — except this box, which has to show
       // on whatever page holds its position, not on its anchor's page.
-      style={{ left: dispX, top: dispY, width: widthVal, visibility: 'visible' }}
+      style={{ left: dispX, top: dispY, width: dispWidth, visibility: 'visible' }}
     >
       {(onPatch || onRemove) && (
         <div className="absolute -top-3 -right-3 z-30 flex items-center gap-1 print:hidden">
@@ -471,6 +512,21 @@ function FreeTextBox({
           className="whitespace-pre-wrap"
           style={{ ...textStyle, textAlign: textStyle.textAlign as 'left' }}
         />
+        {/* Border resize: bottom-right corner. Only width changes — font
+            size (global 13px) is untouched, text reflows. */}
+        {onPatch && (
+          <div
+            role="presentation"
+            title="Glisser pour redimensionner la bordure"
+            onPointerDown={startResize}
+            onPointerMove={moveResize}
+            onPointerUp={endResize}
+            onPointerCancel={() => { resizeStart.current = null; setLiveWidth(null) }}
+            className="absolute bottom-0 right-0 z-20 flex h-5 w-5 cursor-nwse-resize touch-none items-end justify-end rounded-br-sm opacity-70 transition-opacity hover:opacity-100 print:hidden"
+          >
+            <span className="mr-0.5 mb-0.5 block h-2.5 w-2.5 rounded-sm border border-violet-400 bg-white/90 shadow-sm" />
+          </div>
+        )}
       </div>
     </div>
   )
