@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from '@google/genai'
 import type { Entreprise, FicheIngredient, OrgNode } from '../types'
-import { loadSettings } from './storage'
+import { loadSettings } from './storageV3'
 import { rechercheEntreprise as rechercheEntrepriseLocale, genererOrganigrammeOffline } from './ai-stub'
 
 interface FicheGenerationResult {

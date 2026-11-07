@@ -214,6 +214,8 @@ export interface ImageReference {
 
 export interface ReportData {
   id: string
+  createdAt?: number
+  updatedAt?: number
   couverture: Couverture
   entreprise: Entreprise
   sections: Sections
@@ -222,6 +224,9 @@ export interface ReportData {
   pageBreaks?: Record<string, boolean>
   customSteps?: WizardStep[]
   images?: Record<string, ImageReference[]> // No Base64 data here!
+  textBlocks?: Record<string, TextBlock[]>
+  blockOrder?: Record<string, string[]>
+  titleOverrides?: Record<string, string>
   organigramme?: Organigramme
   organigrammes?: Record<string, Organigramme>
   ficheTechniques?: FicheTechnique[]

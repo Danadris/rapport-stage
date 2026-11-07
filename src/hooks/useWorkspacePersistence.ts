@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { getRapport, persistRapport, createBackup } from '../lib/storage'
-import { persistReport as persistReportV3, buildReportMeta, buildReportData } from '../lib/storageV3'
+import { getRapport, persistRapport } from '../lib/storageV3'
 import { revokeReportUrls } from '../lib/imageRuntime'
 import { createBackupV3 } from '../lib/backupV3'
 import { exportToPdf } from '../lib/exportPdf'
@@ -157,10 +156,7 @@ export function useWorkspacePersistence(id: string | undefined) {
     setShowExportMenu(false)
     setExportError(null)
     try {
-      let backupPayload: any = await createBackupV3()
-      if (backupPayload.reports.length === 0) {
-        backupPayload = await createBackup()
-      }
+      const backupPayload = await createBackupV3()
       const json = JSON.stringify(backupPayload, null, 2)
       const fileName = `rapport-stage-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`
       if (Capacitor.isNativePlatform()) {
@@ -198,7 +194,6 @@ export function useWorkspacePersistence(id: string | undefined) {
     window.clearTimeout(saveTimer.current)
     const seq = ++saveSeq.current
     saveTimer.current = window.setTimeout(() => {
-      // V1 save (primary — workspace still loads from V1)
       void persistRapport(rapport)
         .then(() => {
           if (saveSeq.current === seq) setSaveStatus('saved')
@@ -206,17 +201,6 @@ export function useWorkspacePersistence(id: string | undefined) {
         .catch(() => {
           if (saveSeq.current === seq) setSaveStatus('error')
         })
-
-      // V3 dual-write (fire-and-forget, keeps V3 stores in sync)
-      try {
-        const meta = buildReportMeta(rapport)
-        const data = buildReportData(rapport, (rapport.images as any) ?? {})
-        void persistReportV3(data, meta).catch(() => {
-          // V3 write failure is non-critical during dual-write phase
-        })
-      } catch {
-        // Never let V3 errors affect the V1 save path
-      }
     }, 400)
     return () => window.clearTimeout(saveTimer.current)
   }, [rapport, loadingRapport, saveStatus])

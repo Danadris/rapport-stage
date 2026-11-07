@@ -27,11 +27,12 @@ There is no project backend, no central database, no account system and no proje
 - `src/components/preview`: focused preview subcomponents — inline text editing, image placement, the org chart, the cover, one A4 window, and the paragraph drag engine.
 - `src/components/steps`: wizard step implementations.
 - `src/data/sections.ts`: official wizard structure and progress rules.
-- `src/lib/storage.ts`: local persistence, settings and JSON backup import/export.
+- `src/lib/storageV3.ts`: local persistence (single source of truth, IndexedDB v2), settings, V1→V3 migration, Rapport adapter (dataUrls ↔ Blobs).
 - `src/lib/reportDocument.ts`: pure report document assembly, table-of-contents rows and page-break grouping.
 - `src/lib/blockModel.ts`: block identity and paragraph moves (pure `Rapport → Rapport`). See [ADR-0002](./adr/0002-document-blocks-and-preview-drag.md).
 - `src/lib/ai.ts`: AI adapter. Uses Gemini when a key exists, otherwise uses local fallbacks.
 - `src/lib/ai-stub.ts`: local company-search fallback data.
+- `src/lib/backupV3.ts`: JSON backup export/import (v3 format, legacy v1 accepted).
 - `src/components/PreviewA4.tsx`: A4 page composition and document rendering.
 - `android/`: Capacitor-generated Android wrapper.
 
@@ -73,7 +74,7 @@ One window is one A4 sheet, and a growing section is cut across as many windows 
 
 ## Data Ownership
 
-Reports are owned by the user's device. The app stores report drafts, imported images and the optional Gemini API key in IndexedDB with a localStorage fallback for browsers where IndexedDB is unavailable. Visual preferences use localStorage.
+Reports are owned by the user's device. The app stores report drafts in IndexedDB (`rapport-stage-v3`): `reportMeta` (lightweight dashboard rows), `reportData` (full content, no binaries), `images` (Blobs), `settings` (Gemini key/model), `_migration` (one-time V1→V3 state). One-time V1 data (`rapport-stage-db`) is read read-only on first launch and never modified. Section images are kept in memory as dataUrls (`Rapport`) and converted to Blobs on save, hydrated back on load. Visual preferences use localStorage.
 
 The JSON backup feature exports reports only. It does not export the Gemini key.
 

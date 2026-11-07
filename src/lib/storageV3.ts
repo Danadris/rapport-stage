@@ -1,13 +1,14 @@
 import { openDB, type IDBPDatabase } from 'idb'
-import type { ReportMeta, ReportData, StoredImage, Rapport, ImageReference } from '../types'
+import type { ReportMeta, ReportData, StoredImage, Rapport, ImageReference, SectionImage, Settings } from '../types'
 import { progressOf } from '../data/sections'
+import { demoRapport } from './demo'
 
 // ---------------------------------------------------------------------------
 // Database Schema (V3.1)
 // ---------------------------------------------------------------------------
 
 const DB_NAME = 'rapport-stage-v3'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 interface RapportStageDBSchema {
   reportMeta: {
@@ -34,6 +35,14 @@ interface RapportStageDBSchema {
   _migration: {
     key: string
     value: MigrationState | boolean
+  }
+  settings: {
+    key: string
+    value: Settings
+  }
+  _settingsMigration: {
+    key: string
+    value: boolean
   }
 }
 
@@ -79,6 +88,16 @@ export function getDb(): Promise<IDBPDatabase<RapportStageDBSchema>> {
       // _migration — migration state (NOT localStorage)
       if (!db.objectStoreNames.contains('_migration')) {
         db.createObjectStore('_migration')
+      }
+
+      // settings — single doc store (added in v2, replaces V1 'rs:settings:v1')
+      if (!db.objectStoreNames.contains('settings')) {
+        db.createObjectStore('settings')
+      }
+
+      // _settingsMigration — flags one-time V1 settings copy
+      if (!db.objectStoreNames.contains('_settingsMigration')) {
+        db.createObjectStore('_settingsMigration')
       }
     },
   })
@@ -446,10 +465,12 @@ export function buildReportMeta(rapport: Rapport): ReportMeta {
  */
 export function buildReportData(
   rapport: Rapport,
-  images: Record<string, any> = {},
+  images: Record<string, ImageReference[]> = {},
 ): ReportData {
   return {
     id: rapport.id,
+    createdAt: rapport.createdAt,
+    updatedAt: rapport.updatedAt,
     couverture: rapport.couverture,
     entreprise: rapport.entreprise,
     sections: rapport.sections,
@@ -458,9 +479,272 @@ export function buildReportData(
     pageBreaks: rapport.pageBreaks,
     customSteps: rapport.customSteps,
     images,
+    textBlocks: rapport.textBlocks,
+    blockOrder: rapport.blockOrder,
+    titleOverrides: rapport.titleOverrides,
     organigramme: rapport.organigramme,
     organigrammes: rapport.organigrammes,
     ficheTechniques: rapport.ficheTechniques,
     materiels: rapport.materiels,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Settings (replaces V1 'rs:settings:v1')
+// ---------------------------------------------------------------------------
+
+const SETTINGS_KEY = 'app-settings'
+const EMPTY_SETTINGS: Settings = { geminiKey: '', geminiModel: '' }
+
+/** Read V1 settings directly from the old DB / localStorage (read-only, one-time). */
+async function readV1Settings(): Promise<Settings | null> {
+  // Try old IndexedDB first
+  try {
+    const v1 = await new Promise<Settings | null>((resolve) => {
+      const req = indexedDB.open('rapport-stage-db', 1)
+      req.onerror = () => resolve(null)
+      req.onsuccess = () => {
+        const oldDb = req.result
+        if (!oldDb.objectStoreNames.contains('kv')) {
+          oldDb.close()
+          resolve(null)
+          return
+        }
+        const tx = oldDb.transaction('kv', 'readonly')
+        const getReq = tx.objectStore('kv').get('rs:settings:v1')
+        getReq.onsuccess = () => {
+          oldDb.close()
+          const data = getReq.result
+          resolve(data && typeof data === 'object' ? (data as Settings) : null)
+        }
+        getReq.onerror = () => {
+          oldDb.close()
+          resolve(null)
+        }
+      }
+    })
+    if (v1) return v1
+  } catch {
+    // fall through to localStorage
+  }
+  try {
+    const raw = localStorage.getItem('rs:settings:v1')
+    if (raw) return JSON.parse(raw) as Settings
+  } catch {
+    // ignore
+  }
+  return null
+}
+
+export async function loadSettings(): Promise<Settings> {
+  const db = await getDb()
+  const migrated = await db.get('_settingsMigration', 'done').catch(() => undefined)
+  if (!migrated) {
+    const v1 = await readV1Settings()
+    if (v1) {
+      await db.put('settings', v1, SETTINGS_KEY)
+    }
+    await db.put('_settingsMigration', true, 'done')
+  }
+  return (await db.get('settings', SETTINGS_KEY)) ?? EMPTY_SETTINGS
+}
+
+export async function saveSettings(settings: Settings): Promise<void> {
+  const db = await getDb()
+  await db.put('settings', settings, SETTINGS_KEY)
+  await db.put('_settingsMigration', true, 'done').catch(() => {})
+}
+
+// ---------------------------------------------------------------------------
+// Rapport adapter: in-memory Rapport (dataUrls) <-> V3 stores (Blobs)
+// ---------------------------------------------------------------------------
+
+async function dataUrlToBlob(dataUrl: string): Promise<{ blob: Blob; mimeType: string }> {
+  const res = await fetch(dataUrl)
+  const blob = await res.blob()
+  return { blob, mimeType: blob.type || 'image/png' }
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+
+/** Convert all section images from dataUrls to Blobs + references. */
+async function splitRapportImages(
+  reportId: string,
+  images: Record<string, SectionImage[]> | undefined,
+): Promise<{ refs: Record<string, ImageReference[]>; stored: StoredImage[] }> {
+  const refs: Record<string, ImageReference[]> = {}
+  const stored: StoredImage[] = []
+  if (!images) return { refs, stored }
+  for (const [sectionId, list] of Object.entries(images)) {
+    if (!list?.length) continue
+    refs[sectionId] = []
+    for (const img of list) {
+      if (!img.dataUrl || !img.dataUrl.startsWith('data:')) {
+        // Empty or non-data URL (transition state) — keep a ref without blob
+        refs[sectionId].push({
+          id: img.id,
+          imageId: img.id,
+          side: img.side,
+          size: img.size,
+          caption: img.caption,
+          positioning: img.positioning,
+          x: img.x,
+          y: img.y,
+          blockIndex: img.blockIndex,
+        })
+        continue
+      }
+      const { blob, mimeType } = await dataUrlToBlob(img.dataUrl)
+      const { width, height } = await getImageDimensions(img.dataUrl)
+      const imageId = `img_${crypto.randomUUID()}`
+      stored.push({
+        id: imageId,
+        reportId,
+        blob,
+        mimeType,
+        width,
+        height,
+        size: blob.size,
+        createdAt: Date.now(),
+      })
+      refs[sectionId].push({
+        id: img.id,
+        imageId,
+        side: img.side,
+        size: img.size,
+        caption: img.caption,
+        positioning: img.positioning,
+        x: img.x,
+        y: img.y,
+        blockIndex: img.blockIndex,
+      })
+    }
+  }
+  return { refs, stored }
+}
+
+/** Hydrate section images from Blobs back to dataUrls. */
+async function hydrateRapportImages(
+  _reportId: string,
+  refs: Record<string, unknown> | undefined,
+): Promise<Record<string, SectionImage[]>> {
+  const out: Record<string, SectionImage[]> = {}
+  if (!refs) return out
+  const db = await getDb()
+  for (const [sectionId, list] of Object.entries(refs as Record<string, Array<Record<string, unknown>>>)) {
+    if (!Array.isArray(list)) continue
+    out[sectionId] = []
+    for (const ref of list) {
+      // Legacy dual-write rows stored full SectionImage (with dataUrl) directly
+      if (typeof ref.dataUrl === 'string' && ref.dataUrl) {
+        out[sectionId].push(ref as unknown as SectionImage)
+        continue
+      }
+      const imageId = ref.imageId as string | undefined
+      const stored = imageId ? await db.get('images', imageId).catch(() => undefined) : undefined
+      const dataUrl = stored?.blob ? await blobToDataUrl(stored.blob) : ''
+      out[sectionId].push({
+        id: ref.id as string,
+        dataUrl,
+        side: (ref.side as SectionImage['side']) ?? 'center',
+        size: (ref.size as SectionImage['size']) ?? 'M',
+        caption: ref.caption as string | undefined,
+        positioning: ref.positioning as SectionImage['positioning'],
+        x: ref.x as number | undefined,
+        y: ref.y as number | undefined,
+        blockIndex: ref.blockIndex as number | undefined,
+      })
+    }
+  }
+  return out
+}
+
+function reportDataToRapport(data: ReportData, meta: ReportMeta, images: Record<string, SectionImage[]>): Rapport {
+  return {
+    id: data.id,
+    createdAt: data.createdAt ?? meta.createdAt,
+    updatedAt: meta.updatedAt,
+    couverture: data.couverture,
+    entreprise: data.entreprise,
+    sections: data.sections,
+    sectionsGenerated: data.sectionsGenerated,
+    images: Object.keys(images).length ? images : undefined,
+    textBlocks: data.textBlocks,
+    blockOrder: data.blockOrder,
+    style: data.style,
+    pageBreaks: data.pageBreaks,
+    customSteps: data.customSteps,
+    titleOverrides: data.titleOverrides,
+    organigramme: data.organigramme,
+    organigrammes: data.organigrammes,
+    ficheTechniques: data.ficheTechniques,
+    materiels: data.materiels,
+  }
+}
+
+/** Load one report as in-memory Rapport (with dataUrl images). */
+export async function getRapport(id: string): Promise<Rapport | undefined> {
+  const db = await getDb()
+  const data = await db.get('reportData', id)
+  if (!data) return undefined
+  const meta = await db.get('reportMeta', id)
+  const images = await hydrateRapportImages(id, data.images as Record<string, unknown> | undefined)
+  return reportDataToRapport(
+    data,
+    meta ?? buildReportMeta(reportDataToRapport(data, {} as ReportMeta, {})),
+    images,
+  )
+}
+
+/** Load all reports, sorted by updatedAt desc. */
+export async function loadRapports(): Promise<Rapport[]> {
+  const metas = await loadAllMeta()
+  const out: Rapport[] = []
+  for (const meta of metas) {
+    const r = await getRapport(meta.id)
+    if (r) out.push(r)
+  }
+  return out.sort((a, b) => b.updatedAt - a.updatedAt)
+}
+
+/**
+ * Persist an in-memory Rapport to V3 stores.
+ * Section images are converted dataUrl -> Blob and stored separately.
+ * Old stored blobs for this report are replaced (not leaked).
+ */
+export async function persistRapport(rapport: Rapport): Promise<void> {
+  const db = await getDb()
+  const existing = await db.get('reportData', rapport.id).catch(() => undefined)
+  const prevRefs = existing?.images as Record<string, Array<{ imageId?: string }>> | undefined
+  const prevImageIds = prevRefs
+    ? Object.values(prevRefs).flat().map((r) => r.imageId).filter((x): x is string => Boolean(x))
+    : []
+  const { refs, stored } = await splitRapportImages(rapport.id, rapport.images)
+  const data = buildReportData({ ...rapport, updatedAt: Date.now() }, refs)
+  const meta = buildReportMeta({ ...data, updatedAt: Date.now() } as unknown as Rapport)
+  const tx = db.transaction(['reportData', 'reportMeta', 'images'], 'readwrite')
+  tx.objectStore('reportData').put(data)
+  tx.objectStore('reportMeta').put({ ...meta, updatedAt: Date.now() })
+  for (const s of stored) tx.objectStore('images').put(s)
+  for (const oldId of prevImageIds) tx.objectStore('images').delete(oldId)
+  await tx.done
+}
+
+export async function removeRapport(id: string): Promise<void> {
+  await deleteReport(id)
+}
+
+/** Seed the demo report once when the store is empty. */
+export async function ensureDemoReport(): Promise<void> {
+  const metas = await loadAllMeta()
+  if (metas.length > 0) return
+  await persistRapport(demoRapport())
 }

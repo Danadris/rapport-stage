@@ -4,7 +4,7 @@ import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { cx } from '../lib/cx'
-import { createBackup, importBackup, loadSettings, saveSettings } from '../lib/storage'
+import { loadSettings, saveSettings } from '../lib/storageV3'
 import { createBackupV3, importBackupV3 } from '../lib/backupV3'
 import { applyTheme, loadTheme, saveTheme, THEME_PRESETS } from '../lib/themes'
 import { loadDarkPref, saveDarkPref, type DarkPref } from '../lib/darkMode'
@@ -135,15 +135,11 @@ export function ParametresPage() {
     setExportingBackup(true)
     setBackupStatus(null)
     try {
-      let backupPayload: any = await createBackupV3()
-      // If V3 has no reports yet, fall back to V1
-      if (backupPayload.reports.length === 0) {
-        backupPayload = await createBackup()
-      }
+      const backupPayload = await createBackupV3()
 
       const json = JSON.stringify(backupPayload, null, 2)
       const fileName = `rapport-stage-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`
-      const reportCount = backupPayload.reports?.length ?? backupPayload.rapports?.length ?? 0
+      const reportCount = backupPayload.reports?.length ?? 0
 
       if (Capacitor.isNativePlatform()) {
         // On a phone the plain browser download doesn't exist, so write the
@@ -188,13 +184,7 @@ export function ParametresPage() {
     setBackupStatus(null)
     try {
       const text = await file.text()
-      let result: { imported: number; total: number }
-      try {
-        result = await importBackupV3(text)
-      } catch {
-        // Fallback to legacy V1 import
-        result = await importBackup(text)
-      }
+      const result = await importBackupV3(text)
 
       setBackupStatus({
         tone: 'success',

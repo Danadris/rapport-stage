@@ -1,5 +1,4 @@
-import { loadAllMeta, loadReportData, loadImagesByReportId, saveMeta, saveReportData, saveImage } from './storageV3'
-import { persistRapport } from './storage'
+import { loadAllMeta, loadReportData, loadImagesByReportId, saveMeta, saveReportData, saveImage, persistRapport } from './storageV3'
 import type { ReportMeta, ReportData, StoredImage, Rapport } from '../types'
 
 interface BackupPayloadV3 {
@@ -119,23 +118,6 @@ export async function importBackupV3(raw: string): Promise<{ imported: number; t
       if (item.meta && item.data) {
         await saveReportData(item.data)
         await saveMeta({ ...item.meta, updatedAt: Date.now() })
-
-        // Also write to V1 (localStorage) so WorkspacePage can load it immediately
-        const v1Rapport: Rapport = {
-          id: item.data.id,
-          createdAt: item.meta.createdAt,
-          updatedAt: Date.now(),
-          couverture: item.data.couverture,
-          entreprise: item.data.entreprise,
-          sections: item.data.sections,
-          sectionsGenerated: item.data.sectionsGenerated,
-          images: item.data.images as Record<string, any[]> | undefined,
-          style: item.data.style,
-          pageBreaks: item.data.pageBreaks,
-          customSteps: item.data.customSteps,
-        }
-        await persistRapport(v1Rapport)
-
         count++
       }
     }
@@ -153,58 +135,10 @@ export async function importBackupV3(raw: string): Promise<{ imported: number; t
 
   if (v1Reports && v1Reports.length > 0) {
     let count = 0
-    for (const r of v1Reports) {
-      if (!r.id) continue
-
-      // Convert V1 images if present
-      const newImages: Record<string, any[]> = {}
-      if (r.images) {
-        for (const [sectionId, oldImages] of Object.entries(r.images as Record<string, any[]>)) {
-          newImages[sectionId] = []
-          for (const oldImg of oldImages) {
-            const storedImageId = `img_${crypto.randomUUID()}`
-            const blob = await dataUrlToBlob(oldImg.dataUrl)
-            await saveImage({
-              id: storedImageId,
-              reportId: r.id,
-              blob,
-              mimeType: 'image/png',
-              width: 1,
-              height: 1,
-              size: blob.size,
-              createdAt: Date.now(),
-            })
-            newImages[sectionId].push({
-              ...oldImg,
-              imageId: storedImageId,
-            })
-          }
-        }
-      }
-
-      await saveReportData({
-        id: r.id,
-        couverture: r.couverture,
-        entreprise: r.entreprise,
-        sections: r.sections,
-        sectionsGenerated: r.sectionsGenerated,
-        style: r.style,
-        pageBreaks: r.pageBreaks,
-        customSteps: r.customSteps,
-        images: newImages,
-      })
-
-      await saveMeta({
-        id: r.id,
-        createdAt: r.createdAt || Date.now(),
-        updatedAt: Date.now(),
-        studentName: r.couverture?.nomStagiaire || '',
-        companyName: r.entreprise?.nom || '',
-        periodeNumero: r.couverture?.periodeNumero || '',
-        sourceRecherche: r.entreprise?.sourceRecherche ?? null,
-        progressDone: 0,
-        progressTotal: 10,
-      })
+    for (const r of v1Reports as Rapport[]) {
+      if (!r?.id) continue
+      // persistRapport converts dataUrl images to Blobs and writes V3 stores
+      await persistRapport({ ...r, updatedAt: Date.now() })
       count++
     }
 
