@@ -256,7 +256,7 @@ export function PartContent({
   }
 
   return (
-    <div data-part-content={part.key} className="group/section">
+    <div data-part-content={part.key}>
       {/* Level 1: unnumbered — omit entirely if empty */}
       {part.titre && part.titre.trim() !== '' && (
         <PartTitle titre={part.titre} onTitleEdit={actions.onTitleEdit} partKey={part.key} />
@@ -519,18 +519,6 @@ export function PartContent({
       </div>
       {!hasContent && part.sousSections && part.sousSections.length === 0 && (
         <div className="mt-8 text-center text-sm italic text-neutral-400">Section vide</div>
-      )}
-      {/* Aperçu stays clean like the PDF: this lives print:hidden and only
-          shows at full opacity on hover/focus, like every other control. */}
-      {actions.onAddParagraph && (
-        <button
-          type="button"
-          onClick={() => actions.onAddParagraph?.(part.key)}
-          title="Ajouter un paragraphe à cette section"
-          className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-line-strong bg-cream/40 px-3 py-2 text-[11px] text-muted opacity-40 transition-opacity hover:opacity-100 group-hover/section:opacity-100 group-focus-within/section:opacity-100 focus:opacity-100 hover:border-gold-deep/40 hover:text-ink print:hidden"
-        >
-          <span className="text-[14px] leading-none">＋</span> Ajouter un paragraphe
-        </button>
       )}
       <MoveParagraphSheet
         open={!!moveSheet}

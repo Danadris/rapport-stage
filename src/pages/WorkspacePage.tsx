@@ -208,16 +208,11 @@ export function WorkspacePage() {
 
   // The add button lives in the Style panel, so it adds to the section the
   // student is on rather than to whichever section happens to be on screen.
+  // (No inline add in the aperçu — the document stays clean like the PDF.)
   const handleAddParagraph = () => {
     if (!rapport) return
     const current = rapport.textBlocks?.[step.id] ?? []
     setTextBlocks(step.id, [...current, { id: crypto.randomUUID(), text: '' }])
-  }
-
-  const handleAddParagraphFor = (sectionKey: string) => {
-    if (!rapport) return
-    const current = rapport.textBlocks?.[sectionKey] ?? []
-    setTextBlocks(sectionKey, [...current, { id: crypto.randomUUID(), text: '' }])
   }
 
   // Everything the document can be asked to do, as one object: these callbacks
@@ -231,7 +226,6 @@ export function WorkspacePage() {
     onTextBlocksChange: handleTextBlocksChange,
     onBlockOrderChange: handleBlockOrderChange,
     onBlockMove: handleBlockMove,
-    onAddParagraph: handleAddParagraphFor,
     onUndo: undo,
     onImagesChange: setImages,
     onFicheChange: patchFicheTechnique,
