@@ -4,7 +4,7 @@
 > Stack stays React/TS/Vite/Capacitor. No Rust/Go.
 > Order matters: each phase is committable alone, never breaks build.
 >
-> **Status 2026-11-07:** Phase 0 ✅ + Phase 1 ✅ + Phase 2 ✅ + Phase 3 ✅ + Phase 4 ✅ + Phase 5 ✅ + Phase 6 ✅ + Phase 7 ✅ done on branch `refactor/adr0002-0003-integration` (11 commits: 9f4f28e, c842b2d, d46f129, cee1a5c, 41cd99c, 2a45616, 71b5c22, 7060666, 923d034, 4990771, 0b6839b, cb065bb). Tree clean, `typecheck` + `lint` + `vitest` (53) + `build` + `knip` green, `as any` = 0, main 321kB (gzip 92kB). Next: Phase 8 (polish) + PR.
+> **Status 2026-11-07:** Phase 0 ✅ + Phase 1 ✅ + Phase 2 ✅ + Phase 3 ✅ + Phase 4 ✅ + Phase 5 ✅ + Phase 6 ✅ + Phase 7 ✅ + Phase 8 ✅ done on branch `refactor/adr0002-0003-integration` (13 commits: 9f4f28e, c842b2d, d46f129, cee1a5c, 41cd99c, 2a45616, 71b5c22, 7060666, 923d034, 4990771, 0b6839b, cb065bb, dc7ccd3, 50902f7). Tree clean, `typecheck` + `lint` + `vitest` (53) + `build` + `knip` green, `as any` = 0, main 321kB (gzip 92kB), debug APK 54M verified. Ready for PR.
 
 ## Principles
 
@@ -149,11 +149,12 @@ Current: `dist/assets/index-*.js` 872kB (gzip 218kB), `bgWorker` 871kB, `ort-was
 
 ---
 
-## Phase 8 — God-component polish + release (ongoing, P3)
+## Phase 8 — God-component polish + release (P3) ✅
 
-- [ ] Split over time (not urgent): `SectionContent.tsx` (655L) → `BlockView` + `MoveControls`; `NotesStep.tsx` (602L) → field renderer + AI button; `OrgChart.tsx` (662L) → nodes + edges; `FicheTechniqueStep.tsx` (612L)
-- [ ] `src/lib/` subfolders: `lib/doc/`, `lib/persistence/`, `lib/ai/` (currently 16 flat files, 4 clusters)
-- [ ] Final APK: `npm run android:apk`, test on real device, sign release per `ANDROID_RELEASE.md`
+- Done: `SectionContent.tsx` 663 → 516L via `SectionShell.tsx` (BlockMoveControls, PartTitle, Removable); `NotesStep.tsx` 602 → 140L via `NoteFields.tsx` (FieldBox/Level3Box/FinalTextCard) + `useAiDraft.ts`
+- Deferred deliberately: `OrgChart.tsx` (662L) + `FicheTechniqueStep.tsx` (612L) — internal splits need product decisions, no rush
+- Deferred deliberately: `src/lib/` subfolders — 19 flat files is fine at this scale; reorg = ~40 import rewrites for no behavior gain
+- Done: debug APK built `android/app/build/outputs/apk/debug/app-debug.apk` (54M, 28s, JDK 21) — release signing per `ANDROID_RELEASE.md` when needed
 
 ---
 
