@@ -115,6 +115,27 @@ export function WorkspacePage() {
     handleRenameSubSection, handleAddLevel3Item, handleDeleteLevel3Item, setImages, setTextBlocks, setBlockOrder, moveBlockToSection, handlePreviewEdit, handlePreviewTitleEdit, clearSection,
   } = useWorkspaceSteps({ rapport: rapport!, step, setStepId, setRapportWithHistory })
 
+  const editorHandlers = {
+    patchCouverture,
+    patchEntreprise,
+    patchOrganigramme,
+    patchFicheTechniques,
+    patchMateriels,
+    setFicheImages,
+    setNote,
+    setGeneratedNote,
+    setImages,
+    handleToggleStepKind,
+    handleFieldOrganigrammeChange,
+    handleToggleFieldMode,
+    handleAddSubSection,
+    handleDeleteSubSection,
+    handleRenameSubSection,
+    handleAddLevel3Item,
+    handleDeleteLevel3Item,
+    clearSection,
+  }
+
   if (!id) return <Navigate to="/" replace />
   if (loadingRapport) {
     return (
@@ -279,24 +300,7 @@ export function WorkspacePage() {
                   next={next}
                   setStepId={setStepId}
                   setRapportWithHistory={setRapportWithHistory}
-                  patchCouverture={patchCouverture}
-                  patchEntreprise={patchEntreprise}
-                  patchOrganigramme={patchOrganigramme}
-                  patchFicheTechniques={patchFicheTechniques}
-                  patchMateriels={patchMateriels}
-                  setFicheImages={setFicheImages}
-                  setNote={setNote}
-                  setGeneratedNote={setGeneratedNote}
-                  setImages={setImages}
-                  handleToggleStepKind={handleToggleStepKind}
-                  handleFieldOrganigrammeChange={handleFieldOrganigrammeChange}
-                  handleToggleFieldMode={handleToggleFieldMode}
-                  handleAddSubSection={handleAddSubSection}
-                  handleDeleteSubSection={handleDeleteSubSection}
-                  handleRenameSubSection={handleRenameSubSection}
-                  handleAddLevel3Item={handleAddLevel3Item}
-                  handleDeleteLevel3Item={handleDeleteLevel3Item}
-                  clearSection={clearSection}
+                  handlers={editorHandlers}
                 />
               </div>
               {/* Sticky and as tall as the preview, so the grip never scrolls out
@@ -365,24 +369,7 @@ export function WorkspacePage() {
               next={next}
               setStepId={setStepId}
               setRapportWithHistory={setRapportWithHistory}
-              patchCouverture={patchCouverture}
-              patchEntreprise={patchEntreprise}
-              patchOrganigramme={patchOrganigramme}
-              patchFicheTechniques={patchFicheTechniques}
-              patchMateriels={patchMateriels}
-              setFicheImages={setFicheImages}
-              setNote={setNote}
-              setGeneratedNote={setGeneratedNote}
-              setImages={setImages}
-              handleToggleStepKind={handleToggleStepKind}
-              handleFieldOrganigrammeChange={handleFieldOrganigrammeChange}
-              handleToggleFieldMode={handleToggleFieldMode}
-              handleAddSubSection={handleAddSubSection}
-              handleDeleteSubSection={handleDeleteSubSection}
-              handleRenameSubSection={handleRenameSubSection}
-              handleAddLevel3Item={handleAddLevel3Item}
-              handleDeleteLevel3Item={handleDeleteLevel3Item}
-              clearSection={clearSection}
+              handlers={editorHandlers}
             />
           )
         ) : (

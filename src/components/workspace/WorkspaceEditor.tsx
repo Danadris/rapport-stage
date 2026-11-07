@@ -21,39 +21,8 @@ const ACTIVITES_FIELDS: EntFieldDef[] = [
   { key: 'technologies', label: 'Technologies employées', placeholder: 'HACCP, gestion des commandes…' },
 ]
 
-export function WorkspaceEditor({
-  rapport,
-  step,
-  prev,
-  next,
-  setStepId,
-  setRapportWithHistory,
-  patchCouverture,
-  patchEntreprise,
-  patchOrganigramme,
-  patchFicheTechniques,
-  patchMateriels,
-  setFicheImages,
-  setNote,
-  setGeneratedNote,
-  setImages,
-  handleToggleStepKind,
-  handleFieldOrganigrammeChange,
-  handleToggleFieldMode,
-  handleAddSubSection,
-  handleDeleteSubSection,
-  handleRenameSubSection,
-  handleAddLevel3Item,
-  handleDeleteLevel3Item,
-  clearSection,
-  dense,
-}: {
-  rapport: Rapport
-  step: WizardStep
-  prev?: WizardStep
-  next?: WizardStep
-  setStepId: (id: string) => void
-  setRapportWithHistory: (updater: Rapport | ((prev: Rapport | null) => Rapport | null), options?: { isTextKeystroke?: boolean }) => void
+/** All mutation callbacks for the editor, grouped — one object instead of 18 props. */
+export interface WorkspaceEditorHandlers {
   patchCouverture: (patch: Partial<Rapport['couverture']>) => void
   patchEntreprise: (patch: Partial<Entreprise>) => void
   patchOrganigramme: (organigramme: Organigramme, key?: string) => void
@@ -72,9 +41,49 @@ export function WorkspaceEditor({
   handleAddLevel3Item: (stepId: string, parentFieldId: string) => void
   handleDeleteLevel3Item: (stepId: string, fieldId: string) => void
   clearSection: () => void
+}
+
+export function WorkspaceEditor({
+  rapport,
+  step,
+  prev,
+  next,
+  setStepId,
+  setRapportWithHistory,
+  handlers,
+  dense,
+}: {
+  rapport: Rapport
+  step: WizardStep
+  prev?: WizardStep
+  next?: WizardStep
+  setStepId: (id: string) => void
+  setRapportWithHistory: (updater: Rapport | ((prev: Rapport | null) => Rapport | null), options?: { isTextKeystroke?: boolean }) => void
+  handlers: WorkspaceEditorHandlers
   /** True in the split view: the form shares the screen, so its padding tightens. */
   dense?: boolean
 }) {
+  const {
+    patchCouverture,
+    patchEntreprise,
+    patchOrganigramme,
+    patchFicheTechniques,
+    patchMateriels,
+    setFicheImages,
+    setNote,
+    setGeneratedNote,
+    setImages,
+    handleToggleStepKind,
+    handleFieldOrganigrammeChange,
+    handleToggleFieldMode,
+    handleAddSubSection,
+    handleDeleteSubSection,
+    handleRenameSubSection,
+    handleAddLevel3Item,
+    handleDeleteLevel3Item,
+    clearSection,
+  } = handlers
+
   return (
     <>
             <div className={cx('mx-auto w-full max-w-5xl flex-1', dense ? 'px-3 py-6' : 'px-4 py-6 md:px-10 md:py-8')}>

@@ -1,6 +1,6 @@
 import { openDB, type IDBPDatabase } from 'idb'
 import type { ReportMeta, ReportData, StoredImage, Rapport, ImageReference, SectionImage, Settings } from '../types'
-import { progressOf } from '../data/sections'
+import { progressOf } from './progress'
 import { demoRapport } from './demo'
 
 // ---------------------------------------------------------------------------

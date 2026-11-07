@@ -89,8 +89,9 @@ function genererFicheOffline(nom: string): FicheGenerationResult {
 export async function genererFicheTechnique(
   productName: string,
   entrepriseContext?: string,
+  getSettings?: SettingsGetter,
 ): Promise<FicheGenerationResult> {
-  const client = await getClient()
+  const client = await getClient(getSettings)
 
   if (!client || !productName.trim()) {
     return genererFicheOffline(productName)
@@ -168,8 +169,10 @@ export interface RechercheResultat {
   sources: string[]
 }
 
-async function getClient() {
-  const settings = await loadSettings()
+export type SettingsGetter = () => Promise<{ geminiKey: string; geminiModel?: string }>
+
+async function getClient(getSettings: SettingsGetter = loadSettings) {
+  const settings = await getSettings()
   const key = settings.geminiKey.trim()
   if (!key) return null
   return {
@@ -223,8 +226,8 @@ function generateOfflineParagraph(section: string, field: string, notes: string)
   return `${clean} Cette expérience a contribué à ma progression professionnelle et m'a donné une vision plus précise du travail en boulangerie-pâtisserie.`
 }
 
-export async function rechercheEntreprise(nom: string, ville: string): Promise<RechercheResultat> {
-  const client = await getClient()
+export async function rechercheEntreprise(nom: string, ville: string, getSettings?: SettingsGetter): Promise<RechercheResultat> {
+  const client = await getClient(getSettings)
 
   if (!client) {
     const res = await rechercheEntrepriseLocale(nom, ville)
@@ -306,8 +309,8 @@ function trimToLength(text: string, longueur: LongueurAI): string {
   return sentences.slice(0, Math.max(2, Math.ceil(sentences.length / 2))).join(' ')
 }
 
-export async function genererParagraphe(section: string, field: string, notes: string, longueur: LongueurAI = 'moyen'): Promise<string> {
-  const client = await getClient()
+export async function genererParagraphe(section: string, field: string, notes: string, longueur: LongueurAI = 'moyen', getSettings?: SettingsGetter): Promise<string> {
+  const client = await getClient(getSettings)
 
   if (!client) {
     return trimToLength(generateOfflineParagraph(section, field, notes), longueur)
@@ -338,8 +341,9 @@ Notes de l'apprenti :
 export async function genererOrganigramme(
   companyContext: string,
   freeText: string,
+  getSettings?: SettingsGetter,
 ): Promise<OrgNode[]> {
-  const client = await getClient()
+  const client = await getClient(getSettings)
 
   const promptText = [
     companyContext.trim() ? `Informations sur l'entreprise :\n${companyContext.trim()}` : '',
