@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { getRapport, persistRapport } from '../lib/storageV3'
 import { revokeReportUrls } from '../lib/imageRuntime'
-import { createBackupV3 } from '../lib/backupV3'
+import { exportBackup } from '../lib/exportBackup'
 import { exportToPdf } from '../lib/exportPdf'
-import { Capacitor } from '@capacitor/core'
-import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
-import { Share } from '@capacitor/share'
 import type { Rapport, SectionImage } from '../types'
 
 export function useWorkspacePersistence(id: string | undefined) {
@@ -156,24 +153,7 @@ export function useWorkspacePersistence(id: string | undefined) {
     setShowExportMenu(false)
     setExportError(null)
     try {
-      const backupPayload = await createBackupV3()
-      const json = JSON.stringify(backupPayload, null, 2)
-      const fileName = `rapport-stage-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`
-      if (Capacitor.isNativePlatform()) {
-        await Filesystem.writeFile({ path: fileName, data: json, directory: Directory.Cache, encoding: Encoding.UTF8 })
-        const { uri } = await Filesystem.getUri({ path: fileName, directory: Directory.Cache })
-        await Share.share({ title: 'Rapport de stage — sauvegarde', files: [uri], dialogTitle: 'Exporter la sauvegarde' })
-      } else {
-        const blob = new Blob([json], { type: 'application/json' })
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = fileName
-        document.body.appendChild(link)
-        link.click()
-        link.remove()
-        URL.revokeObjectURL(url)
-      }
+      await exportBackup()
     } catch {
       setExportError("L'export de la sauvegarde a échoué.")
     }

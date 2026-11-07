@@ -1,11 +1,10 @@
 import { AlertCircle, CheckCircle2, Download, KeyRound, Moon, Monitor, Palette, Sun, Upload } from 'lucide-react'
 import { Capacitor } from '@capacitor/core'
-import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
-import { Share } from '@capacitor/share'
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { cx } from '../lib/cx'
 import { loadSettings, saveSettings } from '../lib/storageV3'
-import { createBackupV3, importBackupV3 } from '../lib/backupV3'
+import { importBackupV3 } from '../lib/backupV3'
+import { exportBackup } from '../lib/exportBackup'
 import { applyTheme, loadTheme, saveTheme, THEME_PRESETS } from '../lib/themes'
 import { loadDarkPref, saveDarkPref, type DarkPref } from '../lib/darkMode'
 import { Badge, Button, Eyebrow, Field, Input } from '../components/ui'
@@ -135,39 +134,13 @@ export function ParametresPage() {
     setExportingBackup(true)
     setBackupStatus(null)
     try {
-      const backupPayload = await createBackupV3()
-
-      const json = JSON.stringify(backupPayload, null, 2)
-      const fileName = `rapport-stage-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`
-      const reportCount = backupPayload.reports?.length ?? 0
-
-      if (Capacitor.isNativePlatform()) {
-        // On a phone the plain browser download doesn't exist, so write the
-        // backup to the app cache and open the native share sheet: the user
-        // picks "Save to Files" (or Drive, WhatsApp, …) to store it anywhere.
-        await Filesystem.writeFile({ path: fileName, data: json, directory: Directory.Cache, encoding: Encoding.UTF8 })
-        const { uri } = await Filesystem.getUri({ path: fileName, directory: Directory.Cache })
-        await Share.share({
-          title: 'Rapport de stage — sauvegarde',
-          files: [uri],
-          dialogTitle: `Exporter ${reportCount} rapport(s)`,
-        })
-        setBackupStatus({
-          tone: 'success',
-          text: `${reportCount} rapport(s) exporté(s). Dans le menu de partage, choisissez « Enregistrer dans Fichiers » pour sélectionner l'emplacement.`,
-        })
-      } else {
-        const blob = new Blob([json], { type: 'application/json' })
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = fileName
-        document.body.appendChild(link)
-        link.click()
-        link.remove()
-        URL.revokeObjectURL(url)
-        setBackupStatus({ tone: 'success', text: `${reportCount} rapport(s) exporté(s) avec succès.` })
-      }
+      const { reportCount } = await exportBackup()
+      setBackupStatus({
+        tone: 'success',
+        text: Capacitor.isNativePlatform()
+          ? `${reportCount} rapport(s) exporté(s). Dans le menu de partage, choisissez « Enregistrer dans Fichiers » pour sélectionner l'emplacement.`
+          : `${reportCount} rapport(s) exporté(s) avec succès.`,
+      })
     } catch {
       setBackupStatus({ tone: 'error', text: "L'export de la sauvegarde a échoué." })
     } finally {
