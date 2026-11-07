@@ -1,165 +1,18 @@
 
 import { cx } from '../../lib/cx'
-import { ChevronDown, ChevronUp, GripVertical } from 'lucide-react'
 import type { Organigramme, SectionImage, TextBlock } from '../../types'
 import { EditableText, EditableTitle } from './EditableText'
 import { Figure } from './Figure'
 import type { MoveTarget } from './moveTargets'
 import { TextBlockView } from './TextBlockView'
 import { OrgChart } from './OrgChart'
-import { SUBTITLE_COLOR, TITLE_COLOR } from './tokens'
+import { DOC_BODY_STYLE, SUBTITLE_COLOR } from './tokens'
+import { BlockMoveControls, PartTitle, Removable, type RenderBlock, type SectionUnit } from './SectionShell'
 import { blockKeyFor } from '../../lib/blockModel'
 import type { ParagraphDrag } from './paragraphDrag'
 import type { BlockDrop } from './paragraphDrag'
 import type { PreviewActions } from './actions'
-import type { ReportPart, ReportSubSection, ReportSubSubSection } from '../../lib/reportDocument'
-
-/** What PartContent renders per block: a sub-section, or a merged paragraph. */
-type RenderBlock = Partial<ReportSubSection> & { paragraphes?: string[] }
-
-/** CSS-var text alignment, typed once so the three body style objects share it. */
-const DOC_TEXT_ALIGN = 'var(--doc-text-align)' as React.CSSProperties['textAlign']
-const DOC_BODY_STYLE: React.CSSProperties = {
-  fontSize: 'var(--doc-body-size)',
-  lineHeight: 'var(--doc-line-spacing)',
-  textAlign: DOC_TEXT_ALIGN,
-}
-
-/** One renderable piece of a section: a plan block or a free paragraph. */
-type SectionUnit =
-  | { kind: 'block'; block: RenderBlock; index: number; key: string }
-  | { kind: 'text'; block: TextBlock; index: number; key: string }
-
-function Removable({ onRemove, label, children }: { onRemove?: () => void; label: string; children: React.ReactNode }) {
-  if (!onRemove) return <>{children}</>
-  return (
-    <div className="group/text relative">
-      {children}
-      <button
-        type="button"
-        title={label}
-        aria-label={label}
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove() }}
-        className="absolute -right-6 top-0 flex h-5 w-5 items-center justify-center rounded-full border border-neutral-300 bg-white/90 text-[10px] text-neutral-400 opacity-40 transition-opacity hover:text-red-500 print:hidden sm:opacity-0 sm:group-hover/text:opacity-100 sm:group-focus-within/text:opacity-100"
-      >
-        ×
-      </button>
-    </div>
-  )
-}
-
-/**
- * A part's level-1 title: centred, and editable when the report allows it.
- * The organigramme branch and the section branch render the same title, so
- * it lives here once.
- */
-function PartTitle({ titre, onTitleEdit, partKey }: { titre: string; onTitleEdit?: (field: string, value: string) => void; partKey: string }) {
-  const style = { color: TITLE_COLOR, fontSize: 'var(--doc-title-size)' }
-  if (!onTitleEdit) {
-    return <h2 className="text-center font-bold" style={style}>{titre}</h2>
-  }
-  return (
-    <EditableTitle
-      tag="h2"
-      text={titre}
-      onSave={(v) => onTitleEdit?.(`stepTitle:${partKey}`, v)}
-      onRemove={() => onTitleEdit?.(`stepTitle:${partKey}`, '')}
-      className="text-center font-bold"
-      style={style}
-    />
-  )
-}
-
-function BlockMoveControls({
-  label,
-  canUp,
-  canDown,
-  dragging,
-  onDragStart,
-  onDragMove,
-  onDragEnd,
-  onUp,
-  onDown,
-  sectionTargets,
-  onMoveToSection,
-}: {
-  label: string
-  canUp: boolean
-  canDown: boolean
-  dragging: boolean
-  onDragStart: (event: React.PointerEvent<HTMLElement>) => void
-  onDragMove: (event: React.PointerEvent<HTMLElement>) => void
-  onDragEnd: () => void
-  onUp: () => void
-  onDown: () => void
-  /** Other sections, for the picker: a drag needs a grip and a scroll, this does not. */
-  sectionTargets: Array<{ key: string; label: string }>
-  onMoveToSection?: (sectionKey: string) => void
-}) {
-  return (
-    // Always faintly visible, full on hover or focus. Hover alone never fires on
-    // a touch screen, and a control you cannot see is a control you cannot drag.
-    // Marked so the pagination never reads its text as lines of the block: a cut
-    // there would blank most of the page.
-    <div data-pagination-ignore className="absolute -left-10 top-0 flex w-10 flex-col items-center gap-1 opacity-40 transition-opacity hover:opacity-100 group-hover/block:opacity-100 group-focus-within/block:opacity-100 print:hidden">
-      <button
-        type="button"
-        onPointerDown={onDragStart}
-        onPointerMove={onDragMove}
-        onPointerUp={onDragEnd}
-        onPointerCancel={onDragEnd}
-        title={`Glisser « ${label} » pour le déplacer`}
-        aria-label={`Déplacer « ${label} »`}
-        className={`flex h-7 w-7 touch-none select-none items-center justify-center rounded border border-neutral-300 bg-white/90 shadow-sm transition-colors ${
-          dragging ? 'cursor-grabbing border-blue-300 bg-blue-50 text-blue-600' : 'cursor-grab text-neutral-500 hover:text-neutral-900'
-        }`}
-      >
-        <GripVertical size={13} />
-      </button>
-      {onMoveToSection && sectionTargets.length > 0 && (
-        <select
-          value=""
-          onChange={(e) => {
-            onMoveToSection(e.target.value)
-            e.target.value = ''
-          }}
-          title={`Déplacer « ${label} » vers une autre section`}
-          aria-label={`Déplacer « ${label} » vers une autre section`}
-          className="w-[86px] cursor-pointer rounded border border-neutral-300 bg-white/90 text-[10px] text-neutral-600 shadow-sm"
-        >
-          <option value="">Déplacer…</option>
-          {sectionTargets.map((t) => (
-            <option key={t.key} value={t.key}>
-              {t.label}
-            </option>
-          ))}
-        </select>
-      )}
-      <div className="flex gap-px">
-        <button
-          type="button"
-          onClick={onUp}
-          disabled={!canUp}
-          title={`Monter « ${label} »`}
-          aria-label={`Monter « ${label} »`}
-          className="flex h-5 w-4 items-center justify-center rounded border border-neutral-300 bg-white/90 text-neutral-500 shadow-sm transition-colors hover:text-neutral-900 disabled:opacity-30"
-        >
-          <ChevronUp size={11} />
-        </button>
-        <button
-          type="button"
-          onClick={onDown}
-          disabled={!canDown}
-          title={`Descendre « ${label} »`}
-          aria-label={`Descendre « ${label} »`}
-          className="flex h-5 w-4 items-center justify-center rounded border border-neutral-300 bg-white/90 text-neutral-500 shadow-sm transition-colors hover:text-neutral-900 disabled:opacity-30"
-        >
-          <ChevronDown size={11} />
-        </button>
-      </div>
-    </div>
-  )
-}
+import type { ReportPart, ReportSubSubSection } from '../../lib/reportDocument'
 
 export function PartContent({
   part,

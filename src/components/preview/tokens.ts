@@ -8,3 +8,12 @@ export const INSTITUT_AR = 'مـعـهـد الـتـكـويـن فـي مهن 
 export const TITLE_COLOR = 'var(--doc-title-color)'
 /** Level-2 headings (sub-sections) and the a/, b/, c/ prefixes. */
 export const SUBTITLE_COLOR = 'var(--doc-subtitle-color)'
+
+/** CSS-var text alignment for body text, typed once. */
+const DOC_TEXT_ALIGN = 'var(--doc-text-align)' as React.CSSProperties['textAlign']
+
+export const DOC_BODY_STYLE: React.CSSProperties = {
+  fontSize: 'var(--doc-body-size)',
+  lineHeight: 'var(--doc-line-spacing)',
+  textAlign: DOC_TEXT_ALIGN,
+}
