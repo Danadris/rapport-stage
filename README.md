@@ -11,6 +11,8 @@ npm run dev
 
 Puis ouvrir http://localhost:####.
 
+Scripts utiles : `npm run test` (vitest), `npm run lint` (oxlint), `npm run knip` (code mort).
+
 ## Android APK
 
 L'application est aussi préparée pour Android avec Capacitor. Elle reste locale : pas de compte, pas de backend, pas de serveur à vous.
@@ -39,13 +41,16 @@ Avant une release publique, l'`appId` dans `capacitor.config.ts` est déjà déf
 
 ## État du projet
 
-**Phase 1 : frontend complet avec IA optionnelle.**
+**Local-first, preview WYSIWYG PDF.**
 
 - Wizard en 14 étapes (couverture → conclusion, canevas officiel FOR-PSR04) avec sauvegarde locale automatique, sans compte.
 - Recherche d'entreprise via Gemini si une clé API est configurée, avec fallback local (`src/lib/ai-stub.ts`) sans clé.
 - Génération des paragraphes via Gemini si une clé API est configurée, avec rédaction locale simple sans clé.
-- Aperçu A4 fidèle au canevas : couverture bilingue FR/arabe, logos, sommaire, sections numérotées.
-- Export/import de sauvegarde JSON depuis les paramètres.
+- Aperçu A4 fidèle au canevas : couverture bilingue FR/arabe, logos, sommaire, sections numérotées. L'écran est la page imprimée.
+- Édition dans l'aperçu: cliquer-pour-écrire, réorganiser (poignée + ↑/↓), paragraphe libre flottant (la bordure se redimensionne en glissant le coin bas-droite, la taille du texte ne change pas), suppression avec toast + Annuler.
+- Ajout de paragraphe depuis Style → Texte (l'aperçu body reste sans bouton pour rester propre comme le PDF).
+- Tailles de texte globales (Titres / Sous-titres / Texte) dans Style → Texte: curseurs + champ px.
+- Export PDF (aperçu = impression navigateur / WebView, `PrintManager` sur Android) + export/import de sauvegarde JSON depuis les paramètres.
 - Un rapport de démonstration pré-rempli est créé au premier lancement.
 
 ## Confidentialité
@@ -61,7 +66,7 @@ Voir aussi [PRIVACY.md](./PRIVACY.md).
 
 ## Architecture
 
-Voir [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md), [docs/ANDROID_RELEASE.md](./docs/ANDROID_RELEASE.md) et l'ADR [0001-local-first-byok-capacitor](./docs/adr/0001-local-first-byok-capacitor.md).
+Voir [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md), [docs/ANDROID_RELEASE.md](./docs/ANDROID_RELEASE.md) et les ADR [0001](./docs/adr/0001-local-first-byok-capacitor.md), [0002](./docs/adr/0002-document-blocks-and-preview-drag.md), [0003](./docs/adr/0003-sheets-are-filled-with-whole-blocks.md).
 
 ## Licence
 

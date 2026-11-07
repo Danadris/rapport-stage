@@ -108,7 +108,7 @@ Release APK and AAB builds use optional local signing from `android/key.properti
 
 ## Known Tradeoffs
 
-- **Cross-section paragraph moves on the official plan.** The data path is verified by tests, but a live drag of an *existing* paragraph into another section has not been confirmed on a phone. Inside a section works, free paragraphs added from the preview work, and the `Déplacer…` picker is the guaranteed route. The drop chip names its target so a failure is never silent. See [ADR-0002](./adr/0002-document-blocks-and-preview-drag.md).
+- **Cross-section paragraph moves on the official plan.** The data path is verified by tests, but a live drag of an *existing* paragraph into another section has not been confirmed on a phone. Inside a section works (grip drag + ↑/↓), free paragraphs added from the preview work. The drop chip names its target so a failure is never silent. See [ADR-0002](./adr/0002-document-blocks-and-preview-drag.md).
 - WebView/browser storage is local to the app install or browser profile. Users still need JSON backup/export before uninstalling, clearing site data or moving devices.
 - PDF export relies on browser print. This is practical and now has print QA coverage, but a future native PDF renderer would allow stricter pagination.
 - Direct browser-side BYOK is acceptable for this local-first project, but users should understand that keys used in browser JavaScript are not protected like server-side secrets.
@@ -120,6 +120,6 @@ Release APK and AAB builds use optional local signing from `android/key.properti
 
 > History and autosave are already separate hooks (`useRapportHistory`, `useRapportAutosave`); block/pagination tests are committed (`blockModel.test.ts`, `pagination.test.ts`).
 
-## Design history
+## Aperçu rules
 
-- `docs/superpowers/plans/` and `docs/superpowers/specs/` hold dated agent design drafts (logo/bg, organigramme, cover editing). They are historical context, not current documentation — ADRs and this file are the sources of truth.
+- The preview is WYSIWYG for the PDF: no chrome is drawn inside the document flow. Every control (move, resize, delete) is hover-revealed + `print:hidden`, like the PDF — the screen should read as the printed page.
