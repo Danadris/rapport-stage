@@ -115,8 +115,11 @@ Release APK and AAB builds use optional local signing from `android/key.properti
 
 ## Next Architecture Moves
 
-1. Move report mutation, undo and autosave into a dedicated hook or small store.
-2. Add a stronger local paragraph generator for offline use.
-3. Add optional native filesystem backup/export on Android.
-4. Add native PDF generation if browser print is not accurate enough for final institute formatting.
-5. Add a test runner and commit `src/lib/blockModel.ts`'s tests: the block keys, moves and refusals are pure, and the format bug that lost drop positions on the official plan would have been caught by them.
+1. Add a stronger local paragraph generator for offline use.
+2. Add native PDF generation if browser print is not accurate enough for final institute formatting.
+
+> History and autosave are already separate hooks (`useRapportHistory`, `useRapportAutosave`); block/pagination tests are committed (`blockModel.test.ts`, `pagination.test.ts`).
+
+## Design history
+
+- `docs/superpowers/plans/` and `docs/superpowers/specs/` hold dated agent design drafts (logo/bg, organigramme, cover editing). They are historical context, not current documentation — ADRs and this file are the sources of truth.

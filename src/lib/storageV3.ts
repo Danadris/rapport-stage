@@ -118,11 +118,6 @@ export async function saveMeta(meta: ReportMeta): Promise<void> {
   await db.put('reportMeta', meta)
 }
 
-export async function deleteMeta(id: string): Promise<void> {
-  const db = await getDb()
-  await db.delete('reportMeta', id)
-}
-
 // ---------------------------------------------------------------------------
 // Repository: ReportData
 // ---------------------------------------------------------------------------
@@ -135,11 +130,6 @@ export async function loadReportData(id: string): Promise<ReportData | undefined
 export async function saveReportData(data: ReportData): Promise<void> {
   const db = await getDb()
   await db.put('reportData', data)
-}
-
-export async function deleteReportData(id: string): Promise<void> {
-  const db = await getDb()
-  await db.delete('reportData', id)
 }
 
 // ---------------------------------------------------------------------------
@@ -161,7 +151,7 @@ export async function saveImage(image: StoredImage): Promise<void> {
   await db.put('images', image)
 }
 
-export async function deleteImagesByReportId(reportId: string): Promise<void> {
+async function deleteImagesByReportId(reportId: string): Promise<void> {
   const db = await getDb()
   const images = await db.getAllKeysFromIndex('images', 'by-reportId', reportId)
   const tx = db.transaction('images', 'readwrite')
@@ -174,15 +164,6 @@ export async function deleteImagesByReportId(reportId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 // Composite Operations
 // ---------------------------------------------------------------------------
-
-/** Save report data AND update its meta entry in one go. */
-export async function persistReport(data: ReportData, meta: ReportMeta): Promise<void> {
-  const db = await getDb()
-  const tx = db.transaction(['reportData', 'reportMeta'], 'readwrite')
-  tx.objectStore('reportData').put(data)
-  tx.objectStore('reportMeta').put(meta)
-  await tx.done
-}
 
 /** Delete a report, its data, and all associated images. */
 export async function deleteReport(id: string): Promise<void> {
@@ -445,7 +426,7 @@ async function migrateOneReport(rapport: Rapport): Promise<void> {
 /**
  * Helper to build ReportMeta from a Rapport
  */
-export function buildReportMeta(rapport: Rapport): ReportMeta {
+function buildReportMeta(rapport: Rapport): ReportMeta {
   const progress = progressOf(rapport, rapport.customSteps)
   return {
     id: rapport.id,
@@ -463,7 +444,7 @@ export function buildReportMeta(rapport: Rapport): ReportMeta {
 /**
  * Helper to build ReportData from a Rapport
  */
-export function buildReportData(
+function buildReportData(
   rapport: Rapport,
   images: Record<string, ImageReference[]> = {},
 ): ReportData {
@@ -702,17 +683,6 @@ export async function getRapport(id: string): Promise<Rapport | undefined> {
     meta ?? buildReportMeta(reportDataToRapport(data, {} as ReportMeta, {})),
     images,
   )
-}
-
-/** Load all reports, sorted by updatedAt desc. */
-export async function loadRapports(): Promise<Rapport[]> {
-  const metas = await loadAllMeta()
-  const out: Rapport[] = []
-  for (const meta of metas) {
-    const r = await getRapport(meta.id)
-    if (r) out.push(r)
-  }
-  return out.sort((a, b) => b.updatedAt - a.updatedAt)
 }
 
 /**

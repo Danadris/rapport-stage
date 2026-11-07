@@ -1,4 +1,8 @@
-import { removeBackground } from '@imgly/background-removal'
+type WorkerRequest = {
+  id: number
+  source: string
+  publicPath?: string
+}
 
 interface WorkerScope {
   onmessage: ((e: MessageEvent<WorkerRequest>) => Promise<void>) | null
@@ -6,12 +10,6 @@ interface WorkerScope {
 }
 
 const ctx = self as unknown as WorkerScope
-
-type WorkerRequest = {
-  id: number
-  source: string
-  publicPath?: string
-}
 
 function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -48,6 +46,7 @@ ctx.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   try {
     if (publicPath) await assertSelfHostedAssets(publicPath)
     const image = await loadImageSource(source)
+    const { removeBackground } = await import('@imgly/background-removal')
     const blob = await removeBackground(image, {
       ...(publicPath ? { publicPath } : {}),
       model: 'isnet_quint8',

@@ -1,7 +1,13 @@
-import { GoogleGenAI, Type } from '@google/genai'
 import type { Entreprise, FicheIngredient, OrgNode } from '../types'
 import { loadSettings } from './storageV3'
 import { rechercheEntreprise as rechercheEntrepriseLocale, genererOrganigrammeOffline } from './ai-stub'
+
+/** Lazily loaded @google/genai module — kept out of the main bundle. */
+let genaiModulePromise: Promise<typeof import('@google/genai')> | null = null
+function loadGenai() {
+  if (!genaiModulePromise) genaiModulePromise = import('@google/genai')
+  return genaiModulePromise
+}
 
 interface FicheGenerationResult {
   famille: string
@@ -107,6 +113,7 @@ Les ingrédients doivent être réalistes et exprimés en grammes pour des quant
 Les étapes doivent être numérotées (1., 2., 3., ...) et précises.
 Réponds uniquement en JSON.`
 
+  const { Type } = client
   const response = await client.ai.models.generateContent({
     model: client.model,
     contents: prompt,
@@ -175,9 +182,11 @@ async function getClient(getSettings: SettingsGetter = loadSettings) {
   const settings = await getSettings()
   const key = settings.geminiKey.trim()
   if (!key) return null
+  const { GoogleGenAI, Type } = await loadGenai()
   return {
     ai: new GoogleGenAI({ apiKey: key }),
     model: settings.geminiModel?.trim() || 'gemini-3.5-flash-lite',
+    Type,
   }
 }
 
@@ -234,6 +243,7 @@ export async function rechercheEntreprise(nom: string, ville: string, getSetting
     return { ...res, sources: ['Mode sans IA : exemple local à vérifier'] }
   }
 
+  const { Type } = client
   const schema = {
     type: Type.OBJECT,
     properties: {
@@ -369,6 +379,7 @@ Règles :
 4. "name": Nom et prénom de la personne si mentionné, sinon "—" ou un nom plausible.
 5. "title": Intitulé du poste clair (ex: "Directeur Général", "Chef de Fournil", "Responsable Pâtisserie", "Boulanger", "Vendeur en boutique").`
 
+    const { Type } = client
     const response = await client.ai.models.generateContent({
       model: client.model,
       contents: prompt,

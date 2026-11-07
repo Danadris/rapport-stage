@@ -24,3 +24,13 @@ Sérieux mais chaleureux, rassurant, jamais scolaire ni condescendant. Le ton d'
 3. Les données recherchées automatiquement sont toujours relitables et corrigeables par le stagiaire.
 4. Le travail n'est jamais perdu : sauvegarde locale continue, sans compte.
 5. La paperasse doit disparaître : moins de clics, moins de jargon, progression visible.
+
+## Non-goals
+- Pas de comptes utilisateurs, pas de backend, pas de synchronisation cloud.
+- Pas de facturation IA côté projet : l'IA est BYOK (clé Gemini de l'utilisateur) ou 100 % locale.
+- Pas de multi-rapports collaboratifs ni de suivi par un tuteur dans l'app.
+- Pas de PDF natif serveur : l'export passe par l'impression navigateur/webview.
+
+## Scope boundary
+Dans le périmètre : le canevas officiel FOR-PSR04 (14 parties), la sauvegarde locale IndexedDB, l'aperçu A4 fidèle et l'export PDF par impression.
+Hors périmètre : tout ce qui touche à l'administration de l'institut, aux notes ou à la validation du rapport.
