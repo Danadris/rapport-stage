@@ -1,5 +1,5 @@
-import { ChevronDown, Lightbulb, AlertCircle, Plus, Trash2, Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { ChevronDown, Lightbulb, AlertCircle, Plus, Trash2, Loader2, Type, Network } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 import type { NoteField, Organigramme, Entreprise, SectionImage } from '../../types'
 import { Field, Textarea, Button } from '../ui'
 import { ImageManager } from '../ImageManager'
@@ -64,6 +64,208 @@ function Examples({ examples, onPick }: { examples: string[]; onPick: (text: str
   )
 }
 
+/**
+ * The IA-drafting state shared by a level-2 subtitle box and a level-3 point
+ * box: the length picker, the pending call, the error, and the final text that
+ * stays closed until there is something in it.
+ */
+function useAiDraft({
+  stepTitle,
+  fieldLabel,
+  current,
+  generated,
+  onGenerate,
+}: {
+  stepTitle: string
+  fieldLabel: string
+  current: string
+  generated: string
+  onGenerate: (value: string) => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [longueur, setLongueur] = useState<LongueurAI>('moyen')
+  // The final-text box opens only once there is something in it, or when the
+  // writer asks for it by hand — the writing surface stays closed until then.
+  const [finalOpen, setFinalOpen] = useState(false)
+  const hasFinal = finalOpen || generated.trim() !== ''
+  const canGenerate = current.trim() !== ''
+
+  const generate = async () => {
+    if (!canGenerate) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await genererParagraphe(stepTitle, fieldLabel, current, longueur)
+      onGenerate(res)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur de génération')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return { loading, error, longueur, setLongueur, hasFinal, finalOpen, setFinalOpen, canGenerate, generate }
+}
+
+/** The organigramme mode switch: a box flips between plain text and a chart. */
+function OrgToggle({ isOrg, onToggle, small }: { isOrg: boolean; onToggle: (isOrg: boolean) => void; small?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(!isOrg)}
+      title={isOrg ? 'Passer en texte simple' : 'Convertir en organigramme'}
+      className={
+        small
+          ? 'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-gold-deep hover:bg-gold-soft/60 transition-colors'
+          : 'inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] font-medium text-gold-deep hover:bg-gold-soft/60 transition-colors'
+      }
+    >
+      {isOrg ? <Type size={12} /> : <Network size={12} />}
+      {isOrg ? 'Texte' : 'Organigramme'}
+    </button>
+  )
+}
+
+/** The delete button that sits next to a box's label. */
+function DeleteBoxButton({ onClick, title, small }: { onClick: () => void; title: string; small?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`flex shrink-0 items-center justify-center rounded text-faint opacity-60 transition-all hover:bg-danger/10 hover:text-danger hover:opacity-100 active:bg-danger/10 active:text-danger ${
+        small ? 'h-7 w-7' : 'h-8 w-8'
+      }`}
+    >
+      <Trash2 size={small ? 13 : 14} />
+    </button>
+  )
+}
+
+/** The chart, framed by its box. */
+function OrgEditor({
+  organigrammeData,
+  onOrganigrammeChange,
+  entreprise,
+  onToggleMode,
+  small,
+}: {
+  organigrammeData?: Organigramme
+  onOrganigrammeChange?: (val: Organigramme) => void
+  entreprise?: Entreprise
+  onToggleMode?: (isOrg: boolean) => void
+  small?: boolean
+}) {
+  return (
+    <div className={`rounded-xl border border-line bg-paper ${small ? 'space-y-3 p-3' : 'mt-2 space-y-3 p-4'}`}>
+      <div className="flex items-center justify-between pb-2 border-b border-line">
+        <span className={`font-semibold text-ink ${small ? 'text-[11px]' : 'text-[12px]'}`}>
+          Structure hiérarchique
+        </span>
+        {onToggleMode && (
+          <button
+            type="button"
+            onClick={() => onToggleMode(false)}
+            className={`text-faint hover:text-ink transition-colors ${small ? 'text-[11px]' : 'text-[12px]'}`}
+          >
+            Basculer en texte simple
+          </button>
+        )}
+      </div>
+      <OrganigrammeStep
+        value={organigrammeData ?? { nodes: [] }}
+        onChange={(val) => onOrganigrammeChange?.(val)}
+        entreprise={entreprise ?? { nom: '', ville: '', secteurActivite: '', historique: '', organismeAccueil: '', missionsValeurs: '', activitesPrincipales: '', equipements: '', technologies: '', sourceRecherche: null }}
+      />
+    </div>
+  )
+}
+
+/** The final-text card: pick a length, ask the IA, and edit what it wrote. */
+function FinalTextCard({
+  draft,
+  generated,
+  onGeneratedChange,
+  title,
+  subtitle,
+  hint,
+  finalRows,
+  small,
+}: {
+  draft: ReturnType<typeof useAiDraft>
+  generated: string
+  onGeneratedChange: (value: string) => void
+  title: ReactNode
+  subtitle: ReactNode
+  hint: string
+  finalRows: number
+  small?: boolean
+}) {
+  const iconSize = small ? 13 : 14
+  return (
+    <div className={small ? 'field-card-sm' : 'field-card'}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-ink">
+          {title} <span className="font-normal text-faint">{subtitle}</span>
+        </span>
+        <div className="flex items-center gap-2">
+          {draft.hasFinal && (
+            <select
+              value={draft.longueur}
+              onChange={(e) => draft.setLongueur(e.target.value as LongueurAI)}
+              aria-label="Longueur du texte généré"
+              title="Longueur du texte généré"
+              className="h-8 rounded border border-line bg-paper px-1.5 text-[11px] text-ink"
+            >
+              <option value="court">Court</option>
+              <option value="moyen">Moyen</option>
+              <option value="long">Long</option>
+            </select>
+          )}
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={draft.generate}
+            disabled={draft.loading || !draft.canGenerate}
+          >
+            {draft.loading && <Loader2 size={iconSize} className="animate-spin" />}
+            {draft.loading ? 'Rédaction...' : 'Rédiger (IA)'}
+          </Button>
+        </div>
+      </div>
+
+      {draft.error && (
+        <div className="mt-2 flex items-center gap-1.5 text-xs text-danger">
+          <AlertCircle size={iconSize} /> {draft.error}
+        </div>
+      )}
+
+      {draft.hasFinal ? (
+        <div className="mt-2">
+          <Textarea
+            label="Texte final du rapport"
+            rows={finalRows}
+            value={generated}
+            onChange={(e) => onGeneratedChange(e.target.value)}
+            className="bg-paper"
+          />
+        </div>
+      ) : (
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[11px] leading-relaxed text-faint">{hint}</p>
+          <button
+            type="button"
+            onClick={() => draft.setFinalOpen(true)}
+            className="text-[11px] font-medium text-gold-deep underline hover:text-ink cursor-pointer"
+          >
+            Écrire le texte final
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface FieldBoxProps {
   f: NoteField
   stepTitle: string
@@ -80,6 +282,12 @@ interface FieldBoxProps {
   entreprise?: Entreprise
 }
 
+/**
+ * A level-2 subtitle: its own editable label line (in a custom plan), its
+ * notes and the shared IA drafting. Its header differs from a level-3 point —
+ * a plain label rather than a prefixed, indented one — so the shell stays its
+ * own; everything inside it is the shared pieces above.
+ */
 function FieldBox({
   f,
   stepTitle,
@@ -95,27 +303,16 @@ function FieldBox({
   onToggleMode,
   entreprise,
 }: FieldBoxProps) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [longueur, setLongueur] = useState<LongueurAI>('moyen')
-
+  const draft = useAiDraft({
+    stepTitle,
+    fieldLabel: f.label,
+    current,
+    generated,
+    onGenerate: (res) => onGenerate(f.id, res),
+  })
   // An organigramme must only live in the section (or subtitle) titled
   // "organigramme" — never auto-detected from random labels.
   const isOrg = f.isOrganigramme ?? false
-
-  const handleGenerate = async () => {
-    if (!current.trim()) return
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await genererParagraphe(stepTitle, f.label, current, longueur)
-      onGenerate(f.id, res)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur de génération')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div key={f.id} className="space-y-3 relative group/field">
@@ -131,48 +328,18 @@ function FieldBox({
                 className="flex-1 bg-transparent text-[13px] font-medium text-ink focus:outline-none focus:border-b focus:border-gold border-b border-transparent p-0"
               />
               {onToggleMode && (isOrg || f.label.toLowerCase().includes('organigramme')) && (
-                <button
-                  type="button"
-                  onClick={() => onToggleMode(!isOrg)}
-                  title={isOrg ? 'Passer en texte simple' : 'Convertir en organigramme'}
-                  className="rounded px-2 py-0.5 text-[11px] font-medium text-gold-deep hover:bg-gold-soft/60 transition-colors"
-                >
-                  {isOrg ? '📝 Texte' : '🏢 Organigramme'}
-                </button>
+                <OrgToggle isOrg={isOrg} onToggle={onToggleMode} />
               )}
-              {onDelete && (
-                <button
-                  onClick={onDelete}
-                  title="Supprimer ce sous-titre"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-faint opacity-60 transition-all hover:bg-danger/10 hover:text-danger hover:opacity-100 active:bg-danger/10 active:text-danger"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                </button>
-              )}
+              {onDelete && <DeleteBoxButton onClick={onDelete} title="Supprimer ce sous-titre" />}
             </div>
 
             {isOrg ? (
-              <div className="mt-2 space-y-3 rounded-xl border border-line bg-paper p-4">
-                <div className="flex items-center justify-between pb-2 border-b border-line">
-                  <span className="text-[12px] font-semibold text-ink">
-                    Structure hiérarchique
-                  </span>
-                  {onToggleMode && (
-                    <button
-                      type="button"
-                      onClick={() => onToggleMode(false)}
-                      className="text-[12px] text-faint hover:text-ink transition-colors"
-                    >
-                      Basculer en texte simple
-                    </button>
-                  )}
-                </div>
-                <OrganigrammeStep
-                  value={organigrammeData ?? { nodes: [] }}
-                  onChange={(val) => onOrganigrammeChange?.(val)}
-                  entreprise={entreprise ?? { nom: '', ville: '', secteurActivite: '', historique: '', organismeAccueil: '', missionsValeurs: '', activitesPrincipales: '', equipements: '', technologies: '', sourceRecherche: null }}
-                />
-              </div>
+              <OrgEditor
+                organigrammeData={organigrammeData}
+                onOrganigrammeChange={onOrganigrammeChange}
+                entreprise={entreprise}
+                onToggleMode={onToggleMode}
+              />
             ) : (
               <Textarea
                 id={`f-${f.id}`}
@@ -207,48 +374,15 @@ function FieldBox({
       </div>
 
       {!isOrg && (
-        <div className="field-card">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-ink">Texte final du rapport <span className="font-normal text-faint">— rédigé à partir de vos notes</span></span>
-            <div className="flex items-center gap-2">
-              <select
-                value={longueur}
-                onChange={(e) => setLongueur(e.target.value as LongueurAI)}
-                aria-label="Longueur du texte généré"
-                title="Longueur du texte généré"
-                className="h-8 rounded border border-line bg-paper px-1.5 text-[11px] text-ink"
-              >
-                <option value="court">Court</option>
-                <option value="moyen">Moyen</option>
-                <option value="long">Long</option>
-              </select>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={handleGenerate}
-                disabled={loading || !current.trim()}
-              >
-                {loading && <Loader2 size={14} className="animate-spin" />}
-                {loading ? 'Rédaction...' : 'Rédiger (IA)'}
-              </Button>
-            </div>
-          </div>
-
-          {error && (
-            <div className="mb-2 flex items-center gap-1.5 text-xs text-danger">
-              <AlertCircle size={14} /> {error}
-            </div>
-          )}
-
-          <Textarea
-            label="Texte final du rapport"
-            rows={generated ? 4 : 2}
-            value={generated}
-            onChange={(e) => onGenerate(f.id, e.target.value)}
-            placeholder="Optionnel — vos notes sont déjà utilisées. Utilisez « Rédiger (IA) » pour générer un texte depuis elles."
-            className="bg-paper"
-          />
-        </div>
+        <FinalTextCard
+          draft={draft}
+          generated={generated}
+          onGeneratedChange={(v) => onGenerate(f.id, v)}
+          title="Texte final du rapport"
+          subtitle="— remplace vos notes dans le document"
+          hint="Vos notes sont utilisées telles quelles. « Rédiger (IA) » en fait un texte plus rédigé — qui remplace alors vos notes dans le PDF."
+          finalRows={4}
+        />
       )}
     </div>
   )
@@ -269,6 +403,10 @@ interface Level3BoxProps {
   entreprise?: Entreprise
 }
 
+/**
+ * A level-3 point: prefixed and indented under its subtitle. The notes, the
+ * chart and the IA drafting are the level-2 ones, in the small size.
+ */
 function Level3Box({
   f,
   stepTitle,
@@ -283,27 +421,14 @@ function Level3Box({
   onToggleMode,
   entreprise,
 }: Level3BoxProps) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [longueur, setLongueur] = useState<LongueurAI>('moyen')
-
-  // An organigramme must only live in the section (or subtitle) titled
-  // "organigramme" — never auto-detected from random labels.
+  const draft = useAiDraft({
+    stepTitle,
+    fieldLabel: f.prefix ? `${f.prefix} ${f.label}` : f.label,
+    current,
+    generated,
+    onGenerate: (res) => onGenerate(f.id, res),
+  })
   const isOrg = f.isOrganigramme ?? false
-
-  const handleGenerate = async () => {
-    if (!current.trim()) return
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await genererParagraphe(stepTitle, f.prefix ? `${f.prefix} ${f.label}` : f.label, current, longueur)
-      onGenerate(f.id, res)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur de génération')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div className="pl-4 border-l-2 border-gold/30 space-y-3 group/l3">
@@ -318,48 +443,19 @@ function Level3Box({
           className="flex-1 bg-transparent text-[13px] font-medium text-ink focus:outline-none focus:border-b focus:border-gold border-b border-transparent p-0"
         />
         {onToggleMode && (isOrg || f.label.toLowerCase().includes('organigramme')) && (
-          <button
-            type="button"
-            onClick={() => onToggleMode(!isOrg)}
-            title={isOrg ? 'Passer en texte simple' : 'Convertir en organigramme'}
-            className="rounded px-1.5 py-0.5 text-[10px] font-medium text-gold-deep hover:bg-gold-soft/60 transition-colors"
-          >
-            {isOrg ? '📝 Texte' : '🏢 Organigramme'}
-          </button>
+          <OrgToggle isOrg={isOrg} onToggle={onToggleMode} small />
         )}
-        {onDelete && (
-          <button
-            onClick={onDelete}
-            title="Supprimer ce point"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-faint opacity-60 transition-all hover:bg-danger/10 hover:text-danger hover:opacity-100 active:bg-danger/10 active:text-danger"
-          >
-            <Trash2 size={13} />
-          </button>
-        )}
+        {onDelete && <DeleteBoxButton onClick={onDelete} title="Supprimer ce point" small />}
       </div>
 
       {isOrg ? (
-        <div className="space-y-3 rounded-xl border border-line bg-paper p-3">
-          <div className="flex items-center justify-between pb-2 border-b border-line">
-            <span className="text-[11px] font-semibold text-ink">
-              Structure hiérarchique
-            </span>
-            {onToggleMode && (
-              <button
-                type="button"
-                onClick={() => onToggleMode(false)}
-                className="text-[11px] text-faint hover:text-ink transition-colors"
-              >
-                Basculer en texte simple
-              </button>
-            )}
-          </div>
-          <OrganigrammeStep
-            value={organigrammeData ?? { nodes: [] }}
-            onChange={(val) => onOrganigrammeChange?.(val)}
-            entreprise={entreprise ?? { nom: '', ville: '', secteurActivite: '', historique: '', organismeAccueil: '', missionsValeurs: '', activitesPrincipales: '', equipements: '', technologies: '', sourceRecherche: null }}
-          />
-        </div>
+        <OrgEditor
+          organigrammeData={organigrammeData}
+          onOrganigrammeChange={onOrganigrammeChange}
+          entreprise={entreprise}
+          onToggleMode={onToggleMode}
+          small
+        />
       ) : (
         <>
           {/* Notes textarea */}
@@ -373,41 +469,16 @@ function Level3Box({
           />
 
           {/* AI drafting */}
-          <div className="field-card-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-ink">Texte final du rapport <span className="font-normal text-faint">— rédigé à partir de vos notes</span></span>
-              <div className="flex items-center gap-2">
-                <select
-                  value={longueur}
-                  onChange={(e) => setLongueur(e.target.value as LongueurAI)}
-                  aria-label="Longueur du texte généré"
-                  title="Longueur du texte généré"
-                  className="h-8 rounded border border-line bg-paper px-1.5 text-[11px] text-ink"
-                >
-                  <option value="court">Court</option>
-                  <option value="moyen">Moyen</option>
-                  <option value="long">Long</option>
-                </select>
-                <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={loading || !current.trim()}>
-                  {loading && <Loader2 size={13} className="animate-spin" />}
-                  {loading ? 'Rédaction...' : 'Rédiger (IA)'}
-                </Button>
-              </div>
-            </div>
-            {error && (
-              <div className="mb-2 flex items-center gap-1.5 text-xs text-danger">
-                <AlertCircle size={13} /> {error}
-              </div>
-            )}
-            <Textarea
-              label="Texte final du rapport"
-              rows={generated ? 3 : 2}
-              value={generated}
-              onChange={(e) => onGenerate(f.id, e.target.value)}
-              placeholder="Optionnel — vos notes sont déjà utilisées. Utilisez « Rédiger (IA) » pour générer un texte depuis elles."
-              className="bg-paper"
-            />
-          </div>
+          <FinalTextCard
+            draft={draft}
+            generated={generated}
+            onGeneratedChange={(v) => onGenerate(f.id, v)}
+            title="Texte final"
+            subtitle="— remplace vos notes"
+            hint="Vos notes sont utilisées telles quelles. « Rédiger (IA) » les remplace dans le document."
+            finalRows={3}
+            small
+          />
         </>
       )}
     </div>
@@ -506,7 +577,7 @@ export function NotesStep({
                   className="inline-flex items-center gap-1.5 text-[12px] text-faint hover:text-gold-deep transition-colors"
                 >
                   <Plus size={13} />
-                  Ajouter un point ({String.fromCharCode(97 + level3Children.length)}/)
+                  Ajouter un point ({String.fromCharCode(97 + level3Children.length)}/
                 </button>
               </div>
             )}

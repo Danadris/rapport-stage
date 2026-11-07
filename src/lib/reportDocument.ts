@@ -34,16 +34,84 @@ export interface ReportPart {
   isOrganigramme?: boolean
 }
 
-export function isOrganigrammeTitle(title?: string): boolean {
-  if (!title) return false
-  return title.toLowerCase().includes('organigramme')
-}
-
 export function isFicheTechniqueKey(key: string): boolean {
   return key.startsWith('fiche-technique-')
 }
 
 export const MATERIEL_PART_KEY = 'materiel-utilise'
+
+/**
+ * The document's three text sizes, in px. `fallback` is what the preview renders
+ * when a report carries no value — the same number the settings panel's reset
+ * button restores, so the two can never drift apart. `min`/`max` are the range
+ * the slider and the free-px field accept.
+ */
+export const TEXT_SIZES = {
+  title: { key: 'titleSize', label: 'Titres', min: 10, max: 48, fallback: 17 },
+  subtitle: { key: 'subtitleSize', label: 'Sous-titres', min: 9, max: 40, fallback: 14 },
+  body: { key: 'bodySize', label: 'Texte', min: 8, max: 32, fallback: 13 },
+} as const
+
+export type TextSizeKey = keyof typeof TEXT_SIZES
+
+/**
+ * The cover page's two furniture sizes, in px — the blue ribbon's width and the
+ * orange banner's padding. Same contract as TEXT_SIZES: `fallback` is what the
+ * page renders when a report carries no value, and the cover's own sliders reset
+ * to it.
+ */
+export const COVER_SIZES = {
+  ribbon: { key: 'coverRibbonWidth', label: 'Ruban bleu', min: 70, max: 140, step: 2, fallback: 104 },
+  banner: { key: 'coverBannerPadding', label: 'Bandeau orange', min: 8, max: 28, step: 2, fallback: 16 },
+} as const
+
+export type CoverSizeKey = keyof typeof COVER_SIZES
+
+/**
+ * The document's accent as shipped, used by the preview and by the settings
+ * panel's reset — the same contract as TEXT_SIZES' fallbacks.
+ */
+export const DOC_ACCENT = '#2f5496'
+
+/**
+ * Curated heading-colour pairs. Every value clears 4.5:1 on white at the sizes
+ * the document actually uses, and each pair stays in one hue family — a second
+ * unrelated hue is what makes student reports look like a ransom note. The first
+ * entry is the document as it has always looked: one accent for every heading.
+ */
+export const DOC_PALETTES = [
+  { id: 'ifmbp',    name: 'Bleu IFMBP', primary: '#2f5496', title: '#2f5496', subtitle: '#4472c4' },
+  { id: 'vif',      name: 'Bleu vif',   primary: '#4472c4', title: '#4472c4', subtitle: '#2f5496' },
+  { id: 'graphite', name: 'Graphite',   primary: '#3f3a34', title: '#3f3a34', subtitle: '#5d574e' },
+  { id: 'bordeaux', name: 'Bordeaux',   primary: '#7b2d26', title: '#7b2d26', subtitle: '#a0522d' },
+  { id: 'prune',    name: 'Prune',      primary: '#5b3a6e', title: '#5b3a6e', subtitle: '#7d5a91' },
+] as const
+
+/**
+ * Page presets. Density is the one style decision nobody should have to make
+ * knob by knob: one tap sets line spacing, margins and the three text sizes
+ * together, and the individual controls stay for anyone who wants them.
+ */
+export const STYLE_PRESETS = [
+  {
+    id: 'standard',
+    name: 'Standard',
+    hint: 'Le réglage du rapport officiel',
+    style: { lineSpacing: 1.85, margins: 'normal' as const, titleSize: 17, subtitleSize: 14, bodySize: 13 },
+  },
+  {
+    id: 'compact',
+    name: 'Compact',
+    hint: 'Moins de pages, texte plus dense',
+    style: { lineSpacing: 1.4, margins: 'narrow' as const, titleSize: 16, subtitleSize: 13, bodySize: 12 },
+  },
+  {
+    id: 'aere',
+    name: 'Aéré',
+    hint: 'Plus lisible, plus de pages',
+    style: { lineSpacing: 2.2, margins: 'wide' as const, titleSize: 18, subtitleSize: 15, bodySize: 13.5 },
+  },
+] as const
 
 /** Titles of fixed subsection cards can be renamed/removed from the aperçu via titleOverrides. */
 function titleO(rapport: Rapport, source: 'entreprise' | 'section' | 'step', field: string, fallback: string): string {
@@ -51,12 +119,12 @@ function titleO(rapport: Rapport, source: 'entreprise' | 'section' | 'step', fie
   return v === undefined ? fallback : v
 }
 
-export function hasMaterielItems(rapport: Rapport): boolean {
+function hasMaterielItems(rapport: Rapport): boolean {
   return (rapport.materiels ?? []).some((item) => item.nom.trim() || item.utilisation.trim() || item.imageDataUrl)
 }
 
 /** One synthetic part per saved fiche technique — rendered standalone in the A4 preview. */
-export function ficheParts(rapport: Rapport): ReportPart[] {
+function ficheParts(rapport: Rapport): ReportPart[] {
   return (rapport.ficheTechniques ?? [])
     .filter((fiche) => fiche.nom.trim() !== '')
     .map((fiche) => ({
@@ -73,7 +141,7 @@ export interface SommaireEntry {
   sub?: boolean
 }
 
-export function toParagraphs(text: string): string[] {
+function toParagraphs(text: string): string[] {
   return text
     .split(/\n+/)
     .map((t) => t.trim())

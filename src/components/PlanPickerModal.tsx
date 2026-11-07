@@ -1,4 +1,4 @@
-import { X, ListChecks, PencilLine, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
+import { X, ListChecks, PencilLine, Plus, Trash2, ArrowUp, ArrowDown, Building2 } from 'lucide-react'
 import { useState } from 'react'
 import { WIZARD_STEPS } from '../data/sections'
 import type { WizardStep } from '../types'
@@ -190,8 +190,9 @@ export function PlanPickerModal({ onConfirm, onClose }: PlanPickerModalProps) {
                       className="w-full rounded-lg border border-line bg-paper px-3 py-1.5 text-[13px] text-ink placeholder:text-faint focus:border-gold-deep focus:outline-none pr-28"
                     />
                     {section.titre.toLowerCase().includes('organigramme') && (
-                      <span className="absolute right-2 rounded-md bg-gold-soft px-1.5 py-0.5 text-[10px] font-semibold text-gold-deep border border-gold/20 pointer-events-none">
-                        🏢 Organigramme
+                      <span className="absolute right-2 inline-flex items-center gap-1 rounded-md bg-gold-soft px-1.5 py-0.5 text-[10px] font-semibold text-gold-deep border border-gold/20 pointer-events-none">
+                        <Building2 size={11} />
+                        Organigramme
                       </span>
                     )}
                   </div>

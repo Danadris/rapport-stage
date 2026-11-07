@@ -2,7 +2,7 @@ import { loadAllMeta, loadReportData, loadImagesByReportId, saveMeta, saveReport
 import { persistRapport } from './storage'
 import type { ReportMeta, ReportData, StoredImage, Rapport } from '../types'
 
-export interface BackupPayloadV3 {
+interface BackupPayloadV3 {
   app: 'rapport-stage'
   version: 3
   exportedAt: string

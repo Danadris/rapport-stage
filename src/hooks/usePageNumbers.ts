@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState, type RefObject } from 'react'
 
-export const PAGE_HEIGHT = 1123
+const PAGE_HEIGHT = 1123
 
 // The preview is a vertical stack of fixed A4 page blocks (CoverPage,
 // remerciements, sommaire, then each section group). Split blocks carry a

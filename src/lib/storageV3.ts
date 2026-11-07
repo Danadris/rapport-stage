@@ -94,11 +94,6 @@ export async function loadAllMeta(): Promise<ReportMeta[]> {
   return db.getAllFromIndex('reportMeta', 'by-updatedAt')
 }
 
-export async function loadMeta(id: string): Promise<ReportMeta | undefined> {
-  const db = await getDb()
-  return db.get('reportMeta', id)
-}
-
 export async function saveMeta(meta: ReportMeta): Promise<void> {
   const db = await getDb()
   await db.put('reportMeta', meta)
@@ -145,11 +140,6 @@ export async function loadImagesByReportId(reportId: string): Promise<StoredImag
 export async function saveImage(image: StoredImage): Promise<void> {
   const db = await getDb()
   await db.put('images', image)
-}
-
-export async function deleteImage(id: string): Promise<void> {
-  const db = await getDb()
-  await db.delete('images', id)
 }
 
 export async function deleteImagesByReportId(reportId: string): Promise<void> {

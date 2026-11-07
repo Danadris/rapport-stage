@@ -5,13 +5,13 @@ import { createRapport } from './demo'
 const TEST_PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
 
-export interface TestResult {
+interface TestResult {
   name: string
   passed: boolean
   error?: string
 }
 
-export async function runMigrationTestSuite(): Promise<TestResult[]> {
+async function runMigrationTestSuite(): Promise<TestResult[]> {
   const results: TestResult[] = []
 
   const test = async (name: string, fn: () => Promise<void>) => {
@@ -232,7 +232,8 @@ export async function runMigrationTestSuite(): Promise<TestResult[]> {
   return results
 }
 
-// Expose globally in browser environment for testing in DevTools console
-if (typeof window !== 'undefined') {
-  ;(window as any).runMigrationTests = runMigrationTestSuite
+// Expose globally in dev only: the suite is a debugging aid for the browser
+// console, so a release build tree-shakes it away entirely.
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  ;(window as { runMigrationTests?: () => Promise<TestResult[]> }).runMigrationTests = runMigrationTestSuite
 }

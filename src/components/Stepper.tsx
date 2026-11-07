@@ -69,27 +69,28 @@ function stepProgress(rapport: Rapport, step: WizardStep): number {
 }
 
 export function Stepper({ rapport, steps, currentId, onSelect, onDeleteStep, onAddStep }: StepperProps) {
-  const currentIndex = steps.findIndex((s) => s.id === currentId)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
 
   return (
     <nav aria-label="Sections du rapport" className="py-4">
       <ol className="space-y-0.5">
-        {steps.map((step, i) => {
+        {steps.map((step) => {
           const done = stepComplete(rapport, step)
           const current = step.id === currentId
-          const reachable = i <= currentIndex || stepComplete(rapport, steps[i - 1] ?? step)
           const canDelete = onDeleteStep && !FIXED_STEP_KINDS.has(step.kind)
           const confirming = confirmingId === step.id
 
           return (
             <li key={step.id} className="group relative">
+              {/* Every step is clickable: reports are written out of order as
+                  often as not — the cover last, the fiches first — and a locked
+                  stepper only teaches people to fight the tool. Completion stays
+                  visible, as information rather than as a gate. */}
               <button
                 onClick={() => { setConfirmingId(null); onSelect(step.id) }}
-                disabled={!reachable}
                 className={cx(
                   'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors duration-150',
-                  current ? 'bg-gold-soft' : reachable ? 'hover:bg-paper' : 'cursor-not-allowed opacity-40',
+                  current ? 'bg-gold-soft' : 'hover:bg-paper',
                   canDelete ? 'pr-9' : '',
                 )}
               >

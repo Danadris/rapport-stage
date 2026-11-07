@@ -1,6 +1,6 @@
 const STORAGE_KEY = 'rs:theme:v1'
 
-export interface ThemePreset {
+interface ThemePreset {
   id: string
   name: string
   accent: string

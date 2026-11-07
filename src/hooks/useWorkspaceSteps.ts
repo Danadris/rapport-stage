@@ -1,6 +1,6 @@
-import type { Couverture, Entreprise, Organigramme, FicheTechnique, MaterielItem, Rapport, RapportStyle, SectionImage, WizardStep } from '../types'
+import type { Couverture, Entreprise, Organigramme, FicheTechnique, MaterielItem, Rapport, RapportStyle, SectionImage, TextBlock, WizardStep } from '../types'
 import { emptyCouverture } from '../types'
-import { WIZARD_STEPS } from '../data/sections'
+import { materializeSteps, moveBlock } from '../lib/blockModel'
 
 export function useWorkspaceSteps({
   rapport,
@@ -117,8 +117,6 @@ export function useWorkspaceSteps({
     )
 
   /** Copies the official plan into customSteps so the user can edit/add/delete sections. */
-  const materializeSteps = (): WizardStep[] =>
-    WIZARD_STEPS.map((s) => ({ ...s, fields: s.fields.map((f) => ({ ...f })) }))
 
   const handleAddStep = () => {
     const working = rapport.customSteps ?? materializeSteps()
@@ -181,7 +179,7 @@ export function useWorkspaceSteps({
         ...(isOrg ? { kind: 'organigramme' as const } : {}),
       } : s)
       return { ...r, customSteps: updated, updatedAt: Date.now() }
-    })
+    }, { isTextKeystroke: true })
   }
 
   const handleToggleStepKind = (stepId: string, kind: 'notes' | 'organigramme') => {
@@ -265,7 +263,7 @@ export function useWorkspaceSteps({
         return { ...s, fields: s.fields.filter(f => f.id !== fieldId && f.parentId !== fieldId) }
       })
       return { ...r, customSteps: updated, updatedAt: Date.now() }
-    })
+    }, { isTextKeystroke: true })
   }
 
   const handleRenameSubSection = (stepId: string, fieldId: string, newLabel: string) => {
@@ -336,6 +334,31 @@ export function useWorkspaceSteps({
     setRapportWithHistory((r) =>
       r ? { ...r, images: { ...(r.images ?? {}), [sectionId]: imgs }, updatedAt: Date.now() } : r,
     )
+
+  /** Free paragraphs added from the preview, one list per section. */
+  const setTextBlocks = (sectionId: string, blocks: TextBlock[]) =>
+    setRapportWithHistory((r) =>
+      r ? { ...r, textBlocks: { ...(r.textBlocks ?? {}), [sectionId]: blocks }, updatedAt: Date.now() } : r,
+    )
+
+  /** Display order of a section's blocks, so paragraphs can be moved freely. */
+  const setBlockOrder = (sectionId: string, order: string[]) =>
+    setRapportWithHistory((r) =>
+      r ? { ...r, blockOrder: { ...(r.blockOrder ?? {}), [sectionId]: order }, updatedAt: Date.now() } : r,
+    )
+
+  // Paragraph moves and block keys live in lib/blockModel — the same module the
+  // preview builds its keys with, so the two cannot drift apart.
+  const moveBlockToSection = (
+    fromSection: string,
+    blockKey: string,
+    toSection: string,
+    index: number,
+    sourceKeys: string[],
+    targetKeys: string[],
+  ) => {
+    setRapportWithHistory((r) => (r ? moveBlock(r, fromSection, blockKey, toSection, index, sourceKeys, targetKeys) ?? r : r))
+  }
 
   const handlePreviewEdit = (source: 'entreprise' | 'section' | 'couverture', field: string, value: string) => {
     if (source === 'couverture') {
@@ -508,6 +531,9 @@ export function useWorkspaceSteps({
     handleAddLevel3Item,
     handleDeleteLevel3Item,
     setImages,
+    setTextBlocks,
+    setBlockOrder,
+    moveBlockToSection,
     setFicheImages,
     handlePreviewEdit,
     handlePreviewTitleEdit,

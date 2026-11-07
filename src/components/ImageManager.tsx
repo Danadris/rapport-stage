@@ -21,6 +21,22 @@ export function ImageManager({ images, onChange, max = 6 }: ImageManagerProps) {
     void removeBackground(id, dataUrl, (noBg) => update(id, { dataUrl: noBg }))
   }
 
+  // The caption is typed freely but committed on blur or Enter, so editing one
+  // is a single undo step instead of one per character — the same contract the
+  // image toolbar's caption field already follows.
+  const [captionDraft, setCaptionDraft] = useState<Record<string, string>>({})
+
+  const commitCaption = (id: string) => {
+    const draft = captionDraft[id]
+    setCaptionDraft((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+    if (draft === undefined || draft === (images.find((i) => i.id === id)?.caption ?? '')) return
+    update(id, { caption: draft.trim() })
+  }
+
   const addFile = (file: File | undefined) => {
     if (!file) return
     const reader = new FileReader()
@@ -195,9 +211,13 @@ export function ImageManager({ images, onChange, max = 6 }: ImageManagerProps) {
                 </div>
               </div>
               <Input
-                value={img.caption ?? ''}
+                value={captionDraft[img.id] ?? img.caption ?? ''}
+                onChange={(e) => setCaptionDraft((prev) => ({ ...prev, [img.id]: e.target.value }))}
+                onBlur={() => commitCaption(img.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                }}
                 placeholder="Légende (ex : Figure 1 : Four à sole)"
-                onChange={(e) => update(img.id, { caption: e.target.value })}
                 className="py-1.5 text-[13px]"
               />
             </div>

@@ -3,7 +3,7 @@ import type { Entreprise, FicheIngredient, OrgNode } from '../types'
 import { loadSettings } from './storage'
 import { rechercheEntreprise as rechercheEntrepriseLocale, genererOrganigrammeOffline } from './ai-stub'
 
-export interface FicheGenerationResult {
+interface FicheGenerationResult {
   famille: string
   nbPieces: string
   poidsUnitaire: string

@@ -1,7 +1,8 @@
-import { Fragment, useRef } from 'react'
+import { Fragment, useRef, useContext } from 'react'
 import { Eye, EyeOff, ImagePlus, Loader2, Trash2, Scissors } from 'lucide-react'
 import type { FicheIngredient, FicheTechnique } from '../../types'
-import logo from '../../assets/ifmbp-logo-official.png'
+import { IfmbpLogoContext } from './ifmbpLogo'
+import { DOC_ACCENT } from '../../lib/reportDocument'
 
 const FAMILLE_LABELS: Record<string, string> = {
   pain: 'Pain',
@@ -47,10 +48,11 @@ export function FicheTechniquePage({
   bgError,
   embedded,
 }: Props) {
-  const color = primaryColor || '#2f5496'
+  const color = primaryColor || DOC_ACCENT
   const fileRef = useRef<HTMLInputElement>(null)
   const canEdit = !!onChange
   const hiddenTitles = fiche.hiddenTitles ?? []
+  const logo = useContext(IfmbpLogoContext)
 
   const etapesLines = fiche.etapes
     .split('\n')
@@ -112,21 +114,22 @@ export function FicheTechniquePage({
       }
       style={{ fontFamily: 'var(--doc-body-font)', paddingLeft: 'var(--doc-margins)', paddingRight: 'var(--doc-margins)' }}
     >
-      {/* Header stamp */}
+      {/* Header stamp — inside the top padding, clear of the content, mirroring
+          the page number below (h-10 is 35px on the 14px root). */}
       {startPageNum !== undefined && (
         <Fragment>
           <div
             className="absolute left-0 right-0 flex items-center justify-between"
-            style={{ top: '40px', paddingLeft: 'var(--doc-margins)', paddingRight: 'var(--doc-margins)' }}
+            style={{ top: '21px', paddingLeft: 'var(--doc-margins)', paddingRight: 'var(--doc-margins)' }}
           >
-            <img src={logo} alt="IFMBP" className="h-12 max-w-[150px] object-contain opacity-80" />
+            <img src={logo} alt="IFMBP" className="h-10 max-w-[150px] object-contain opacity-80" />
             {headerLogo ? (
-              <img src={headerLogo} alt="Entreprise" className="h-12 max-w-[150px] object-contain opacity-80" />
+              <img src={headerLogo} alt="Entreprise" className="h-10 max-w-[150px] object-contain opacity-80" />
             ) : <div />}
           </div>
           <div
             className="absolute left-0 right-0 text-center text-[12px] text-neutral-500"
-            style={{ top: `${1123 - 40}px` }}
+            style={{ top: `${1123 - 56}px` }}
           >
             - {startPageNum} -
           </div>

@@ -1,16 +1,19 @@
 import { useRef, useState } from 'react'
-import { Plus, Trash2, ChefHat, GripVertical, ImagePlus, AlertCircle, Loader2 } from 'lucide-react'
+import { Plus, Trash2, ChefHat, GripVertical, ImagePlus, AlertCircle, Loader2, Wheat, Croissant, CakeSlice, UtensilsCrossed, Boxes } from 'lucide-react'
 import type { FicheTechnique, FicheIngredient, SectionImage, Entreprise, MaterielItem } from '../../types'
 import { Field, Textarea, Button } from '../ui'
+import { cx } from '../../lib/cx'
 import { genererFicheTechnique } from '../../lib/ai'
 import { useBackgroundRemoval } from '../../hooks/useBackgroundRemoval'
 
+/** Icons rather than emoji: they take the colour of the surrounding text and
+    stay legible at the size the interface actually uses. */
 const FAMILLES = [
-  { value: 'pain', label: '🍞 Pain' },
-  { value: 'viennoiserie', label: '🥐 Viennoiserie' },
-  { value: 'patisserie', label: '🎂 Pâtisserie' },
-  { value: 'traiteur', label: '🍽️ Traiteur' },
-  { value: 'autre', label: '✨ Autre' },
+  { value: 'pain', label: 'Pain', Icon: Wheat },
+  { value: 'viennoiserie', label: 'Viennoiserie', Icon: Croissant },
+  { value: 'patisserie', label: 'Pâtisserie', Icon: CakeSlice },
+  { value: 'traiteur', label: 'Traiteur', Icon: UtensilsCrossed },
+  { value: 'autre', label: 'Autre', Icon: Boxes },
 ]
 
 function newFiche(): FicheTechnique {
@@ -366,15 +369,31 @@ export function FicheTechniqueStep({ fiches, onChange, materiels = [], onMaterie
                 />
               </Field>
               <Field label="Famille de produit">
-                <select
-                  value={activeFiche.famille}
-                  onChange={(e) => patchActive({ famille: e.target.value })}
-                  className={inputCls}
-                >
-                  {FAMILLES.map((f) => (
-                    <option key={f.value} value={f.value}>{f.label}</option>
-                  ))}
-                </select>
+                {/* A select cannot carry an icon, so the emoji had nowhere to go
+                    but out. Chips show the current value and are one tap. */}
+                <div className="flex flex-wrap gap-1.5">
+                  {FAMILLES.map(({ value, label, Icon }) => {
+                    const active = activeFiche.famille === value
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => patchActive({ famille: value })}
+                        aria-pressed={active}
+                        title={label}
+                        className={cx(
+                          'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[12px] transition-colors cursor-pointer',
+                          active
+                            ? 'border-gold-deep bg-gold-soft/50 font-medium text-ink'
+                            : 'border-line bg-paper text-muted hover:border-line-strong hover:text-ink',
+                        )}
+                      >
+                        <Icon size={14} />
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
               </Field>
             </div>
 

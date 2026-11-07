@@ -1,6 +1,6 @@
 import type { Entreprise, OrgNode } from '../types'
 
-export interface RechercheResultat {
+interface RechercheResultat {
   entreprise: Omit<Entreprise, 'nom' | 'ville' | 'logoDataUrl' | 'sourceRecherche'>
   sources: string[]
 }

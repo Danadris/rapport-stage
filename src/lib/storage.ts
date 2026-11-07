@@ -6,7 +6,7 @@ const SETTINGS_KEY = 'rs:settings:v1'
 const MIGRATION_KEY = 'rs:migrated-to-indexeddb:v1'
 
 import type { Rapport, Settings } from '../types'
-import { createRapport, demoRapport } from './demo'
+import { demoRapport } from './demo'
 
 interface BackupPayload {
   app: 'rapport-stage'
@@ -225,5 +225,3 @@ export async function saveSettings(settings: Settings): Promise<void> {
     legacyWrite(SETTINGS_KEY, settings)
   }
 }
-
-export { createRapport }
