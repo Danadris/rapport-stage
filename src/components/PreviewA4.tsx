@@ -1,4 +1,4 @@
-import { useRef, Fragment } from 'react'
+import { useEffect, useRef, useState, Fragment } from 'react'
 import type { Rapport, SectionImage } from '../types'
 import { usePageNumbers } from '../hooks/usePageNumbers'
 import { useBackgroundRemoval } from '../hooks/useBackgroundRemoval'
@@ -55,6 +55,19 @@ export function PreviewA4({ rapport, actions }: {
 
   const [remerciements, ...mainParts] = parts
   const entries = buildSommaireEntries(parts, numbers)
+
+  const [deletedTick, setDeletedTick] = useState<string | null>(null)
+  useEffect(() => {
+    if (!deletedTick) return
+    const t = setTimeout(() => setDeletedTick(null), 6000)
+    return () => clearTimeout(t)
+  }, [deletedTick])
+
+  const notifyDeleted = () => setDeletedTick(String(Date.now()))
+  const wrappedActions: PreviewActions = {
+    ...actions,
+    onDeleted: notifyDeleted,
+  }
 
   const marginsMap = { narrow: '56px', normal: '94px', wide: '120px' }
   const marginVal = marginsMap[rapport.style?.margins || 'normal']
@@ -120,7 +133,7 @@ export function PreviewA4({ rapport, actions }: {
       part={p}
       images={imagesBySection[p.key] ?? []}
       onImagesChange={makeImagesChange(p.key)}
-      actions={actions}
+      actions={wrappedActions}
       organigramme={rapport.organigramme}
       organigrammes={rapport.organigrammes}
       primaryColor={rapport.style?.primaryColor}
@@ -148,7 +161,7 @@ export function PreviewA4({ rapport, actions }: {
         <CoverPage
           rapport={rapport}
           periodeLabel={formatPeriodeLabel(c.periodeNumero)}
-          actions={actions}
+          actions={wrappedActions}
         />
         <Page
           data-part="remerciements"
@@ -236,6 +249,18 @@ export function PreviewA4({ rapport, actions }: {
           )
         })}
       </div>
+      {deletedTick && actions.onUndo && (
+        <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-line bg-ink px-4 py-2.5 text-white shadow-lg print:hidden">
+          <span className="text-[12px]">Élément supprimé.</span>
+          <button
+            type="button"
+            onClick={() => { actions.onUndo?.(); setDeletedTick(null) }}
+            className="rounded-lg bg-white/10 px-2.5 py-1 text-[12px] font-semibold text-white hover:bg-white/20"
+          >
+            Annuler
+          </button>
+        </div>
+      )}
     </IfmbpLogoContext.Provider>
   )
 }

@@ -1,5 +1,6 @@
 
 import { cx } from '../../lib/cx'
+import { useState } from 'react'
 import type { Organigramme, SectionImage, TextBlock } from '../../types'
 import { EditableText, EditableTitle } from './EditableText'
 import { Figure } from './Figure'
@@ -8,6 +9,7 @@ import { TextBlockView } from './TextBlockView'
 import { OrgChart } from './OrgChart'
 import { DOC_BODY_STYLE, SUBTITLE_COLOR } from './tokens'
 import { BlockMoveControls, PartTitle, Removable, type RenderBlock, type SectionUnit } from './SectionShell'
+import { MoveParagraphSheet } from './MoveParagraphSheet'
 import { blockKeyFor } from '../../lib/blockModel'
 import type { ParagraphDrag } from './paragraphDrag'
 import type { BlockDrop } from './paragraphDrag'
@@ -67,6 +69,10 @@ export function PartContent({
     if (part.key && organigrammes?.[part.key]?.nodes?.length) return organigrammes[part.key]
     return organigramme
   }
+
+  // Move sheet: which block is asking to leave the section?
+  const [moveSheet, setMoveSheet] = useState<{ blockKey: string; label: string } | null>(null)
+  const notifyDeleted = () => actions.onDeleted?.()
 
   // Writes the chart that is on screen, not the one the key points at: a
   // sub-chart falls back to its section's chart, and that fallback is what the
@@ -209,11 +215,14 @@ export function PartContent({
     onImagesChange(images.map((img) => (img.id === id ? { ...img, ...patch } : img)))
   }
 
-  // The guaranteed path: the same move the drag performs, chosen from a picker.
-  // It lands at the top of the destination; the arrows then move it from there.
-  const moveBlockToSectionTop = (blockKey: string) => (sectionKey: string) => {
-    if (!actions.onBlockMove) return
-    actions.onBlockMove(part.key, blockKey, sectionKey, 0, ordered.map((u) => u.key), [])
+  // The guaranteed path: the same move the drag performs, chosen from the
+  // sheet. The student picks Début or Fin in the destination — explicit,
+  // never a silent teleport to the top.
+  const pickMoveTarget = (toSection: string, position: 'start' | 'end') => {
+    if (!actions.onBlockMove || !moveSheet) return
+    const index = position === 'start' ? 0 : 999
+    actions.onBlockMove(part.key, moveSheet.blockKey, toSection, index, ordered.map((u) => u.key), [])
+    setMoveSheet(null)
   }
 
   // A free drop places the box where the pointer is. Same section: write the
@@ -320,7 +329,7 @@ export function PartContent({
                   sectionTargets={sectionTargets ?? []}
                   onMoveToSection={
                     actions.onBlockMove && (sectionTargets ?? []).length > 0
-                      ? moveBlockToSectionTop(unit.key)
+                      ? () => setMoveSheet({ blockKey: unit.key, label: unit.kind === 'text' ? 'ce paragraphe' : b.titre || 'ce paragraphe' })
                       : undefined
                   }
                 />
@@ -330,7 +339,7 @@ export function PartContent({
                   block={unit.block}
                   onSaveText={actions.onTextBlocksChange ? (v) => actions.onTextBlocksChange?.(part.key, textBlocks.map((x) => (x.id === unit.block.id ? { ...x, text: v } : x))) : undefined}
                   onPatch={actions.onTextBlocksChange ? (patch) => actions.onTextBlocksChange?.(part.key, textBlocks.map((x) => (x.id === unit.block.id ? { ...x, ...patch } : x))) : undefined}
-                  onRemove={actions.onTextBlocksChange ? () => actions.onTextBlocksChange?.(part.key, textBlocks.filter((x) => x.id !== unit.block.id)) : undefined}
+                  onRemove={actions.onTextBlocksChange ? () => { actions.onTextBlocksChange?.(part.key, textBlocks.filter((x) => x.id !== unit.block.id)); notifyDeleted() } : undefined}
                   drag={drag}
                   partKey={part.key}
                   unitKey={unit.key}
@@ -350,7 +359,7 @@ export function PartContent({
                     text={b.titre}
                     prefixNode={ordinals.get(unit.key) !== undefined ? `${ordinals.get(unit.key)}.` : undefined}
                     onSave={(v) => actions.onTitleEdit?.(b.id ? `fieldLabel:${part.key}:${b.id}` : `titleOverride:${b.editPath!.source}:${b.editPath!.field}`, v)}
-                    onRemove={() => actions.onTitleEdit?.(b.id ? `fieldLabel:${part.key}:${b.id}` : `titleOverride:${b.editPath!.source}:${b.editPath!.field}`, '')}
+                    onRemove={() => { actions.onTitleEdit?.(b.id ? `fieldLabel:${part.key}:${b.id}` : `titleOverride:${b.editPath!.source}:${b.editPath!.field}`, ''); notifyDeleted() }}
                     className="font-semibold"
                     style={{ color: SUBTITLE_COLOR, fontSize: 'var(--doc-subtitle-size)' }}
                   />
@@ -381,7 +390,7 @@ export function PartContent({
                       key={img.id}
                       img={img}
                       onUpdate={onImagesChange ? (patch) => handleUpdate(img.id, patch) : undefined}
-                      onRemove={onImagesChange ? () => onImagesChange(images.filter((i) => i.id !== img.id)) : undefined}
+                      onRemove={onImagesChange ? () => { onImagesChange(images.filter((i) => i.id !== img.id)); notifyDeleted() } : undefined}
                       isDragging={drag?.drag?.blockKey === `image:${img.id}`}
                       moveTargets={moveTargets}
                       onMoveImage={onMoveImage ? (toSection, toBlockIndex) => onMoveImage(img.id, part.key, toSection, toBlockIndex) : undefined}
@@ -390,7 +399,7 @@ export function PartContent({
                     />
                   ))}
                   {b.paragraphes ? (
-                    <Removable onRemove={actions.onEdit ? () => handleParagraphsSave('') : undefined} label="Supprimer ce texte">
+                    <Removable onRemove={actions.onEdit ? () => { handleParagraphsSave(''); notifyDeleted() } : undefined} label="Supprimer ce texte">
                     <div className="space-y-3.5" style={DOC_BODY_STYLE}>
                       <EditableText
                         text={b.paragraphes.join('\n\n')}
@@ -401,7 +410,7 @@ export function PartContent({
                     </div>
                     </Removable>
                   ) : b.texte && b.texte.trim() !== '' ? (
-                    <Removable onRemove={actions.onEdit && b.editPath ? () => actions.onEdit?.(b.editPath!.source, b.editPath!.field, '') : undefined} label="Supprimer ce texte">
+                    <Removable onRemove={actions.onEdit && b.editPath ? () => { actions.onEdit?.(b.editPath!.source, b.editPath!.field, ''); notifyDeleted() } : undefined} label="Supprimer ce texte">
                     <EditableText
                       text={b.texte}
                       placeholder="Cliquez ici pour rédiger..."
@@ -435,7 +444,7 @@ export function PartContent({
                             text={item.titre}
                             prefixNode={<span style={{ color: SUBTITLE_COLOR }}>{item.prefix || 'a/'}</span>}
                             onSave={(v) => actions.onTitleEdit?.(item.id ? `fieldLabel:${part.key}:${item.id}` : `titleOverride:${item.editPath!.source}:${item.editPath!.field}`, v)}
-                            onRemove={() => actions.onTitleEdit?.(item.id ? `fieldLabel:${part.key}:${item.id}` : `titleOverride:${item.editPath!.source}:${item.editPath!.field}`, '')}
+                            onRemove={() => { actions.onTitleEdit?.(item.id ? `fieldLabel:${part.key}:${item.id}` : `titleOverride:${item.editPath!.source}:${item.editPath!.field}`, ''); notifyDeleted() }}
                             className="font-semibold text-ink"
                             style={{ fontSize: 'var(--doc-body-size)', fontFamily: 'var(--doc-title-font)' }}
                           />
@@ -465,7 +474,7 @@ export function PartContent({
                         </div>
                       ) : (
                         item.texte && item.texte.trim() !== '' ? (
-                          <Removable onRemove={actions.onEdit && item.editPath ? () => actions.onEdit?.(item.editPath!.source, item.editPath!.field, '') : undefined} label="Supprimer ce texte">
+                          <Removable onRemove={actions.onEdit && item.editPath ? () => { actions.onEdit?.(item.editPath!.source, item.editPath!.field, ''); notifyDeleted() } : undefined} label="Supprimer ce texte">
                           <EditableText
                             text={item.texte}
                             placeholder="Cliquez ici pour rédiger..."
@@ -498,7 +507,7 @@ export function PartContent({
             key={img.id}
             img={{ ...img, side: img.side ?? 'center' }}
             onUpdate={onImagesChange ? (patch) => handleUpdate(img.id, patch) : undefined}
-            onRemove={onImagesChange ? () => onImagesChange(images.filter((i) => i.id !== img.id)) : undefined}
+            onRemove={onImagesChange ? () => { onImagesChange(images.filter((i) => i.id !== img.id)); notifyDeleted() } : undefined}
             isDragging={drag?.drag?.blockKey === `image:${img.id}`}
             moveTargets={moveTargets}
             onMoveImage={onMoveImage ? (toSection, toBlockIndex) => onMoveImage(img.id, part.key, toSection, toBlockIndex) : undefined}
@@ -511,6 +520,23 @@ export function PartContent({
       {!hasContent && part.sousSections && part.sousSections.length === 0 && (
         <div className="mt-8 text-center text-sm italic text-neutral-400">Section vide</div>
       )}
+      {actions.onAddParagraph && (
+        <button
+          type="button"
+          onClick={() => actions.onAddParagraph?.(part.key)}
+          className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-line-strong bg-cream/40 px-3 py-3 text-[12px] text-muted transition-colors hover:border-gold-deep/40 hover:text-ink print:hidden"
+        >
+          <span className="text-[14px] leading-none">＋</span> Ajouter un paragraphe
+        </button>
+      )}
+      <MoveParagraphSheet
+        open={!!moveSheet}
+        blockLabel={moveSheet?.label ?? ''}
+        fromKey={part.key}
+        targets={sectionTargets ?? []}
+        onPick={pickMoveTarget}
+        onClose={() => setMoveSheet(null)}
+      />
     </div>
   )
 }

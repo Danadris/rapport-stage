@@ -26,6 +26,12 @@ export interface PreviewActions {
     sourceKeys: string[],
     targetKeys: string[],
   ) => void
+  /** Adds an empty paragraph at the end of a section (inline add). */
+  onAddParagraph?: (sectionKey: string) => void
+  /** Undo the last change — used by the delete toast's "Annuler" button. */
+  onUndo?: () => void
+  /** Called after any delete so the assembler can show a toast. */
+  onDeleted?: () => void
   onImagesChange?: (sectionId: string, imgs: SectionImage[]) => void
   onFicheChange?: (ficheId: string, patch: Partial<FicheTechnique>) => void
   onTitleEdit?: (field: string, value: string) => void

@@ -214,6 +214,12 @@ export function WorkspacePage() {
     setTextBlocks(step.id, [...current, { id: crypto.randomUUID(), text: '' }])
   }
 
+  const handleAddParagraphFor = (sectionKey: string) => {
+    if (!rapport) return
+    const current = rapport.textBlocks?.[sectionKey] ?? []
+    setTextBlocks(sectionKey, [...current, { id: crypto.randomUUID(), text: '' }])
+  }
+
   // Everything the document can be asked to do, as one object: these callbacks
   // travel to PartContent, and a prop per capability meant every new feature
   // grew three signatures to keep in step.
@@ -225,6 +231,8 @@ export function WorkspacePage() {
     onTextBlocksChange: handleTextBlocksChange,
     onBlockOrderChange: handleBlockOrderChange,
     onBlockMove: handleBlockMove,
+    onAddParagraph: handleAddParagraphFor,
+    onUndo: undo,
     onImagesChange: setImages,
     onFicheChange: patchFicheTechnique,
     onTitleEdit: handlePreviewTitleEdit,

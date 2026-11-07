@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, GripVertical } from 'lucide-react'
+import { ChevronDown, ChevronUp, GripVertical, MoveHorizontal } from 'lucide-react'
 import { EditableTitle } from './EditableText'
 import { TITLE_COLOR } from './tokens'
 import type { ReportSubSection } from '../../lib/reportDocument'
@@ -74,9 +74,9 @@ export function BlockMoveControls({
   onDragEnd: () => void
   onUp: () => void
   onDown: () => void
-  /** Other sections, for the picker: a drag needs a grip and a scroll, this does not. */
+  /** Other sections, for the move sheet: a drag needs a grip and a scroll, this does not. */
   sectionTargets: Array<{ key: string; label: string }>
-  onMoveToSection?: (sectionKey: string) => void
+  onMoveToSection?: () => void
 }) {
   return (
     // Always faintly visible, full on hover or focus. Hover alone never fires on
@@ -90,8 +90,8 @@ export function BlockMoveControls({
         onPointerMove={onDragMove}
         onPointerUp={onDragEnd}
         onPointerCancel={onDragEnd}
-        title={`Glisser « ${label} » pour le déplacer`}
-        aria-label={`Déplacer « ${label} »`}
+        title={`Glisser « ${label} » pour réorganiser`}
+        aria-label={`Réorganiser « ${label} »`}
         className={`flex h-7 w-7 touch-none select-none items-center justify-center rounded border border-neutral-300 bg-white/90 shadow-sm transition-colors ${
           dragging ? 'cursor-grabbing border-blue-300 bg-blue-50 text-blue-600' : 'cursor-grab text-neutral-500 hover:text-neutral-900'
         }`}
@@ -99,23 +99,15 @@ export function BlockMoveControls({
         <GripVertical size={13} />
       </button>
       {onMoveToSection && sectionTargets.length > 0 && (
-        <select
-          value=""
-          onChange={(e) => {
-            onMoveToSection(e.target.value)
-            e.target.value = ''
-          }}
-          title={`Déplacer « ${label} » vers une autre section`}
-          aria-label={`Déplacer « ${label} » vers une autre section`}
-          className="w-[86px] cursor-pointer rounded border border-neutral-300 bg-white/90 text-[10px] text-neutral-600 shadow-sm"
+        <button
+          type="button"
+          onClick={onMoveToSection}
+          title={`Déplacer « ${label} » hors de la section`}
+          aria-label={`Déplacer « ${label} » hors de la section`}
+          className="flex h-7 w-7 items-center justify-center rounded border border-neutral-300 bg-white/90 text-neutral-500 shadow-sm transition-colors hover:text-neutral-900"
         >
-          <option value="">Déplacer…</option>
-          {sectionTargets.map((t) => (
-            <option key={t.key} value={t.key}>
-              {t.label}
-            </option>
-          ))}
-        </select>
+          <MoveHorizontal size={13} />
+        </button>
       )}
       <div className="flex gap-px">
         <button
