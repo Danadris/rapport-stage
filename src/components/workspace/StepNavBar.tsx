@@ -1,10 +1,10 @@
-import { Archive, Download, Eye, FileText, Menu, PencilLine, Redo2, SlidersHorizontal, Undo2 } from 'lucide-react'
+import { Archive, Download, Eye, FileText, Menu, PanelLeftClose, PanelLeftOpen, PencilLine, Redo2, SlidersHorizontal, Undo2 } from 'lucide-react'
 import { cx } from '../../lib/cx'
 import type { Rapport, WizardStep } from '../../types'
 import { SettingsPanel } from './SettingsPanel'
 import type { RapportStyle } from '../../types'
 
-export type WorkspaceMode = 'edition' | 'apercu'
+type WorkspaceMode = 'edition' | 'apercu'
 
 export function StepNavBar({
   step,
@@ -15,6 +15,8 @@ export function StepNavBar({
   wordCount,
   showSettings,
   setShowSettings,
+  /** Style controls: true everywhere now that the panel also holds the paragraph button. */
+  styleAvailable,
   showExportMenu,
   setShowExportMenu,
   exportError,
@@ -26,10 +28,14 @@ export function StepNavBar({
   canRedo,
   handleRenameStep,
   onOpenMobileMenu,
+  /** Sections panel state — the toggle lives beside the mobile menu button. */
+  sidebarCollapsed,
+  onToggleSidebar,
   style,
   patchStyle,
   zoom,
   setZoom,
+  addParagraph,
 }: {
   step: WizardStep
   stepsCount: number
@@ -39,6 +45,8 @@ export function StepNavBar({
   wordCount: number
   showSettings: boolean
   setShowSettings: (v: boolean | ((prev: boolean) => boolean)) => void
+  /** Style controls sit with the document, so they follow preview visibility. */
+  styleAvailable: boolean
   showExportMenu: boolean
   setShowExportMenu: (v: boolean | ((prev: boolean) => boolean)) => void
   exportError: string | null
@@ -50,16 +58,30 @@ export function StepNavBar({
   canRedo: boolean
   handleRenameStep: (stepId: string, newTitle: string) => void
   onOpenMobileMenu: () => void
+  sidebarCollapsed: boolean
+  onToggleSidebar: () => void
   style?: Rapport['style']
   patchStyle: (patch: Partial<RapportStyle>) => void
   zoom: number
   setZoom: (zoom: number) => void
+  /** Paragraph control for the Style panel; absent where paragraphs cannot be added. */
+  addParagraph?: { sectionLabel: string; count: number; onAdd: () => void }
 }) {
   return (
     <div className="sticky top-14 z-30" data-print-hide>
       {/* Step nav bar */}
       <div className="flex items-center justify-between gap-2 border-b border-line bg-cream/85 px-4 md:px-6 py-3 backdrop-blur-sm">
         <div className="min-w-0 flex items-center gap-2">
+          {/* Sections panel: collapsed on desktop only — on a phone it is the
+              drawer the Menu button opens. */}
+          <button
+            onClick={onToggleSidebar}
+            title={sidebarCollapsed ? 'Afficher les sections' : 'Masquer les sections'}
+            aria-label={sidebarCollapsed ? 'Afficher les sections' : 'Masquer les sections'}
+            className="hidden h-10 w-10 shrink-0 items-center justify-center -ml-2 rounded-lg text-muted transition-colors hover:text-ink active:bg-gold-soft/60 md:flex"
+          >
+            {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
           <button className="flex h-10 w-10 shrink-0 items-center justify-center -ml-2 text-muted active:text-ink md:hidden" onClick={onOpenMobileMenu}>
             <Menu size={20} />
           </button>
@@ -86,7 +108,7 @@ export function StepNavBar({
           </div>
 
           {/* Style / PDF buttons integrated into nav bar for ALL sizes */}
-          {mode === 'apercu' && (
+          {styleAvailable && (
             <div className="flex items-center gap-0.5 sm:gap-2">
               <span className="hidden md:inline text-[11px] text-muted border-r border-line pr-3 mr-1">{wordCount.toLocaleString('fr-FR')} mots</span>
               <button
@@ -162,8 +184,8 @@ export function StepNavBar({
       </div>
 
       {/* ── Unified Settings panel ── */}
-      {mode === 'apercu' && showSettings && (
-        <SettingsPanel style={style} patchStyle={patchStyle} zoom={zoom} setZoom={setZoom} />
+      {styleAvailable && showSettings && (
+        <SettingsPanel style={style} patchStyle={patchStyle} zoom={zoom} setZoom={setZoom} addParagraph={addParagraph} />
       )}
     </div>
   )

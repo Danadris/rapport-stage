@@ -34,16 +34,84 @@ export interface ReportPart {
   isOrganigramme?: boolean
 }
 
-export function isOrganigrammeTitle(title?: string): boolean {
-  if (!title) return false
-  return title.toLowerCase().includes('organigramme')
-}
-
 export function isFicheTechniqueKey(key: string): boolean {
   return key.startsWith('fiche-technique-')
 }
 
 export const MATERIEL_PART_KEY = 'materiel-utilise'
+
+/**
+ * The document's three text sizes, in px. `fallback` is what the preview renders
+ * when a report carries no value — the same number the settings panel's reset
+ * button restores, so the two can never drift apart. `min`/`max` are the range
+ * the slider and the free-px field accept.
+ */
+export const TEXT_SIZES = {
+  title: { key: 'titleSize', label: 'Titres', min: 10, max: 48, fallback: 17 },
+  subtitle: { key: 'subtitleSize', label: 'Sous-titres', min: 9, max: 40, fallback: 14 },
+  body: { key: 'bodySize', label: 'Texte', min: 8, max: 32, fallback: 13 },
+} as const
+
+export type TextSizeKey = keyof typeof TEXT_SIZES
+
+/**
+ * The cover page's two furniture sizes, in px — the blue ribbon's width and the
+ * orange banner's padding. Same contract as TEXT_SIZES: `fallback` is what the
+ * page renders when a report carries no value, and the cover's own sliders reset
+ * to it.
+ */
+export const COVER_SIZES = {
+  ribbon: { key: 'coverRibbonWidth', label: 'Ruban bleu', min: 70, max: 140, step: 2, fallback: 104 },
+  banner: { key: 'coverBannerPadding', label: 'Bandeau orange', min: 8, max: 28, step: 2, fallback: 16 },
+} as const
+
+export type CoverSizeKey = keyof typeof COVER_SIZES
+
+/**
+ * The document's accent as shipped, used by the preview and by the settings
+ * panel's reset — the same contract as TEXT_SIZES' fallbacks.
+ */
+export const DOC_ACCENT = '#2f5496'
+
+/**
+ * Curated heading-colour pairs. Every value clears 4.5:1 on white at the sizes
+ * the document actually uses, and each pair stays in one hue family — a second
+ * unrelated hue is what makes student reports look like a ransom note. The first
+ * entry is the document as it has always looked: one accent for every heading.
+ */
+export const DOC_PALETTES = [
+  { id: 'ifmbp',    name: 'Bleu IFMBP', primary: '#2f5496', title: '#2f5496', subtitle: '#4472c4' },
+  { id: 'vif',      name: 'Bleu vif',   primary: '#4472c4', title: '#4472c4', subtitle: '#2f5496' },
+  { id: 'graphite', name: 'Graphite',   primary: '#3f3a34', title: '#3f3a34', subtitle: '#5d574e' },
+  { id: 'bordeaux', name: 'Bordeaux',   primary: '#7b2d26', title: '#7b2d26', subtitle: '#a0522d' },
+  { id: 'prune',    name: 'Prune',      primary: '#5b3a6e', title: '#5b3a6e', subtitle: '#7d5a91' },
+] as const
+
+/**
+ * Page presets. Density is the one style decision nobody should have to make
+ * knob by knob: one tap sets line spacing, margins and the three text sizes
+ * together, and the individual controls stay for anyone who wants them.
+ */
+export const STYLE_PRESETS = [
+  {
+    id: 'standard',
+    name: 'Standard',
+    hint: 'Le réglage du rapport officiel',
+    style: { lineSpacing: 1.85, margins: 'normal' as const, titleSize: 17, subtitleSize: 14, bodySize: 13 },
+  },
+  {
+    id: 'compact',
+    name: 'Compact',
+    hint: 'Moins de pages, texte plus dense',
+    style: { lineSpacing: 1.4, margins: 'narrow' as const, titleSize: 16, subtitleSize: 13, bodySize: 12 },
+  },
+  {
+    id: 'aere',
+    name: 'Aéré',
+    hint: 'Plus lisible, plus de pages',
+    style: { lineSpacing: 2.2, margins: 'wide' as const, titleSize: 18, subtitleSize: 15, bodySize: 13.5 },
+  },
+] as const
 
 /** Titles of fixed subsection cards can be renamed/removed from the aperçu via titleOverrides. */
 function titleO(rapport: Rapport, source: 'entreprise' | 'section' | 'step', field: string, fallback: string): string {
@@ -51,12 +119,12 @@ function titleO(rapport: Rapport, source: 'entreprise' | 'section' | 'step', fie
   return v === undefined ? fallback : v
 }
 
-export function hasMaterielItems(rapport: Rapport): boolean {
+function hasMaterielItems(rapport: Rapport): boolean {
   return (rapport.materiels ?? []).some((item) => item.nom.trim() || item.utilisation.trim() || item.imageDataUrl)
 }
 
 /** One synthetic part per saved fiche technique — rendered standalone in the A4 preview. */
-export function ficheParts(rapport: Rapport): ReportPart[] {
+function ficheParts(rapport: Rapport): ReportPart[] {
   return (rapport.ficheTechniques ?? [])
     .filter((fiche) => fiche.nom.trim() !== '')
     .map((fiche) => ({
@@ -73,7 +141,7 @@ export interface SommaireEntry {
   sub?: boolean
 }
 
-export function toParagraphs(text: string): string[] {
+function toParagraphs(text: string): string[] {
   return text
     .split(/\n+/)
     .map((t) => t.trim())
@@ -89,9 +157,99 @@ function note(rapport: Rapport, stepId: string, fieldId: string): string {
   return rapport.sections[stepId]?.[fieldId]?.trim() || ''
 }
 
-export function buildReportParts(rapport: Rapport): ReportPart[] {
+/** Shared section builders — one definition for the custom-plan and official-plan paths. */
+function presentationPart(rapport: Rapport, key: string, titre: string): ReportPart {
   const e = rapport.entreprise
+  return {
+    key,
+    numero: null,
+    titre,
+    sousSections: [
+      { titre: titleO(rapport, 'entreprise', 'organismeAccueil', "Organisme d'accueil"), numero: 1, texte: e.organismeAccueil, editPath: { source: 'entreprise', field: 'organismeAccueil' } },
+      { titre: titleO(rapport, 'entreprise', 'historique', "Historique de l'entreprise"), numero: 2, texte: e.historique, editPath: { source: 'entreprise', field: 'historique' } },
+      { titre: titleO(rapport, 'entreprise', 'secteurActivite', "Secteur d'activité"), numero: 3, texte: e.secteurActivite, editPath: { source: 'entreprise', field: 'secteurActivite' } },
+      { titre: titleO(rapport, 'entreprise', 'missionsValeurs', 'Missions et valeurs'), numero: 4, texte: e.missionsValeurs, editPath: { source: 'entreprise', field: 'missionsValeurs' } },
+    ],
+  }
+}
 
+function activitesPart(rapport: Rapport, key: string, titre: string): ReportPart {
+  const e = rapport.entreprise
+  return {
+    key,
+    numero: null,
+    titre,
+    sousSections: [
+      { titre: titleO(rapport, 'entreprise', 'activitesPrincipales', 'Activités principales'), numero: 1, texte: e.activitesPrincipales, editPath: { source: 'entreprise', field: 'activitesPrincipales' } },
+      { titre: titleO(rapport, 'entreprise', 'equipements', 'Équipements utilisés'), numero: 2, texte: e.equipements, editPath: { source: 'entreprise', field: 'equipements' } },
+      { titre: titleO(rapport, 'entreprise', 'technologies', 'Technologies employées'), numero: 3, texte: e.technologies, editPath: { source: 'entreprise', field: 'technologies' } },
+    ],
+  }
+}
+
+function remerciementsPart(rapport: Rapport, key: string, titre: string): ReportPart {
+  const merged = [note(rapport, 'remerciements', 'personnes'), note(rapport, 'remerciements', 'raisons')]
+    .filter(Boolean)
+    .join(' ')
+  return {
+    key,
+    numero: null,
+    titre,
+    paragraphes: merged ? [merged] : [],
+    editPath: { stepId: 'remerciements', fieldIds: ['personnes', 'raisons'] },
+  }
+}
+
+function introductionPart(rapport: Rapport, key: string, titre: string): ReportPart {
+  const merged = [note(rapport, 'introduction', 'presentationBreve'), note(rapport, 'introduction', 'objectifsIntro')]
+    .filter(Boolean)
+    .join('\n')
+  return {
+    key,
+    numero: null,
+    titre,
+    paragraphes: merged ? toParagraphs(merged) : [],
+    editPath: { stepId: 'introduction', fieldIds: ['presentationBreve', 'objectifsIntro'] },
+  }
+}
+
+function contextePart(rapport: Rapport, key: string, titre: string): ReportPart {
+  return {
+    key,
+    numero: null,
+    titre,
+    paragraphes: toParagraphs(note(rapport, 'contexte', 'rechercheStage')),
+    editPath: { stepId: 'contexte', fieldIds: ['rechercheStage'] },
+  }
+}
+
+function objectifsPart(rapport: Rapport, key: string, titre: string): ReportPart {
+  return {
+    key,
+    numero: null,
+    titre,
+    paragraphes: toParagraphs(note(rapport, 'objectifs', 'objectifsFixes')),
+    editPath: { stepId: 'objectifs', fieldIds: ['objectifsFixes'] },
+  }
+}
+
+function conclusionPart(rapport: Rapport, key: string, titre: string): ReportPart {
+  const paras = [note(rapport, 'conclusion', 'resumeExperiences'), note(rapport, 'conclusion', 'perspectives')]
+    .filter(Boolean)
+  return {
+    key,
+    numero: null,
+    titre,
+    paragraphes: paras,
+    editPath: { stepId: 'conclusion', fieldIds: ['resumeExperiences', 'perspectives'] },
+    sousSections: [
+      { titre: titleO(rapport, 'section', 'conclusion:annexes', 'Annexes'), numero: 1, texte: note(rapport, 'conclusion', 'annexes'), editPath: { source: 'section', field: 'conclusion:annexes' } },
+      { titre: titleO(rapport, 'section', 'conclusion:bibliographie', 'Bibliographie'), numero: 2, texte: note(rapport, 'conclusion', 'bibliographie'), editPath: { source: 'section', field: 'conclusion:bibliographie' } },
+    ],
+  }
+}
+
+export function buildReportParts(rapport: Rapport): ReportPart[] {
   if (rapport.customSteps) {
     const parts: ReportPart[] = []
 
@@ -117,95 +275,34 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
       }
 
       if (step.kind === 'presentation') {
-        parts.push({
-          key: step.id,
-          numero: null,
-          titre: step.titre,
-          sousSections: [
-            { titre: titleO(rapport, 'entreprise', 'organismeAccueil', "Organisme d'accueil"), numero: 1, texte: e.organismeAccueil, editPath: { source: 'entreprise', field: 'organismeAccueil' } },
-            { titre: titleO(rapport, 'entreprise', 'historique', "Historique de l'entreprise"), numero: 2, texte: e.historique, editPath: { source: 'entreprise', field: 'historique' } },
-            { titre: titleO(rapport, 'entreprise', 'secteurActivite', "Secteur d'activité"), numero: 3, texte: e.secteurActivite, editPath: { source: 'entreprise', field: 'secteurActivite' } },
-            { titre: titleO(rapport, 'entreprise', 'missionsValeurs', 'Missions et valeurs'), numero: 4, texte: e.missionsValeurs, editPath: { source: 'entreprise', field: 'missionsValeurs' } },
-          ],
-        })
+        parts.push(presentationPart(rapport, step.id, step.titre))
         continue
       }
 
       if (step.kind === 'activites') {
-        parts.push({
-          key: step.id,
-          numero: null,
-          titre: step.titre,
-          sousSections: [
-            { titre: titleO(rapport, 'entreprise', 'activitesPrincipales', 'Activités principales'), numero: 1, texte: e.activitesPrincipales, editPath: { source: 'entreprise', field: 'activitesPrincipales' } },
-            { titre: titleO(rapport, 'entreprise', 'equipements', 'Équipements utilisés'), numero: 2, texte: e.equipements, editPath: { source: 'entreprise', field: 'equipements' } },
-            { titre: titleO(rapport, 'entreprise', 'technologies', 'Technologies employées'), numero: 3, texte: e.technologies, editPath: { source: 'entreprise', field: 'technologies' } },
-          ],
-        })
+        parts.push(activitesPart(rapport, step.id, step.titre))
         continue
       }
 
       // Standard explanatory sections render as merged paragraphs (identical to the official plan)
       if (step.id === 'remerciements') {
-        const merged = [note(rapport, 'remerciements', 'personnes'), note(rapport, 'remerciements', 'raisons')]
-          .filter(Boolean)
-          .join(' ')
-        parts.push({
-          key: step.id,
-          numero: null,
-          titre: step.titre,
-          paragraphes: merged ? [merged] : [],
-          editPath: { stepId: 'remerciements', fieldIds: ['personnes', 'raisons'] },
-        })
+        parts.push(remerciementsPart(rapport, step.id, step.titre))
         continue
       }
       if (step.id === 'introduction') {
-        const merged = [note(rapport, 'introduction', 'presentationBreve'), note(rapport, 'introduction', 'objectifsIntro')]
-          .filter(Boolean)
-          .join('\n')
-        parts.push({
-          key: step.id,
-          numero: null,
-          titre: step.titre,
-          paragraphes: merged ? toParagraphs(merged) : [],
-          editPath: { stepId: 'introduction', fieldIds: ['presentationBreve', 'objectifsIntro'] },
-        })
+        parts.push(introductionPart(rapport, step.id, step.titre))
         continue
       }
       if (step.id === 'contexte') {
-        parts.push({
-          key: step.id,
-          numero: null,
-          titre: step.titre,
-          paragraphes: toParagraphs(note(rapport, 'contexte', 'rechercheStage')),
-          editPath: { stepId: 'contexte', fieldIds: ['rechercheStage'] },
-        })
+        parts.push(contextePart(rapport, step.id, step.titre))
         continue
       }
       if (step.id === 'objectifs') {
-        parts.push({
-          key: step.id,
-          numero: null,
-          titre: step.titre,
-          paragraphes: toParagraphs(note(rapport, 'objectifs', 'objectifsFixes')),
-          editPath: { stepId: 'objectifs', fieldIds: ['objectifsFixes'] },
-        })
+        parts.push(objectifsPart(rapport, step.id, step.titre))
         continue
       }
       if (step.id === 'conclusion') {
-        const paras = [note(rapport, 'conclusion', 'resumeExperiences'), note(rapport, 'conclusion', 'perspectives')]
-          .filter(Boolean)
-        parts.push({
-          key: step.id,
-          numero: null,
-          titre: step.titre,
-          paragraphes: paras,
-          editPath: { stepId: 'conclusion', fieldIds: ['resumeExperiences', 'perspectives'] },
-          sousSections: [
-            { titre: titleO(rapport, 'section', 'conclusion:annexes', 'Annexes'), numero: 1, texte: note(rapport, 'conclusion', 'annexes'), editPath: { source: 'section', field: 'conclusion:annexes' } },
-            { titre: titleO(rapport, 'section', 'conclusion:bibliographie', 'Bibliographie'), numero: 2, texte: note(rapport, 'conclusion', 'bibliographie'), editPath: { source: 'section', field: 'conclusion:bibliographie' } },
-          ],
-        })
+        parts.push(conclusionPart(rapport, step.id, step.titre))
         continue
       }
 
@@ -249,115 +346,57 @@ export function buildReportParts(rapport: Rapport): ReportPart[] {
     return parts
   }
 
-  const remerciements = [note(rapport, 'remerciements', 'personnes'), note(rapport, 'remerciements', 'raisons')]
-    .filter(Boolean)
-    .join(' ')
+  const deroulement: ReportPart = {
+    key: 'deroulement',
+    numero: null,
+    titre: titleO(rapport, 'step', 'deroulement', 'Déroulement du stage'),
+    sousSections: [
+      { titre: titleO(rapport, 'section', 'deroulement:departements', 'Départements ou services visités'), numero: 1, texte: note(rapport, 'deroulement', 'departements'), editPath: { source: 'section', field: 'deroulement:departements' } },
+      { titre: titleO(rapport, 'section', 'deroulement:tachesConfiees', 'Tâches confiées'), numero: 2, texte: note(rapport, 'deroulement', 'tachesConfiees'), editPath: { source: 'section', field: 'deroulement:tachesConfiees' } },
+    ],
+  }
 
-  const intro = [note(rapport, 'introduction', 'presentationBreve'), note(rapport, 'introduction', 'objectifsIntro')]
-    .filter(Boolean)
-    .join('\n')
+  const taches: ReportPart = {
+    key: 'taches',
+    numero: null,
+    titre: titleO(rapport, 'step', 'taches', 'Tâches effectuées pendant le stage'),
+    sousSections: [
+      { titre: titleO(rapport, 'section', 'taches:missionsDetaillees', 'Détail des missions confiées'), numero: 1, texte: note(rapport, 'taches', 'missionsDetaillees'), editPath: { source: 'section', field: 'taches:missionsDetaillees' } },
+      { titre: titleO(rapport, 'section', 'taches:competencesDeveloppees', 'Compétences développées'), numero: 2, texte: note(rapport, 'taches', 'competencesDeveloppees'), editPath: { source: 'section', field: 'taches:competencesDeveloppees' } },
+      { titre: titleO(rapport, 'section', 'taches:problematiquesRencontrees', 'Problématiques rencontrées'), numero: 3, texte: note(rapport, 'taches', 'problematiquesRencontrees'), editPath: { source: 'section', field: 'taches:problematiquesRencontrees' } },
+    ],
+  }
 
-  const conclusionParas = [note(rapport, 'conclusion', 'resumeExperiences'), note(rapport, 'conclusion', 'perspectives')]
-    .filter(Boolean)
+  const bilan: ReportPart = {
+    key: 'bilan',
+    numero: null,
+    titre: titleO(rapport, 'step', 'bilan', 'Bilan personnel'),
+    sousSections: [
+      { titre: titleO(rapport, 'section', 'bilan:competencesAcquises', 'Les compétences acquises'), numero: 1, texte: note(rapport, 'bilan', 'competencesAcquises'), editPath: { source: 'section', field: 'bilan:competencesAcquises' } },
+      { titre: titleO(rapport, 'section', 'bilan:enseignementsTires', 'Les enseignements tirés'), numero: 2, texte: note(rapport, 'bilan', 'enseignementsTires'), editPath: { source: 'section', field: 'bilan:enseignementsTires' } },
+      { titre: titleO(rapport, 'section', 'bilan:pointsAmeliorer', 'Les points à améliorer'), numero: 3, texte: note(rapport, 'bilan', 'pointsAmeliorer'), editPath: { source: 'section', field: 'bilan:pointsAmeliorer' } },
+    ],
+  }
 
   return [
-    {
-      key: 'remerciements',
-      numero: null,
-      titre: titleO(rapport, 'step', 'remerciements', 'Remerciements'),
-      paragraphes: remerciements ? [remerciements] : [],
-      editPath: { stepId: 'remerciements', fieldIds: ['personnes', 'raisons'] },
-    },
-    {
-      key: 'introduction',
-      numero: null,
-      titre: titleO(rapport, 'step', 'introduction', 'Introduction'),
-      paragraphes: intro ? toParagraphs(intro) : [],
-      editPath: { stepId: 'introduction', fieldIds: ['presentationBreve', 'objectifsIntro'] },
-    },
-    {
-      key: 'presentation',
-      numero: null,
-      titre: titleO(rapport, 'step', 'presentation', "Présentation de l'entreprise d'accueil"),
-      sousSections: [
-        { titre: titleO(rapport, 'entreprise', 'organismeAccueil', "Organisme d'accueil"), numero: 1, texte: e.organismeAccueil, editPath: { source: 'entreprise', field: 'organismeAccueil' } },
-        { titre: titleO(rapport, 'entreprise', 'historique', "Historique de l'entreprise"), numero: 2, texte: e.historique, editPath: { source: 'entreprise', field: 'historique' } },
-        { titre: titleO(rapport, 'entreprise', 'secteurActivite', "Secteur d'activité"), numero: 3, texte: e.secteurActivite, editPath: { source: 'entreprise', field: 'secteurActivite' } },
-        { titre: titleO(rapport, 'entreprise', 'missionsValeurs', 'Missions et valeurs'), numero: 4, texte: e.missionsValeurs, editPath: { source: 'entreprise', field: 'missionsValeurs' } },
-      ],
-    },
+    remerciementsPart(rapport, 'remerciements', titleO(rapport, 'step', 'remerciements', 'Remerciements')),
+    introductionPart(rapport, 'introduction', titleO(rapport, 'step', 'introduction', 'Introduction')),
+    presentationPart(rapport, 'presentation', titleO(rapport, 'step', 'presentation', "Présentation de l'entreprise d'accueil")),
     {
       key: 'organigramme',
       numero: null,
       titre: titleO(rapport, 'step', 'organigramme', "Organigramme de l'entreprise"),
       isOrganigramme: true,
     },
-    {
-      key: 'activites',
-      numero: null,
-      titre: titleO(rapport, 'step', 'activites', "Les activités et équipements de l'entreprise"),
-      sousSections: [
-        { titre: titleO(rapport, 'entreprise', 'activitesPrincipales', 'Activités principales'), numero: 1, texte: e.activitesPrincipales, editPath: { source: 'entreprise', field: 'activitesPrincipales' } },
-        { titre: titleO(rapport, 'entreprise', 'equipements', 'Équipements utilisés'), numero: 2, texte: e.equipements, editPath: { source: 'entreprise', field: 'equipements' } },
-        { titre: titleO(rapport, 'entreprise', 'technologies', 'Technologies employées'), numero: 3, texte: e.technologies, editPath: { source: 'entreprise', field: 'technologies' } },
-      ],
-    },
-    {
-      key: 'contexte',
-      numero: null,
-      titre: titleO(rapport, 'step', 'contexte', 'Contexte du stage'),
-      paragraphes: toParagraphs(note(rapport, 'contexte', 'rechercheStage')),
-      editPath: { stepId: 'contexte', fieldIds: ['rechercheStage'] },
-    },
-    {
-      key: 'objectifs',
-      numero: null,
-      titre: titleO(rapport, 'step', 'objectifs', 'Objectifs du stage'),
-      paragraphes: toParagraphs(note(rapport, 'objectifs', 'objectifsFixes')),
-      editPath: { stepId: 'objectifs', fieldIds: ['objectifsFixes'] },
-    },
-    {
-      key: 'deroulement',
-      numero: null,
-      titre: titleO(rapport, 'step', 'deroulement', 'Déroulement du stage'),
-      sousSections: [
-        { titre: titleO(rapport, 'section', 'deroulement:departements', 'Départements ou services visités'), numero: 1, texte: note(rapport, 'deroulement', 'departements'), editPath: { source: 'section', field: 'deroulement:departements' } },
-        { titre: titleO(rapport, 'section', 'deroulement:tachesConfiees', 'Tâches confiées'), numero: 2, texte: note(rapport, 'deroulement', 'tachesConfiees'), editPath: { source: 'section', field: 'deroulement:tachesConfiees' } },
-      ],
-    },
-    {
-      key: 'taches',
-      numero: null,
-      titre: titleO(rapport, 'step', 'taches', 'Tâches effectuées pendant le stage'),
-      sousSections: [
-        { titre: titleO(rapport, 'section', 'taches:missionsDetaillees', 'Détail des missions confiées'), numero: 1, texte: note(rapport, 'taches', 'missionsDetaillees'), editPath: { source: 'section', field: 'taches:missionsDetaillees' } },
-        { titre: titleO(rapport, 'section', 'taches:competencesDeveloppees', 'Compétences développées'), numero: 2, texte: note(rapport, 'taches', 'competencesDeveloppees'), editPath: { source: 'section', field: 'taches:competencesDeveloppees' } },
-        { titre: titleO(rapport, 'section', 'taches:problematiquesRencontrees', 'Problématiques rencontrées'), numero: 3, texte: note(rapport, 'taches', 'problematiquesRencontrees'), editPath: { source: 'section', field: 'taches:problematiquesRencontrees' } },
-      ],
-    },
+    activitesPart(rapport, 'activites', titleO(rapport, 'step', 'activites', "Les activités et équipements de l'entreprise")),
+    contextePart(rapport, 'contexte', titleO(rapport, 'step', 'contexte', 'Contexte du stage')),
+    objectifsPart(rapport, 'objectifs', titleO(rapport, 'step', 'objectifs', 'Objectifs du stage')),
+    deroulement,
+    taches,
     ...(hasMaterielItems(rapport) ? [{ key: MATERIEL_PART_KEY, numero: null, titre: 'Matériel utilisé' }] : []),
     ...ficheParts(rapport),
-    {
-      key: 'bilan',
-      numero: null,
-      titre: titleO(rapport, 'step', 'bilan', 'Bilan personnel'),
-      sousSections: [
-        { titre: titleO(rapport, 'section', 'bilan:competencesAcquises', 'Les compétences acquises'), numero: 1, texte: note(rapport, 'bilan', 'competencesAcquises'), editPath: { source: 'section', field: 'bilan:competencesAcquises' } },
-        { titre: titleO(rapport, 'section', 'bilan:enseignementsTires', 'Les enseignements tirés'), numero: 2, texte: note(rapport, 'bilan', 'enseignementsTires'), editPath: { source: 'section', field: 'bilan:enseignementsTires' } },
-        { titre: titleO(rapport, 'section', 'bilan:pointsAmeliorer', 'Les points à améliorer'), numero: 3, texte: note(rapport, 'bilan', 'pointsAmeliorer'), editPath: { source: 'section', field: 'bilan:pointsAmeliorer' } },
-      ],
-    },
-    {
-      key: 'conclusion',
-      numero: null,
-      titre: titleO(rapport, 'step', 'conclusion', 'Conclusion'),
-      paragraphes: conclusionParas,
-      editPath: { stepId: 'conclusion', fieldIds: ['resumeExperiences', 'perspectives'] },
-      sousSections: [
-        { titre: titleO(rapport, 'section', 'conclusion:annexes', 'Annexes'), numero: 1, texte: note(rapport, 'conclusion', 'annexes'), editPath: { source: 'section', field: 'conclusion:annexes' } },
-        { titre: titleO(rapport, 'section', 'conclusion:bibliographie', 'Bibliographie'), numero: 2, texte: note(rapport, 'conclusion', 'bibliographie'), editPath: { source: 'section', field: 'conclusion:bibliographie' } },
-      ],
-    },
+    bilan,
+    conclusionPart(rapport, 'conclusion', titleO(rapport, 'step', 'conclusion', 'Conclusion')),
   ]
 }
 

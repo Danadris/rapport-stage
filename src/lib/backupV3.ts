@@ -1,8 +1,7 @@
-import { loadAllMeta, loadReportData, loadImagesByReportId, saveMeta, saveReportData, saveImage } from './storageV3'
-import { persistRapport } from './storage'
+import { loadAllMeta, loadReportData, loadImagesByReportId, saveMeta, saveReportData, saveImage, persistRapport } from './storageV3'
 import type { ReportMeta, ReportData, StoredImage, Rapport } from '../types'
 
-export interface BackupPayloadV3 {
+interface BackupPayloadV3 {
   app: 'rapport-stage'
   version: 3
   exportedAt: string
@@ -84,58 +83,44 @@ export async function createBackupV3(): Promise<BackupPayloadV3> {
  * Supports both V3 (Object Stores with Blobs) and V1 (legacy JSON array).
  */
 export async function importBackupV3(raw: string): Promise<{ imported: number; total: number }> {
-  let parsed: any
+  let parsed: unknown
   try {
     parsed = JSON.parse(raw)
   } catch {
     throw new Error('Le fichier de sauvegarde est illisible.')
   }
 
+  const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null
+
   // Handle V3 format
-  if (parsed && parsed.app === 'rapport-stage' && parsed.version === 3 && Array.isArray(parsed.reports)) {
-    const v3 = parsed as BackupPayloadV3
+  if (isRecord(parsed) && parsed.app === 'rapport-stage' && parsed.version === 3 && Array.isArray(parsed.reports)) {
+    const v3 = parsed as unknown as BackupPayloadV3
+    const images = Array.isArray(v3.images) ? v3.images : []
+    const reports = v3.reports ?? []
     let count = 0
 
     // Restore images as Blobs in IndexedDB
-    if (Array.isArray(v3.images)) {
-      for (const img of v3.images) {
-        const blob = await dataUrlToBlob(img.dataUrl)
-        const stored: StoredImage = {
-          id: img.id,
-          reportId: img.reportId,
-          blob,
-          mimeType: img.mimeType,
-          width: img.width,
-          height: img.height,
-          size: img.size,
-          createdAt: Date.now(),
-        }
-        await saveImage(stored)
+    for (const img of images) {
+      if (!img?.dataUrl) continue
+      const blob = await dataUrlToBlob(img.dataUrl)
+      const stored: StoredImage = {
+        id: img.id,
+        reportId: img.reportId,
+        blob,
+        mimeType: img.mimeType,
+        width: img.width,
+        height: img.height,
+        size: img.size,
+        createdAt: Date.now(),
       }
+      await saveImage(stored)
     }
 
     // Restore reports and metadata
-    for (const item of v3.reports) {
+    for (const item of reports) {
       if (item.meta && item.data) {
         await saveReportData(item.data)
         await saveMeta({ ...item.meta, updatedAt: Date.now() })
-
-        // Also write to V1 (localStorage) so WorkspacePage can load it immediately
-        const v1Rapport: Rapport = {
-          id: item.data.id,
-          createdAt: item.meta.createdAt,
-          updatedAt: Date.now(),
-          couverture: item.data.couverture,
-          entreprise: item.data.entreprise,
-          sections: item.data.sections,
-          sectionsGenerated: item.data.sectionsGenerated,
-          images: item.data.images as Record<string, any[]> | undefined,
-          style: item.data.style,
-          pageBreaks: item.data.pageBreaks,
-          customSteps: item.data.customSteps,
-        }
-        await persistRapport(v1Rapport)
-
         count++
       }
     }
@@ -147,64 +132,17 @@ export async function importBackupV3(raw: string): Promise<{ imported: number; t
   // Handle Legacy V1 format
   const v1Reports = Array.isArray(parsed)
     ? parsed
-    : parsed && Array.isArray(parsed.rapports)
-      ? parsed.rapports
+    : isRecord(parsed) && Array.isArray(parsed.rapports)
+      ? (parsed.rapports as unknown[])
       : null
 
   if (v1Reports && v1Reports.length > 0) {
     let count = 0
     for (const r of v1Reports) {
-      if (!r.id) continue
-
-      // Convert V1 images if present
-      const newImages: Record<string, any[]> = {}
-      if (r.images) {
-        for (const [sectionId, oldImages] of Object.entries(r.images as Record<string, any[]>)) {
-          newImages[sectionId] = []
-          for (const oldImg of oldImages) {
-            const storedImageId = `img_${crypto.randomUUID()}`
-            const blob = await dataUrlToBlob(oldImg.dataUrl)
-            await saveImage({
-              id: storedImageId,
-              reportId: r.id,
-              blob,
-              mimeType: 'image/png',
-              width: 1,
-              height: 1,
-              size: blob.size,
-              createdAt: Date.now(),
-            })
-            newImages[sectionId].push({
-              ...oldImg,
-              imageId: storedImageId,
-            })
-          }
-        }
-      }
-
-      await saveReportData({
-        id: r.id,
-        couverture: r.couverture,
-        entreprise: r.entreprise,
-        sections: r.sections,
-        sectionsGenerated: r.sectionsGenerated,
-        style: r.style,
-        pageBreaks: r.pageBreaks,
-        customSteps: r.customSteps,
-        images: newImages,
-      })
-
-      await saveMeta({
-        id: r.id,
-        createdAt: r.createdAt || Date.now(),
-        updatedAt: Date.now(),
-        studentName: r.couverture?.nomStagiaire || '',
-        companyName: r.entreprise?.nom || '',
-        periodeNumero: r.couverture?.periodeNumero || '',
-        sourceRecherche: r.entreprise?.sourceRecherche ?? null,
-        progressDone: 0,
-        progressTotal: 10,
-      })
+      if (!isRecord(r) || typeof r.id !== 'string') continue
+      const rapport = r as unknown as Rapport
+      // persistRapport converts dataUrl images to Blobs and writes V3 stores
+      await persistRapport({ ...rapport, updatedAt: Date.now() })
       count++
     }
 

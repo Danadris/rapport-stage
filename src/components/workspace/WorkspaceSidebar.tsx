@@ -14,6 +14,7 @@ export function WorkspaceSidebar({
   onSelectStep,
   onAddStep,
   onDeleteStep,
+  collapsed,
 }: {
   rapport: Rapport
   activeSteps: WizardStep[]
@@ -24,6 +25,8 @@ export function WorkspaceSidebar({
   onSelectStep: (id: string) => void
   onAddStep: () => void
   onDeleteStep: (stepId: string) => void
+  /** Desktop only: gives the form the whole width. */
+  collapsed?: boolean
 }) {
   return (
     <>
@@ -32,7 +35,10 @@ export function WorkspaceSidebar({
       )}
       <aside
         className={cx(
-          "fixed inset-y-0 left-0 z-50 w-[264px] shrink-0 flex-col border-r border-line bg-cream px-3 md:sticky md:top-14 md:z-auto md:h-[calc(100vh-3.5rem)] md:bg-transparent md:flex md:py-2",
+          "fixed inset-y-0 left-0 z-50 w-[264px] shrink-0 flex-col border-r border-line bg-cream px-3 md:sticky md:top-14 md:z-auto md:h-[calc(100vh-3.5rem)] md:bg-transparent md:py-2",
+          // Dropped rather than overridden, so the collapsed state always wins
+          // over the desktop display rule above.
+          collapsed ? "" : "md:flex",
           isMobileMenuOpen ? "flex" : "hidden"
         )}
         style={isMobileMenuOpen ? {

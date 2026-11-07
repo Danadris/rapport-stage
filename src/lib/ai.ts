@@ -1,9 +1,15 @@
-import { GoogleGenAI, Type } from '@google/genai'
 import type { Entreprise, FicheIngredient, OrgNode } from '../types'
-import { loadSettings } from './storage'
+import { loadSettings } from './storageV3'
 import { rechercheEntreprise as rechercheEntrepriseLocale, genererOrganigrammeOffline } from './ai-stub'
 
-export interface FicheGenerationResult {
+/** Lazily loaded @google/genai module — kept out of the main bundle. */
+let genaiModulePromise: Promise<typeof import('@google/genai')> | null = null
+function loadGenai() {
+  if (!genaiModulePromise) genaiModulePromise = import('@google/genai')
+  return genaiModulePromise
+}
+
+interface FicheGenerationResult {
   famille: string
   nbPieces: string
   poidsUnitaire: string
@@ -89,8 +95,9 @@ function genererFicheOffline(nom: string): FicheGenerationResult {
 export async function genererFicheTechnique(
   productName: string,
   entrepriseContext?: string,
+  getSettings?: SettingsGetter,
 ): Promise<FicheGenerationResult> {
-  const client = await getClient()
+  const client = await getClient(getSettings)
 
   if (!client || !productName.trim()) {
     return genererFicheOffline(productName)
@@ -106,6 +113,7 @@ Les ingrédients doivent être réalistes et exprimés en grammes pour des quant
 Les étapes doivent être numérotées (1., 2., 3., ...) et précises.
 Réponds uniquement en JSON.`
 
+  const { Type } = client
   const response = await client.ai.models.generateContent({
     model: client.model,
     contents: prompt,
@@ -142,20 +150,24 @@ Réponds uniquement en JSON.`
     throw new Error('Réponse vide')
   }
 
-  const data = JSON.parse(response.text)
-  const famille = FICHE_FAMILLES.includes(data.famille) ? data.famille : detectFamille(productName)
+  const data: unknown = JSON.parse(response.text)
+  const rec = (typeof data === 'object' && data !== null ? data : {}) as Record<string, unknown>
+  const famille = FICHE_FAMILLES.includes(rec.famille as string) ? (rec.famille as string) : detectFamille(productName)
+
+  const rawIngredients = Array.isArray(rec.ingredients) ? rec.ingredients : []
+  const ingredients = rawIngredients
+    .filter((i): i is Record<string, unknown> => typeof i === 'object' && i !== null && Boolean((i as Record<string, unknown>).ingredient))
+    .map((i) => ({ id: crypto.randomUUID(), ingredient: String(i.ingredient ?? ''), quantite: String(i.quantite ?? '') }))
 
   return {
     famille,
-    nbPieces: String(data.nbPieces ?? ''),
-    poidsUnitaire: String(data.poidsUnitaire ?? ''),
-    duree: String(data.duree ?? ''),
-    ingredients: (Array.isArray(data.ingredients) ? data.ingredients : [])
-      .filter((i: any) => i && i.ingredient)
-      .map((i: any) => ({ id: crypto.randomUUID(), ingredient: String(i.ingredient), quantite: String(i.quantite ?? '') })),
-    materiel: String(data.materiel ?? ''),
-    etapes: String(data.etapes ?? ''),
-    conseils: String(data.conseils ?? ''),
+    nbPieces: String(rec.nbPieces ?? ''),
+    poidsUnitaire: String(rec.poidsUnitaire ?? ''),
+    duree: String(rec.duree ?? ''),
+    ingredients,
+    materiel: String(rec.materiel ?? ''),
+    etapes: String(rec.etapes ?? ''),
+    conseils: String(rec.conseils ?? ''),
   }
 }
 
@@ -164,13 +176,17 @@ export interface RechercheResultat {
   sources: string[]
 }
 
-async function getClient() {
-  const settings = await loadSettings()
+export type SettingsGetter = () => Promise<{ geminiKey: string; geminiModel?: string }>
+
+async function getClient(getSettings: SettingsGetter = loadSettings) {
+  const settings = await getSettings()
   const key = settings.geminiKey.trim()
   if (!key) return null
+  const { GoogleGenAI, Type } = await loadGenai()
   return {
     ai: new GoogleGenAI({ apiKey: key }),
     model: settings.geminiModel?.trim() || 'gemini-3.5-flash-lite',
+    Type,
   }
 }
 
@@ -219,14 +235,15 @@ function generateOfflineParagraph(section: string, field: string, notes: string)
   return `${clean} Cette expérience a contribué à ma progression professionnelle et m'a donné une vision plus précise du travail en boulangerie-pâtisserie.`
 }
 
-export async function rechercheEntreprise(nom: string, ville: string): Promise<RechercheResultat> {
-  const client = await getClient()
+export async function rechercheEntreprise(nom: string, ville: string, getSettings?: SettingsGetter): Promise<RechercheResultat> {
+  const client = await getClient(getSettings)
 
   if (!client) {
     const res = await rechercheEntrepriseLocale(nom, ville)
     return { ...res, sources: ['Mode sans IA : exemple local à vérifier'] }
   }
 
+  const { Type } = client
   const schema = {
     type: Type.OBJECT,
     properties: {
@@ -302,8 +319,8 @@ function trimToLength(text: string, longueur: LongueurAI): string {
   return sentences.slice(0, Math.max(2, Math.ceil(sentences.length / 2))).join(' ')
 }
 
-export async function genererParagraphe(section: string, field: string, notes: string, longueur: LongueurAI = 'moyen'): Promise<string> {
-  const client = await getClient()
+export async function genererParagraphe(section: string, field: string, notes: string, longueur: LongueurAI = 'moyen', getSettings?: SettingsGetter): Promise<string> {
+  const client = await getClient(getSettings)
 
   if (!client) {
     return trimToLength(generateOfflineParagraph(section, field, notes), longueur)
@@ -334,8 +351,9 @@ Notes de l'apprenti :
 export async function genererOrganigramme(
   companyContext: string,
   freeText: string,
+  getSettings?: SettingsGetter,
 ): Promise<OrgNode[]> {
-  const client = await getClient()
+  const client = await getClient(getSettings)
 
   const promptText = [
     companyContext.trim() ? `Informations sur l'entreprise :\n${companyContext.trim()}` : '',
@@ -361,6 +379,7 @@ Règles :
 4. "name": Nom et prénom de la personne si mentionné, sinon "—" ou un nom plausible.
 5. "title": Intitulé du poste clair (ex: "Directeur Général", "Chef de Fournil", "Responsable Pâtisserie", "Boulanger", "Vendeur en boutique").`
 
+    const { Type } = client
     const response = await client.ai.models.generateContent({
       model: client.model,
       contents: prompt,
@@ -383,17 +402,19 @@ Règles :
     })
 
     const raw = response.text ?? '[]'
-    const parsed = JSON.parse(raw)
+    const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed) || parsed.length === 0) {
       return genererOrganigrammeOffline()
     }
 
-    return parsed.map((n: any) => ({
-      id: String(n.id || crypto.randomUUID()),
-      name: String(n.name || '—'),
-      title: String(n.title || 'Poste'),
-      parentId: n.parentId ? String(n.parentId) : undefined,
-    }))
+    return parsed
+      .filter((n): n is Record<string, unknown> => typeof n === 'object' && n !== null)
+      .map((n) => ({
+        id: String(n.id || crypto.randomUUID()),
+        name: String(n.name || '—'),
+        title: String(n.title || 'Poste'),
+        parentId: n.parentId ? String(n.parentId) : undefined,
+      }))
   } catch (err) {
     console.warn('AI org chart generation error, falling back to offline stub', err)
     return genererOrganigrammeOffline()

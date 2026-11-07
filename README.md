@@ -35,13 +35,13 @@ Prérequis Android :
 - Android SDK installé. Android Studio crée normalement `android/local.properties`; sinon créer ce fichier local avec `sdk.dir=/chemin/vers/Android/Sdk`.
 - Ne pas utiliser `sudo npm` pour initialiser ou installer les dépendances.
 
-Avant une release publique, changer `appId` dans `capacitor.config.ts` pour un identifiant qui vous appartient, par exemple `io.github.votrecompte.rapportstage`.
+Avant une release publique, l'`appId` dans `capacitor.config.ts` est déjà défini (`io.github.dane.rapportstage`) — changez-le uniquement si vous publiez sous un autre compte, par exemple `io.github.votrecompte.rapportstage`.
 
 ## État du projet
 
 **Phase 1 : frontend complet avec IA optionnelle.**
 
-- Wizard en 12 étapes (couverture → conclusion) avec sauvegarde locale automatique, sans compte.
+- Wizard en 14 étapes (couverture → conclusion, canevas officiel FOR-PSR04) avec sauvegarde locale automatique, sans compte.
 - Recherche d'entreprise via Gemini si une clé API est configurée, avec fallback local (`src/lib/ai-stub.ts`) sans clé.
 - Génération des paragraphes via Gemini si une clé API est configurée, avec rédaction locale simple sans clé.
 - Aperçu A4 fidèle au canevas : couverture bilingue FR/arabe, logos, sommaire, sections numérotées.

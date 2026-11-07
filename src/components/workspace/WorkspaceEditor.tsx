@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react'
+import { ArrowLeft, ArrowRight, RotateCcw, Type, Network } from 'lucide-react'
 import { Button } from '../ui'
 import { CouvertureStep } from '../steps/CouvertureStep'
 import { EntrepriseStep } from '../steps/EntrepriseStep'
@@ -21,38 +21,8 @@ const ACTIVITES_FIELDS: EntFieldDef[] = [
   { key: 'technologies', label: 'Technologies employées', placeholder: 'HACCP, gestion des commandes…' },
 ]
 
-export function WorkspaceEditor({
-  rapport,
-  step,
-  prev,
-  next,
-  setStepId,
-  setRapportWithHistory,
-  patchCouverture,
-  patchEntreprise,
-  patchOrganigramme,
-  patchFicheTechniques,
-  patchMateriels,
-  setFicheImages,
-  setNote,
-  setGeneratedNote,
-  setImages,
-  handleToggleStepKind,
-  handleFieldOrganigrammeChange,
-  handleToggleFieldMode,
-  handleAddSubSection,
-  handleDeleteSubSection,
-  handleRenameSubSection,
-  handleAddLevel3Item,
-  handleDeleteLevel3Item,
-  clearSection,
-}: {
-  rapport: Rapport
-  step: WizardStep
-  prev?: WizardStep
-  next?: WizardStep
-  setStepId: (id: string) => void
-  setRapportWithHistory: (updater: Rapport | ((prev: Rapport | null) => Rapport | null), options?: { isTextKeystroke?: boolean }) => void
+/** All mutation callbacks for the editor, grouped — one object instead of 18 props. */
+export interface WorkspaceEditorHandlers {
   patchCouverture: (patch: Partial<Rapport['couverture']>) => void
   patchEntreprise: (patch: Partial<Entreprise>) => void
   patchOrganigramme: (organigramme: Organigramme, key?: string) => void
@@ -71,14 +41,56 @@ export function WorkspaceEditor({
   handleAddLevel3Item: (stepId: string, parentFieldId: string) => void
   handleDeleteLevel3Item: (stepId: string, fieldId: string) => void
   clearSection: () => void
+}
+
+export function WorkspaceEditor({
+  rapport,
+  step,
+  prev,
+  next,
+  setStepId,
+  setRapportWithHistory,
+  handlers,
+  dense,
+}: {
+  rapport: Rapport
+  step: WizardStep
+  prev?: WizardStep
+  next?: WizardStep
+  setStepId: (id: string) => void
+  setRapportWithHistory: (updater: Rapport | ((prev: Rapport | null) => Rapport | null), options?: { isTextKeystroke?: boolean }) => void
+  handlers: WorkspaceEditorHandlers
+  /** True in the split view: the form shares the screen, so its padding tightens. */
+  dense?: boolean
 }) {
+  const {
+    patchCouverture,
+    patchEntreprise,
+    patchOrganigramme,
+    patchFicheTechniques,
+    patchMateriels,
+    setFicheImages,
+    setNote,
+    setGeneratedNote,
+    setImages,
+    handleToggleStepKind,
+    handleFieldOrganigrammeChange,
+    handleToggleFieldMode,
+    handleAddSubSection,
+    handleDeleteSubSection,
+    handleRenameSubSection,
+    handleAddLevel3Item,
+    handleDeleteLevel3Item,
+    clearSection,
+  } = handlers
+
   return (
     <>
-            <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 md:px-10 md:py-8">
+            <div className={cx('mx-auto w-full max-w-5xl flex-1', dense ? 'px-3 py-6' : 'px-4 py-6 md:px-10 md:py-8')}>
               <p className="mb-7 text-sm leading-relaxed text-muted">{step.consigne}</p>
               {/* The organigramme format switch makes sense only for the section
                   that IS the organigramme — showing it on every custom step made
-                  the 🏢 Organigramme button appear in Introduction, Contexte de
+                  the Organigramme button appear on Introduction, Contexte de
                   stage, etc. It is therefore only rendered for steps whose title
                   is (or whose format already is) the organigramme. */}
               {rapport.customSteps &&
@@ -91,21 +103,21 @@ export function WorkspaceEditor({
                       type="button"
                       onClick={() => handleToggleStepKind(step.id, 'notes')}
                       className={cx(
-                        "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                        "inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all",
                         step.kind === 'notes' ? "bg-paper text-ink shadow-xs" : "text-muted hover:text-ink"
                       )}
                     >
-                      📝 Texte rédigé
+                      <Type size={13} /> Texte rédigé
                     </button>
                     <button
                       type="button"
                       onClick={() => handleToggleStepKind(step.id, 'organigramme')}
                       className={cx(
-                        "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                        "inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all",
                         step.kind === 'organigramme' ? "bg-paper text-gold-deep shadow-xs font-semibold" : "text-muted hover:text-ink"
                       )}
                     >
-                      🏢 Organigramme
+                      <Network size={13} /> Organigramme
                     </button>
                   </div>
                 </div>

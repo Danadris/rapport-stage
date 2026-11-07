@@ -47,7 +47,7 @@ export interface SectionImage {
   blockIndex?: number
 }
 
-export type SectionNotes = Record<string, string>
+type SectionNotes = Record<string, string>
 export type Sections = Record<string, SectionNotes>
 
 export interface NoteField {
@@ -70,7 +70,16 @@ export interface OrgNode {
 
 export interface Organigramme {
   nodes: OrgNode[]
+  /** Drawn width in page px, set from the preview; absent = natural size. */
+  width?: number
+  /** Tree direction, set from the preview. */
+  orientation?: 'vertical' | 'horizontal'
+  /** How the chart is drawn, set from the preview. */
+  shape?: OrgShape
 }
+
+/** The three chart shapes. `tree` and `tree-side` are trees; `list` is indented. */
+export type OrgShape = 'tree' | 'tree-side' | 'list'
 
 export type StepKind = 'couverture' | 'entreprise' | 'organigramme' | 'presentation' | 'activites' | 'notes' | 'fiche-technique'
 
@@ -123,6 +132,32 @@ export interface RapportStyle {
   lineSpacing?: number
   margins?: 'narrow' | 'normal' | 'wide'
   textAlign?: 'left' | 'center' | 'justify'
+  /** Override for level-1 titles; falls back to primaryColor. */
+  titleColor?: string
+  /** Override for subtitles and the a/, b/, c/ prefixes; falls back to primaryColor. */
+  subtitleColor?: string
+  ifmbpLogo?: string
+  coverRibbonWidth?: number
+  coverBannerPadding?: number
+}
+
+/** A paragraph added from the preview, independent of the section's fields. */
+export interface TextBlock {
+  id: string
+  text: string
+  /** 'flow' = between the paragraphs (default), 'free' = placed anywhere on the page like a Word text box */
+  positioning?: 'flow' | 'free'
+  /**
+   * Offset from the block's own place in the flow, in page px (only when
+   * positioning === 'free'). Unit-relative — unlike images, which store
+   * copy-relative offsets — so the box renders exactly where it is put,
+   * whatever holds it.
+   */
+  x?: number
+  /** Offset from the block's own place in the flow, in page px (only when positioning === 'free') */
+  y?: number
+  /** Box width in page px when free. Defaults to 280. */
+  width?: number
 }
 
 export interface Rapport {
@@ -134,6 +169,10 @@ export interface Rapport {
   sections: Sections
   sectionsGenerated?: Sections
   images?: Record<string, SectionImage[]>
+  /** Free paragraphs added from the preview, keyed by section id. */
+  textBlocks?: Record<string, TextBlock[]>
+  /** Display order of a section's blocks, keyed by section id — overrides the plan's. */
+  blockOrder?: Record<string, string[]>
   style?: RapportStyle
   pageBreaks?: Record<string, boolean>
   /** Custom plan defined by the user. undefined = use official WIZARD_STEPS */
@@ -175,6 +214,8 @@ export interface ImageReference {
 
 export interface ReportData {
   id: string
+  createdAt?: number
+  updatedAt?: number
   couverture: Couverture
   entreprise: Entreprise
   sections: Sections
@@ -183,6 +224,9 @@ export interface ReportData {
   pageBreaks?: Record<string, boolean>
   customSteps?: WizardStep[]
   images?: Record<string, ImageReference[]> // No Base64 data here!
+  textBlocks?: Record<string, TextBlock[]>
+  blockOrder?: Record<string, string[]>
+  titleOverrides?: Record<string, string>
   organigramme?: Organigramme
   organigrammes?: Record<string, Organigramme>
   ficheTechniques?: FicheTechnique[]

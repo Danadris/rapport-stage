@@ -1,15 +1,10 @@
 import { ArrowRight, FileText, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { createRapport } from '../lib/demo'
-import { persistRapport, removeRapport, loadRapports } from '../lib/storage'
 import {
   loadAllMeta,
-  deleteMeta,
-  deleteReportData,
-  deleteImagesByReportId,
-  persistReport as persistReportV3,
-  buildReportMeta,
-  buildReportData,
+  persistRapport,
+  removeRapport,
 } from '../lib/storageV3'
 import type { ReportMeta, WizardStep } from '../types'
 import { useEffect, useState } from 'react'
@@ -78,15 +73,7 @@ export function HomePage() {
   const [showPlanPicker, setShowPlanPicker] = useState(false)
 
   const fetchMetas = async (): Promise<ReportMeta[]> => {
-    // Try V3 first. If empty, fall back to V1 and build meta on the fly.
-    let list = await loadAllMeta()
-    if (list.length === 0) {
-      // V3 not populated yet (migration may still be running).
-      // Fall back to V1 so the user always sees their data.
-      const v1 = await loadRapports()
-      list = v1.map(buildReportMeta)
-    }
-    return list
+    return await loadAllMeta()
   }
 
   const refresh = async () => {
@@ -110,28 +97,12 @@ export function HomePage() {
   const handleNew = async (customSteps?: WizardStep[]) => {
     setShowPlanPicker(false)
     const rapport = createRapport({ customSteps })
-    // V1 save (primary)
     await persistRapport(rapport)
-    // V3 dual-write
-    try {
-      await persistReportV3(buildReportData(rapport), buildReportMeta(rapport))
-    } catch {
-      // V3 failure is non-critical during dual-write phase
-    }
     navigate(`/rapport/${rapport.id}`)
   }
 
   const handleDelete = async (id: string) => {
-    // Delete from V1
     await removeRapport(id)
-    // Delete from V3 (if migrated)
-    try {
-      await deleteImagesByReportId(id)
-      await deleteReportData(id)
-      await deleteMeta(id)
-    } catch {
-      // V3 may not have this report yet, that's fine
-    }
     await refresh()
   }
 

@@ -46,6 +46,11 @@
     font-style: italic;
     pointer-events: none;
   }
+
+  .a4-page [data-part="couverture"] [class*="bg-[#ed7d31]"] [contenteditable="true"][data-placeholder]:empty::before,
+  .a4-page [data-part="couverture"] .bg-\[\#ed7d31\] [contenteditable="true"][data-placeholder]:empty::before {
+    color: rgba(255, 255, 255, 0.75);
+  }
 }
 
 @layer base {
@@ -153,17 +158,14 @@ html.dark {
     display: none !important;
   }
 
-  main {
-    padding: 0 !important;
-    background: transparent !important;
-    margin: 0 !important;
-  }
-
-  main > div {
+  /* Reset all outer wrappers around pages so margins and padding don't shift pages down */
+  main,
+  main div:not(.a4-page):not(.a4-page *) {
     max-width: none !important;
     padding: 0 !important;
-    background: transparent !important;
     margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
   }
 
   .a4-page {
@@ -174,6 +176,21 @@ html.dark {
     border-radius: 0 !important;
     break-after: page;
     page-break-after: always;
+  }
+
+  /* Lock cover page strictly to 1 page in print */
+  [data-part="couverture"] {
+    height: 297mm !important;
+    max-height: 297mm !important;
+    overflow: hidden !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  [style*="--cover-fit"] {
+    zoom: var(--cover-fit, 1) !important;
   }
 
   .a4-page:last-child {
