@@ -4,7 +4,7 @@
 > Stack stays React/TS/Vite/Capacitor. No Rust/Go.
 > Order matters: each phase is committable alone, never breaks build.
 >
-> **Status 2026-11-07:** Phase 0 ✅ + Phase 1 ✅ + Phase 2 ✅ + Phase 3 ✅ done on branch `refactor/adr0002-0003-integration` (8 commits: 9f4f28e, c842b2d, d46f129, cee1a5c, 41cd99c, 2a45616, 71b5c22). Tree clean, `tsc -b` + `oxlint` + `vite build` green, `as any` = 0. Next: Phase 4 (gods).
+> **Status 2026-11-07:** Phase 0 ✅ + Phase 1 ✅ + Phase 2 ✅ + Phase 3 ✅ + Phase 4 ✅ + Phase 5 ✅ done on branch `refactor/adr0002-0003-integration` (10 commits: 9f4f28e, c842b2d, d46f129, cee1a5c, 41cd99c, 2a45616, 71b5c22, 7060666, 923d034, 4990771). Tree clean, `tsc -b` + `oxlint` + `vitest` (53 tests) + `vite build` green, `as any` = 0. Next: Phase 6 (bundle) + Phase 7 (docs).
 
 ## Principles
 
