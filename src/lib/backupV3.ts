@@ -83,38 +83,41 @@ export async function createBackupV3(): Promise<BackupPayloadV3> {
  * Supports both V3 (Object Stores with Blobs) and V1 (legacy JSON array).
  */
 export async function importBackupV3(raw: string): Promise<{ imported: number; total: number }> {
-  let parsed: any
+  let parsed: unknown
   try {
     parsed = JSON.parse(raw)
   } catch {
     throw new Error('Le fichier de sauvegarde est illisible.')
   }
 
+  const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null
+
   // Handle V3 format
-  if (parsed && parsed.app === 'rapport-stage' && parsed.version === 3 && Array.isArray(parsed.reports)) {
-    const v3 = parsed as BackupPayloadV3
+  if (isRecord(parsed) && parsed.app === 'rapport-stage' && parsed.version === 3 && Array.isArray(parsed.reports)) {
+    const v3 = parsed as unknown as BackupPayloadV3
+    const images = Array.isArray(v3.images) ? v3.images : []
+    const reports = v3.reports ?? []
     let count = 0
 
     // Restore images as Blobs in IndexedDB
-    if (Array.isArray(v3.images)) {
-      for (const img of v3.images) {
-        const blob = await dataUrlToBlob(img.dataUrl)
-        const stored: StoredImage = {
-          id: img.id,
-          reportId: img.reportId,
-          blob,
-          mimeType: img.mimeType,
-          width: img.width,
-          height: img.height,
-          size: img.size,
-          createdAt: Date.now(),
-        }
-        await saveImage(stored)
+    for (const img of images) {
+      if (!img?.dataUrl) continue
+      const blob = await dataUrlToBlob(img.dataUrl)
+      const stored: StoredImage = {
+        id: img.id,
+        reportId: img.reportId,
+        blob,
+        mimeType: img.mimeType,
+        width: img.width,
+        height: img.height,
+        size: img.size,
+        createdAt: Date.now(),
       }
+      await saveImage(stored)
     }
 
     // Restore reports and metadata
-    for (const item of v3.reports) {
+    for (const item of reports) {
       if (item.meta && item.data) {
         await saveReportData(item.data)
         await saveMeta({ ...item.meta, updatedAt: Date.now() })
@@ -129,16 +132,17 @@ export async function importBackupV3(raw: string): Promise<{ imported: number; t
   // Handle Legacy V1 format
   const v1Reports = Array.isArray(parsed)
     ? parsed
-    : parsed && Array.isArray(parsed.rapports)
-      ? parsed.rapports
+    : isRecord(parsed) && Array.isArray(parsed.rapports)
+      ? (parsed.rapports as unknown[])
       : null
 
   if (v1Reports && v1Reports.length > 0) {
     let count = 0
-    for (const r of v1Reports as Rapport[]) {
-      if (!r?.id) continue
+    for (const r of v1Reports) {
+      if (!isRecord(r) || typeof r.id !== 'string') continue
+      const rapport = r as unknown as Rapport
       // persistRapport converts dataUrl images to Blobs and writes V3 stores
-      await persistRapport({ ...r, updatedAt: Date.now() })
+      await persistRapport({ ...rapport, updatedAt: Date.now() })
       count++
     }
 

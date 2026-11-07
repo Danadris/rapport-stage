@@ -140,8 +140,8 @@ async function runMigrationTestSuite(): Promise<TestResult[]> {
     // Store reportData with lightweight references (NO BASE64)
     await db.put('reportData', {
       id: imgReportId,
-      couverture: { nomStagiaire: 'Test Img Stagiaire' } as any,
-      entreprise: { nom: 'Test Img Entreprise' } as any,
+      couverture: { nomStagiaire: 'Test Img Stagiaire', periodeNumero: '', periodeDebut: '', periodeFin: '', objectifStage: '', tuteurPedagogique: '', tuteurIndustriel: '', membresJury: [] },
+      entreprise: { nom: 'Test Img Entreprise', ville: '', sourceRecherche: null, organismeAccueil: '', historique: '', secteurActivite: '', missionsValeurs: '', activitesPrincipales: '', equipements: '', technologies: '' },
       sections: {},
       images: {
         presentation: [

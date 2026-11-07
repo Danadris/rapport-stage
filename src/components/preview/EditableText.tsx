@@ -27,7 +27,7 @@ export function EditableTitle({
   /** Read-only prefix rendered before the editable text, e.g. "1." or "a/". */
   prefixNode?: React.ReactNode
 }) {
-  const ref = useRef<HTMLElement>(null)
+  const ref = useRef<HTMLElement | null>(null)
   const Tag = tag
 
   const handleBlur = () => {
@@ -45,7 +45,7 @@ export function EditableTitle({
   return (
     <div className="group/title relative">
       <Tag
-        ref={ref as any}
+        ref={(el) => { ref.current = el }}
         contentEditable={!!onSave}
         suppressContentEditableWarning
         onBlur={handleBlur}

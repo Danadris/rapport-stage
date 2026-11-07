@@ -17,6 +17,14 @@ import type { ReportPart, ReportSubSection, ReportSubSubSection } from '../../li
 /** What PartContent renders per block: a sub-section, or a merged paragraph. */
 type RenderBlock = Partial<ReportSubSection> & { paragraphes?: string[] }
 
+/** CSS-var text alignment, typed once so the three body style objects share it. */
+const DOC_TEXT_ALIGN = 'var(--doc-text-align)' as React.CSSProperties['textAlign']
+const DOC_BODY_STYLE: React.CSSProperties = {
+  fontSize: 'var(--doc-body-size)',
+  lineHeight: 'var(--doc-line-spacing)',
+  textAlign: DOC_TEXT_ALIGN,
+}
+
 /** One renderable piece of a section: a plan block or a free paragraph. */
 type SectionUnit =
   | { kind: 'block'; block: RenderBlock; index: number; key: string }
@@ -431,7 +439,7 @@ export function PartContent({
           const bi = unit.index
           const b = unit.block as RenderBlock
           const blockImages = bi < 0 ? [] : images.filter((img) => (img.blockIndex ?? images.indexOf(img)) === bi)
-          const blockItems = (b as any).items as ReportSubSubSection[] | undefined
+          const blockItems: ReportSubSubSection[] | undefined = b.items
 
           return (
             <div
@@ -499,18 +507,18 @@ export function PartContent({
                   </h3>
                 )
               )}
-              {(b as any).isOrganigramme ? (
+              {b.isOrganigramme ? (
                 <div className="mt-4">
                   <OrgChart
-                    nodes={getOrg((b as any).id)?.nodes ?? []}
+                    nodes={getOrg(b.id)?.nodes ?? []}
                     primaryColor={primaryColor}
-                    width={getOrg((b as any).id)?.width}
-                    shape={getOrg((b as any).id)?.shape}
-                    orientation={getOrg((b as any).id)?.orientation}
+                    width={getOrg(b.id)?.width}
+                    shape={getOrg(b.id)?.shape}
+                    orientation={getOrg(b.id)?.orientation}
                     editable={!!actions.onOrganigrammeChange}
-                    onWidthChange={actions.onOrganigrammeChange ? (width) => changeOrg((b as any).id, { width }) : undefined}
-                    onShapeChange={actions.onOrganigrammeChange ? (shape) => changeOrg((b as any).id, { shape }) : undefined}
-                    onNodesChange={actions.onOrganigrammeChange ? (next) => changeOrg((b as any).id, { nodes: next }) : undefined}
+                    onWidthChange={actions.onOrganigrammeChange ? (width) => changeOrg(b.id ?? '', { width }) : undefined}
+                    onShapeChange={actions.onOrganigrammeChange ? (shape) => changeOrg(b.id ?? '', { shape }) : undefined}
+                    onNodesChange={actions.onOrganigrammeChange ? (next) => changeOrg(b.id ?? '', { nodes: next }) : undefined}
                   />
                 </div>
               ) : (
@@ -530,7 +538,7 @@ export function PartContent({
                   ))}
                   {b.paragraphes ? (
                     <Removable onRemove={actions.onEdit ? () => handleParagraphsSave('') : undefined} label="Supprimer ce texte">
-                    <div className="space-y-3.5" style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}>
+                    <div className="space-y-3.5" style={DOC_BODY_STYLE}>
                       <EditableText
                         text={b.paragraphes.join('\n\n')}
                         placeholder="Cliquez ici pour rédiger..."
@@ -546,7 +554,7 @@ export function PartContent({
                       placeholder="Cliquez ici pour rédiger..."
                       onSave={actions.onEdit && b.editPath ? (v) => actions.onEdit?.(b.editPath!.source, b.editPath!.field, v) : undefined}
                       className={`${b.titre && b.titre.trim() !== '' ? 'mt-2.5' : ''} whitespace-pre-wrap`}
-                      style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}
+                      style={DOC_BODY_STYLE}
                     />
                     </Removable>
                   ) : actions.onEdit && b.editPath ? (
@@ -610,7 +618,7 @@ export function PartContent({
                             placeholder="Cliquez ici pour rédiger..."
                             onSave={actions.onEdit && item.editPath ? (v) => actions.onEdit?.(item.editPath!.source, item.editPath!.field, v) : undefined}
                             className={`${item.titre && item.titre.trim() !== '' ? 'mt-1.5' : ''} whitespace-pre-wrap`}
-                            style={{ fontSize: 'var(--doc-body-size)', lineHeight: 'var(--doc-line-spacing)', textAlign: 'var(--doc-text-align)' as any }}
+                            style={DOC_BODY_STYLE}
                           />
                           </Removable>
                         ) : actions.onEdit && item.editPath ? (

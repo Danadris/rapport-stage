@@ -142,20 +142,24 @@ Réponds uniquement en JSON.`
     throw new Error('Réponse vide')
   }
 
-  const data = JSON.parse(response.text)
-  const famille = FICHE_FAMILLES.includes(data.famille) ? data.famille : detectFamille(productName)
+  const data: unknown = JSON.parse(response.text)
+  const rec = (typeof data === 'object' && data !== null ? data : {}) as Record<string, unknown>
+  const famille = FICHE_FAMILLES.includes(rec.famille as string) ? (rec.famille as string) : detectFamille(productName)
+
+  const rawIngredients = Array.isArray(rec.ingredients) ? rec.ingredients : []
+  const ingredients = rawIngredients
+    .filter((i): i is Record<string, unknown> => typeof i === 'object' && i !== null && Boolean((i as Record<string, unknown>).ingredient))
+    .map((i) => ({ id: crypto.randomUUID(), ingredient: String(i.ingredient ?? ''), quantite: String(i.quantite ?? '') }))
 
   return {
     famille,
-    nbPieces: String(data.nbPieces ?? ''),
-    poidsUnitaire: String(data.poidsUnitaire ?? ''),
-    duree: String(data.duree ?? ''),
-    ingredients: (Array.isArray(data.ingredients) ? data.ingredients : [])
-      .filter((i: any) => i && i.ingredient)
-      .map((i: any) => ({ id: crypto.randomUUID(), ingredient: String(i.ingredient), quantite: String(i.quantite ?? '') })),
-    materiel: String(data.materiel ?? ''),
-    etapes: String(data.etapes ?? ''),
-    conseils: String(data.conseils ?? ''),
+    nbPieces: String(rec.nbPieces ?? ''),
+    poidsUnitaire: String(rec.poidsUnitaire ?? ''),
+    duree: String(rec.duree ?? ''),
+    ingredients,
+    materiel: String(rec.materiel ?? ''),
+    etapes: String(rec.etapes ?? ''),
+    conseils: String(rec.conseils ?? ''),
   }
 }
 
@@ -383,17 +387,19 @@ Règles :
     })
 
     const raw = response.text ?? '[]'
-    const parsed = JSON.parse(raw)
+    const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed) || parsed.length === 0) {
       return genererOrganigrammeOffline()
     }
 
-    return parsed.map((n: any) => ({
-      id: String(n.id || crypto.randomUUID()),
-      name: String(n.name || '—'),
-      title: String(n.title || 'Poste'),
-      parentId: n.parentId ? String(n.parentId) : undefined,
-    }))
+    return parsed
+      .filter((n): n is Record<string, unknown> => typeof n === 'object' && n !== null)
+      .map((n) => ({
+        id: String(n.id || crypto.randomUUID()),
+        name: String(n.name || '—'),
+        title: String(n.title || 'Poste'),
+        parentId: n.parentId ? String(n.parentId) : undefined,
+      }))
   } catch (err) {
     console.warn('AI org chart generation error, falling back to offline stub', err)
     return genererOrganigrammeOffline()

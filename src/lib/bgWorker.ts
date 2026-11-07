@@ -1,6 +1,11 @@
 import { removeBackground } from '@imgly/background-removal'
 
-const ctx = self as any
+interface WorkerScope {
+  onmessage: ((e: MessageEvent<WorkerRequest>) => Promise<void>) | null
+  postMessage: (message: unknown) => void
+}
+
+const ctx = self as unknown as WorkerScope
 
 type WorkerRequest = {
   id: number
