@@ -1,6 +1,5 @@
 
 import { cx } from '../../lib/cx'
-import { useState } from 'react'
 import type { Organigramme, SectionImage, TextBlock } from '../../types'
 import { EditableText, EditableTitle } from './EditableText'
 import { Figure } from './Figure'
@@ -9,7 +8,6 @@ import { TextBlockView } from './TextBlockView'
 import { OrgChart } from './OrgChart'
 import { DOC_BODY_STYLE, SUBTITLE_COLOR } from './tokens'
 import { BlockMoveControls, PartTitle, Removable, type RenderBlock, type SectionUnit } from './SectionShell'
-import { MoveParagraphSheet } from './MoveParagraphSheet'
 import { blockKeyFor } from '../../lib/blockModel'
 import type { ParagraphDrag } from './paragraphDrag'
 import type { BlockDrop } from './paragraphDrag'
@@ -70,8 +68,6 @@ export function PartContent({
     return organigramme
   }
 
-  // Move sheet: which block is asking to leave the section?
-  const [moveSheet, setMoveSheet] = useState<{ blockKey: string; label: string } | null>(null)
   const notifyDeleted = () => actions.onDeleted?.()
 
   // Writes the chart that is on screen, not the one the key points at: a
@@ -215,16 +211,6 @@ export function PartContent({
     onImagesChange(images.map((img) => (img.id === id ? { ...img, ...patch } : img)))
   }
 
-  // The guaranteed path: the same move the drag performs, chosen from the
-  // sheet. The student picks Début or Fin in the destination — explicit,
-  // never a silent teleport to the top.
-  const pickMoveTarget = (toSection: string, position: 'start' | 'end') => {
-    if (!actions.onBlockMove || !moveSheet) return
-    const index = position === 'start' ? 0 : 999
-    actions.onBlockMove(part.key, moveSheet.blockKey, toSection, index, ordered.map((u) => u.key), [])
-    setMoveSheet(null)
-  }
-
   // A free drop places the box where the pointer is. Same section: write the
   // freely chosen position. Another section: the paragraph carries its text
   // there (the stored offset travels with it) and lands at its flow place —
@@ -326,12 +312,6 @@ export function PartContent({
                   onDragEnd={() => { commitDrop(); drag?.end() }}
                   onUp={() => moveUnit(unit.key, -1)}
                   onDown={() => moveUnit(unit.key, 1)}
-                  sectionTargets={sectionTargets ?? []}
-                  onMoveToSection={
-                    actions.onBlockMove && (sectionTargets ?? []).length > 0
-                      ? () => setMoveSheet({ blockKey: unit.key, label: unit.kind === 'text' ? 'ce paragraphe' : b.titre || 'ce paragraphe' })
-                      : undefined
-                  }
                 />
               )}
               {unit.kind === 'text' ? (
@@ -520,14 +500,6 @@ export function PartContent({
       {!hasContent && part.sousSections && part.sousSections.length === 0 && (
         <div className="mt-8 text-center text-sm italic text-neutral-400">Section vide</div>
       )}
-      <MoveParagraphSheet
-        open={!!moveSheet}
-        blockLabel={moveSheet?.label ?? ''}
-        fromKey={part.key}
-        targets={sectionTargets ?? []}
-        onPick={pickMoveTarget}
-        onClose={() => setMoveSheet(null)}
-      />
     </div>
   )
 }
