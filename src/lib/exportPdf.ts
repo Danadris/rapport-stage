@@ -7,11 +7,15 @@ interface NativePrintPlugin {
 const NativePrint = registerPlugin<NativePrintPlugin>('NativePrint')
 
 export async function exportToPdf() {
-  if ('fonts' in document) {
-    await document.fonts.ready
+  if (typeof document !== 'undefined' && 'fonts' in document) {
+    if (document.fonts.status !== 'loaded') {
+      try {
+        await document.fonts.ready
+      } catch {
+        // Continue even if font loading fails
+      }
+    }
   }
-
-  await new Promise((resolve) => requestAnimationFrame(resolve))
 
   if (Capacitor.getPlatform() === 'android') {
     try {
@@ -22,5 +26,7 @@ export async function exportToPdf() {
     }
   }
 
-  window.print()
+  if (typeof window !== 'undefined' && typeof window.print === 'function') {
+    window.print()
+  }
 }

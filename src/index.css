@@ -151,6 +151,18 @@ html.dark {
     background: white;
     margin: 0;
     padding: 0;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  #root,
+  #root > div {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    position: static !important;
   }
 
   header, aside, nav,
@@ -158,14 +170,25 @@ html.dark {
     display: none !important;
   }
 
-  /* Reset all outer wrappers around pages so margins and padding don't shift pages down */
+  /* Reset all outer wrappers around pages so margins, padding, flexbox, and overflow don't break pagination */
   main,
   main div:not(.a4-page):not(.a4-page *) {
+    display: block !important;
     max-width: none !important;
     padding: 0 !important;
     margin: 0 !important;
     border: none !important;
     background: transparent !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  [style*="--preview-zoom"],
+  .print\:\!\[zoom\:1\] {
+    zoom: 1 !important;
   }
 
   .a4-page {
@@ -229,8 +252,13 @@ html.dark {
     display: none !important;
   }
 
+  .page-window:not([data-part="couverture"]) {
+    overflow: visible !important;
+  }
+
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    -webkit-text-size-adjust: 100% !important;
   }
 }

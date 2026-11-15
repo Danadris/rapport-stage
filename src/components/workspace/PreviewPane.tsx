@@ -36,11 +36,11 @@ export function PreviewPane({
   const previewZoom = Math.max(0.2, fitZoom * (zoom / 100))
 
   return (
-    <div className="flex-1 bg-line-strong/60 print:bg-transparent min-w-0 relative">
+    <div className="flex-1 bg-line-strong/60 print:bg-transparent print:!overflow-visible min-w-0 relative">
       <div
         ref={previewWrapRef}
         className={cx(
-          'print:!p-0 print:!m-0 overflow-x-auto',
+          'print:!p-0 print:!m-0 print:!overflow-visible overflow-x-auto',
           compact ? 'px-2 py-3 md:px-3 md:py-4' : 'px-2 py-6 md:px-4 md:py-10',
         )}
       >

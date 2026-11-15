@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { Navigate, useParams } from 'react-router-dom'
 import { PreviewPane } from '../components/workspace/PreviewPane'
 import { StepNavBar } from '../components/workspace/StepNavBar'
@@ -13,6 +14,7 @@ import type { PreviewActions } from '../components/PreviewA4'
 import { SkeletonRow } from '../components/ui'
 import { useWorkspacePersistence } from '../hooks/useWorkspacePersistence'
 import { useWorkspaceSteps } from '../hooks/useWorkspaceSteps'
+import { exportToPdf } from '../lib/exportPdf'
 
 // The preview column beside the form: wide enough to read a page, narrow enough
 // to leave the writing column the room. Remembered per browser, because the right
@@ -71,8 +73,28 @@ export function WorkspacePage() {
   const {
     rapport, loadingRapport, saveStatus, canUndo, canRedo,
     setRapportWithHistory, undo, redo,
-    showExportMenu, setShowExportMenu, exportError, handleExportPdf, handleExportBackup,
+    showExportMenu, setShowExportMenu, exportError, handleExportBackup,
   } = useWorkspacePersistence(id)
+
+  const handleExportPdf = useCallback(() => {
+    setShowExportMenu(false)
+    const prevMode = mode
+    if (mode !== 'apercu') {
+      flushSync(() => {
+        setMode('apercu')
+      })
+    }
+    const onAfterPrint = () => {
+      window.removeEventListener('afterprint', onAfterPrint)
+      if (prevMode !== 'apercu') {
+        setMode(prevMode)
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('afterprint', onAfterPrint)
+    }
+    void exportToPdf()
+  }, [mode, setShowExportMenu])
 
   const activeSteps = (rapport?.customSteps ?? WIZARD_STEPS)
   const step = stepById(stepId, activeSteps) ?? activeSteps[0]
@@ -364,15 +386,17 @@ export function WorkspacePage() {
               )}
             </div>
           ) : (
-            <WorkspaceEditor
-              rapport={rapport}
-              step={step}
-              prev={prev}
-              next={next}
-              setStepId={setStepId}
-              setRapportWithHistory={setRapportWithHistory}
-              handlers={editorHandlers}
-            />
+            <div className="min-w-0 flex-1 print:!hidden">
+              <WorkspaceEditor
+                rapport={rapport}
+                step={step}
+                prev={prev}
+                next={next}
+                setStepId={setStepId}
+                setRapportWithHistory={setRapportWithHistory}
+                handlers={editorHandlers}
+              />
+            </div>
           )
         ) : (
           <PreviewPane

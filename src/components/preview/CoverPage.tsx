@@ -104,10 +104,10 @@ export function CoverPage({
       style={{ fontFamily: 'var(--doc-body-font)' }}
     >
       <div
-        className="group/ribbon relative flex shrink-0 items-center justify-center bg-[#4472c4]"
+        className="group/ribbon relative flex shrink-0 items-center justify-center bg-[#4472c4] print:h-[297mm]"
         style={{ width: `${ribbonWidth}px` }}
       >
-        <span className="block rotate-180 whitespace-nowrap text-[48px] font-bold tracking-wide text-white [writing-mode:vertical-rl]">
+        <span className="block rotate-180 whitespace-nowrap text-[48px] font-bold tracking-wide text-white [writing-mode:vertical-rl] print:inline-block">
           Rapport de stage : {periodeLabel}
         </span>
         {actions.onCoverChange && (
