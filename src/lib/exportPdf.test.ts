@@ -25,31 +25,19 @@ describe('exportToPdf', () => {
     globalThis.document = originalDocument
   })
 
-  it('calls window.print when fonts are already loaded', async () => {
+  it('calls window.print synchronously (web/iOS path)', () => {
+    // exportToPdf must call window.print() synchronously on the web/iOS path
+    // so that iOS Safari's transient user-activation (gesture chain) is kept
+    // alive. Any await before window.print() breaks the gesture on iOS.
     const printSpy = vi.spyOn(globalThis.window, 'print')
-    await exportToPdf()
+    exportToPdf()
+    // print must have been called in the same synchronous turn — no await needed
     expect(printSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('waits for fonts when status is loading', async () => {
-    let resolved = false
-    const fontPromise = new Promise<void>((resolve) => {
-      setTimeout(() => {
-        resolved = true
-        resolve()
-      }, 50)
-    })
-
-    globalThis.document = {
-      fonts: {
-        status: 'loading',
-        ready: fontPromise as unknown as Promise<FontFaceSet>,
-      },
-    } as unknown as Document
-
-    const printSpy = vi.spyOn(globalThis.window, 'print')
-    await exportToPdf()
-    expect(resolved).toBe(true)
-    expect(printSpy).toHaveBeenCalledTimes(1)
+  it('does not throw when window.print is unavailable', () => {
+    // @ts-expect-error test mock
+    globalThis.window = {}
+    expect(() => exportToPdf()).not.toThrow()
   })
 })

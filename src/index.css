@@ -256,6 +256,15 @@ html.dark {
     overflow: visible !important;
   }
 
+  /* iOS Safari writing-mode:vertical-rl workaround: the ribbon text must have an
+     explicit height so WebKit's print compositor does not collapse it to 0. */
+  [data-part="couverture"] [class*="vertical-rl"],
+  [data-part="couverture"] .\\[writing-mode\\:vertical-rl\\] {
+    height: 297mm;
+    max-height: 297mm;
+    display: inline-block;
+  }
+
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;

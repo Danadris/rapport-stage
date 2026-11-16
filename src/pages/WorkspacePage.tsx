@@ -79,11 +79,17 @@ export function WorkspacePage() {
   const handleExportPdf = useCallback(() => {
     setShowExportMenu(false)
     const prevMode = mode
+
+    // Switch to preview mode so the A4 pages are in the DOM (required on
+    // mobile where edition mode renders only the editor form).
+    // flushSync makes React commit the new mode synchronously so the DOM is
+    // ready before we call window.print().
     if (mode !== 'apercu') {
       flushSync(() => {
         setMode('apercu')
       })
     }
+
     const onAfterPrint = () => {
       window.removeEventListener('afterprint', onAfterPrint)
       if (prevMode !== 'apercu') {
@@ -93,7 +99,11 @@ export function WorkspacePage() {
     if (typeof window !== 'undefined') {
       window.addEventListener('afterprint', onAfterPrint)
     }
-    void exportToPdf()
+
+    // iOS Safari requires window.print() to be called synchronously within
+    // the user-gesture chain. flushSync above keeps us synchronous; exportToPdf
+    // is now synchronous on web/iOS (see exportPdf.ts).
+    exportToPdf()
   }, [mode, setShowExportMenu])
 
   const activeSteps = (rapport?.customSteps ?? WIZARD_STEPS)
