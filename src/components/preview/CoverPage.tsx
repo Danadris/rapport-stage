@@ -86,8 +86,23 @@ export function CoverPage({
     if (!el) return
     const measure = () => {
       setFit((prev) => {
-        const trueH = el.scrollHeight / (prev || 1)
-        const next = trueH > 1123 ? Math.max(0.5, Math.floor((1123 / trueH) * 1000) / 1000) : 1
+        // `offsetHeight` is the unzoomed layout height in every engine, unlike
+        // `scrollHeight`: under the mobile preview's `zoom`, WebKit reports a
+        // scaled scrollHeight and the cover was shrunk to the 0.5 floor, which
+        // made every font tiny. Summing the children's layout boxes gives the
+        // same answer on screen, in print and in the captured PDF.
+        const cs = getComputedStyle(el)
+        const gap = parseFloat(cs.rowGap || cs.gap || '0') || 0
+        const padTop = parseFloat(cs.paddingTop || '0') || 0
+        const padBottom = parseFloat(cs.paddingBottom || '0') || 0
+        const natural = Array.from(el.children).reduce(
+          (sum, child) => sum + (child as HTMLElement).offsetHeight,
+          padTop + padBottom,
+        ) + gap * Math.max(0, el.children.length - 1)
+        if (!natural) return prev
+        const next = natural > 1123
+          ? Math.max(0.8, Math.floor((1123 / natural) * 1000) / 1000)
+          : 1
         return Math.abs(prev - next) > 0.001 ? next : prev
       })
     }

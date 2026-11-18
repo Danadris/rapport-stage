@@ -83,35 +83,70 @@ async function buildClientPdf(): Promise<void> {
   const pages = Array.from(document.querySelectorAll<HTMLElement>('.a4-page'))
   if (pages.length === 0) throw new Error('Aperçu A4 absent — export impossible.')
 
-  // Fonts are embedded once and reused for every sheet (embedding is the slow
-  // part). If embedding fails, carry on: the browser then uses fallback fonts
-  // rather than losing the whole export.
-  let fontEmbedCSS: string | undefined
+  // WebKit can compute the cover's auto-fit zoom far too small under the
+  // mobile preview's `zoom`, shrinking every font. The cover layout collapses
+  // its gaps and shrinks the photo on its own when content is long, so capture
+  // the cover at full size whenever that actually fits within one A4 sheet.
+  const coverContent = document.querySelector<HTMLElement>('[data-part="couverture"] [style*="--cover-fit"]')
+  let restoreCoverFit: (() => void) | undefined
+  if (coverContent) {
+    const originalFit = coverContent.style.getPropertyValue('--cover-fit')
+    const naturalHeight = () => {
+      const cs = getComputedStyle(coverContent)
+      const gap = parseFloat(cs.rowGap || cs.gap || '0') || 0
+      return Array.from(coverContent.children).reduce(
+        (sum, child) => sum + (child as HTMLElement).offsetHeight,
+        (parseFloat(cs.paddingTop || '0') || 0) + (parseFloat(cs.paddingBottom || '0') || 0),
+      ) + gap * Math.max(0, coverContent.children.length - 1)
+    }
+    coverContent.style.setProperty('--cover-fit', '1')
+    // Reading layout forces the new zoom to apply before we measure.
+    void coverContent.offsetHeight
+    if (naturalHeight() > A4_CSS_H) {
+      // Genuinely too much content — keep the app's shrink so nothing is cut.
+      if (originalFit) coverContent.style.setProperty('--cover-fit', originalFit)
+      else coverContent.style.removeProperty('--cover-fit')
+    } else {
+      restoreCoverFit = () => {
+        if (originalFit) coverContent.style.setProperty('--cover-fit', originalFit)
+        else coverContent.style.removeProperty('--cover-fit')
+      }
+    }
+  }
+
   try {
-    fontEmbedCSS = await getFontEmbedCSS(pages[0])
-  } catch {
-    // continue without precomputed font CSS
+    // Fonts are embedded once and reused for every sheet (embedding is the slow
+    // part). If embedding fails, carry on: the browser then uses fallback fonts
+    // rather than losing the whole export.
+    let fontEmbedCSS: string | undefined
+    try {
+      fontEmbedCSS = await getFontEmbedCSS(pages[0])
+    } catch {
+      // continue without precomputed font CSS
+    }
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true })
+    pdf.setProperties({ title: 'Rapport de stage' })
+
+    for (let i = 0; i < pages.length; i++) {
+      const canvas = await toCanvas(pages[i], {
+        width: A4_CSS_W,
+        height: A4_CSS_H,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        cacheBust: true,
+        skipAutoScale: true,
+        fontEmbedCSS,
+        filter: keepPrintContent,
+      })
+      if (i > 0) pdf.addPage()
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, A4_MM_W, A4_MM_H, undefined, 'FAST')
+    }
+
+    await deliverPdf(pdf)
+  } finally {
+    restoreCoverFit?.()
   }
-
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true })
-  pdf.setProperties({ title: 'Rapport de stage' })
-
-  for (let i = 0; i < pages.length; i++) {
-    const canvas = await toCanvas(pages[i], {
-      width: A4_CSS_W,
-      height: A4_CSS_H,
-      pixelRatio: 2,
-      backgroundColor: '#ffffff',
-      cacheBust: true,
-      skipAutoScale: true,
-      fontEmbedCSS,
-      filter: keepPrintContent,
-    })
-    if (i > 0) pdf.addPage()
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, A4_MM_W, A4_MM_H, undefined, 'FAST')
-  }
-
-  await deliverPdf(pdf)
 }
 
 /**

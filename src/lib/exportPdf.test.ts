@@ -45,6 +45,7 @@ describe('exportToPdf', () => {
         ready: Promise.resolve() as unknown as Promise<FontFaceSet>,
       },
       querySelectorAll: vi.fn(() => [{}, {}]),
+      querySelector: vi.fn(() => null),
     } as unknown as Document
     vi.stubGlobal('navigator', { userAgent: DESKTOP_CHROME_UA, platform: 'Linux x86_64' })
     mockToCanvas.mockResolvedValue({ toDataURL: () => 'data:image/jpeg;base64,AAAA' })

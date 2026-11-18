@@ -171,8 +171,11 @@ html.dark {
   }
 
   /* Reset all outer wrappers around pages so margins, padding, flexbox, and overflow don't break pagination */
+  /* The editor chrome is hidden above, but this reset matches every non-page
+     div inside main. Exclude the hidden ones or `display:block !important`
+     wins and the sidebar/nav prints as a blank first page. */
   main,
-  main div:not(.a4-page):not(.a4-page *) {
+  main div:not(.a4-page):not(.a4-page *):not([data-print-hide]):not(.print\:hidden) {
     display: block !important;
     max-width: none !important;
     padding: 0 !important;
