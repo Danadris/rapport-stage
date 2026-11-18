@@ -14,7 +14,7 @@ import type { PreviewActions } from '../components/PreviewA4'
 import { SkeletonRow } from '../components/ui'
 import { useWorkspacePersistence } from '../hooks/useWorkspacePersistence'
 import { useWorkspaceSteps } from '../hooks/useWorkspaceSteps'
-import { exportToPdf } from '../lib/exportPdf'
+import { exportToPdf, needsClientSidePdf } from '../lib/exportPdf'
 
 // The preview column beside the form: wide enough to read a page, narrow enough
 // to leave the writing column the room. Remembered per browser, because the right
@@ -38,6 +38,9 @@ export function WorkspacePage() {
   const [zoom, setZoom] = useState(100)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  // Client-side PDF generation (iOS Chrome and friends) takes a few seconds;
+  // keep a visible cue up so the tap does not look like it did nothing.
+  const [isBuildingPdf, setIsBuildingPdf] = useState(false)
   // Both side panels collapse, so the writing column can take the room it needs.
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
@@ -83,27 +86,44 @@ export function WorkspacePage() {
     // Switch to preview mode so the A4 pages are in the DOM (required on
     // mobile where edition mode renders only the editor form).
     // flushSync makes React commit the new mode synchronously so the DOM is
-    // ready before we call window.print().
+    // ready before we call window.print() or capture the sheets.
     if (mode !== 'apercu') {
       flushSync(() => {
         setMode('apercu')
       })
     }
 
+    // `afterprint` restores the mode on the window.print() path. The
+    // client-side PDF path has no such event, so it restores in `finally`
+    // below; `restored` makes sure the two never fight.
+    let restored = false
+    const restoreMode = () => {
+      if (restored) return
+      restored = true
+      if (prevMode !== 'apercu') setMode(prevMode)
+    }
     const onAfterPrint = () => {
       window.removeEventListener('afterprint', onAfterPrint)
-      if (prevMode !== 'apercu') {
-        setMode(prevMode)
-      }
+      restoreMode()
     }
     if (typeof window !== 'undefined') {
       window.addEventListener('afterprint', onAfterPrint)
     }
 
+    const clientPdf = needsClientSidePdf()
+    if (clientPdf) setIsBuildingPdf(true)
+
     // iOS Safari requires window.print() to be called synchronously within
-    // the user-gesture chain. flushSync above keeps us synchronous; exportToPdf
-    // is now synchronous on web/iOS (see exportPdf.ts).
-    exportToPdf()
+    // the user-gesture chain. flushSync above keeps us synchronous and
+    // exportToPdf is synchronous on that path (see exportPdf.ts).
+    const result = exportToPdf()
+    if (result && typeof (result as Promise<void>).finally === 'function') {
+      void (result as Promise<void>).finally(() => {
+        window.removeEventListener('afterprint', onAfterPrint)
+        restoreMode()
+        if (clientPdf) setIsBuildingPdf(false)
+      })
+    }
   }, [mode, setShowExportMenu])
 
   const activeSteps = (rapport?.customSteps ?? WIZARD_STEPS)
@@ -266,6 +286,14 @@ export function WorkspacePage() {
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-3.5rem)] w-full">
+      {isBuildingPdf && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 print:hidden" role="status" aria-live="polite">
+          <div className="flex items-center gap-3 rounded-xl bg-paper px-5 py-4 text-[13px] text-ink shadow-lg">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-line border-t-gold-deep" aria-hidden />
+            Génération du PDF…
+          </div>
+        </div>
+      )}
       <WorkspaceSidebar
         rapport={rapport}
         activeSteps={activeSteps}
